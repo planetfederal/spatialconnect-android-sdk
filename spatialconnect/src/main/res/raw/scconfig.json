@@ -1,0 +1,23 @@
+{
+  "stores": [
+    {
+      "name": "haiti-vectors-split.gpkg",
+      "type": "geopackage",
+      "uri": "http://www.geopackage.org/data/haiti-vectors-split.gpkg",
+      "id": "1234"
+    },
+    {
+      "name": "ERDC_Whitehorse_GeoPackage.gpkg",
+      "type": "geopackage",
+      "uri": "https://portal.opengeospatial.org/files/63156",
+      "id": "5678"
+    },
+    {
+      "name": "nola_polling_places.json",
+      "type": "geojson",
+      "uri": "nola_polling_places.json",
+      "isInApp": true,
+      "id": "504"
+    }
+  ]
+}

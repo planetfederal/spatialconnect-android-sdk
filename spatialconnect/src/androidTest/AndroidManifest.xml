@@ -1,0 +1,17 @@
+<manifest
+    package="com.boundlessgeo.spatialconnect.test"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.ACCESS_MOCK_LOCATION"/>
+
+    <application
+        android:allowBackup="true"
+        android:label="@string/app_name">
+        <!-- setup the activity used for testing -->
+        <activity
+            android:name="com.boundlessgeo.spatialconnect.SpatialConnectActivity">
+        </activity>
+
+    </application>
+
+</manifest>
