@@ -1,13 +1,12 @@
 package com.boundlessgeo.spatialconnect.services;
 
-import android.util.Log;
-
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreLifeCycle;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
+import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,6 +17,8 @@ import java.util.Set;
 
 import rx.Observable;
 import rx.functions.Func1;
+import rx.subjects.PublishSubject;
+import rx.subjects.Subject;
 
 public class SCDataService extends SCService
 {
@@ -26,12 +27,15 @@ public class SCDataService extends SCService
     private Map<String, SCDataStore> stores;
     private boolean storesStarted;
     private final String DATA_SERVICE = "DataService";
+    private PublishSubject<SCStoreStatusEvent> storeStatusSubject;
+    public Observable<SCStoreStatusEvent> storeEvents;
 
     public SCDataService()
     {
         super();
         this.supportedStores = new HashSet<>();
         this.stores = new HashMap<>();
+        this.storeStatusSubject = PublishSubject.create();
         addDefaultStoreImpls();
     }
 
@@ -43,6 +47,7 @@ public class SCDataService extends SCService
 
     public void startAllStores()
     {
+
         for (String key : stores.keySet())
         {
             Object obj = stores.get(key);

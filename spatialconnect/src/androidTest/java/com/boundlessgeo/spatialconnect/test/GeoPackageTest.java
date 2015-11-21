@@ -11,6 +11,7 @@ import com.boundlessgeo.spatialconnect.services.SCServiceManager;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
+import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 
 import java.util.Random;
 
@@ -62,7 +63,7 @@ public class GeoPackageTest extends BaseTestCase {
         filter.setPredicate(
                 new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
         );
-        /** test that there are 1871 features returned.  the reference query to find this number is:
+        /** test that there are 1871 features returned.  the reference queryFeature to find this number is:
          SELECT(
          (SELECT COUNT(*) FROM point_features  WHERE ST_Within(the_geom, ST_GeomFromText('POLYGON((-73.3901 19.1627, -72.5097 19.1627, -72.5097 18.6261, -73.3901 18.6261, -73.3901 19.1627))')))+
          (SELECT COUNT(*) FROM polygon_features  WHERE ST_Within(the_geom, ST_GeomFromText('POLYGON((-73.3901 19.1627, -72.5097 19.1627, -72.5097 18.6261, -73.3901 18.6261, -73.3901 19.1627))')))+
@@ -140,7 +141,8 @@ public class GeoPackageTest extends BaseTestCase {
         final SCDataStore gpkgStore = serviceManager.getDataService().getStoreById("1234");
         SCSpatialFeature scSpatialFeature = new SCSpatialFeature();
         scSpatialFeature.setId(featureId);
-        gpkgStore.delete(scSpatialFeature).subscribe(new Action1<Boolean>() {
+        SCKeyTuple t = scSpatialFeature.getKey();
+        gpkgStore.delete(t).subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean deleted) {
                 assertTrue("The featureRow should have been deleted", deleted);
