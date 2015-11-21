@@ -36,5 +36,5 @@ public interface SCSpatialStore extends SCDataStoreLifeCycle
     Observable query(SCQueryFilter scFilter);
     Observable create(SCSpatialFeature scSpatialFeature);
     Observable update(SCSpatialFeature scSpatialFeature);
-    Observable delete(SCSpatialFeature scSpatialFeature);
+    Observable delete(SCKeyTuple keyTuple);
 }

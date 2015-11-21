@@ -215,9 +215,9 @@ public class GeoPackageStore extends SCDataStore {
     }
 
     @Override
-    public Observable<Boolean> delete(final SCSpatialFeature scSpatialFeature) {
+    public Observable<Boolean> delete(final SCKeyTuple tuple) {
 
-        final String featureId = scSpatialFeature.getId();
+        final String featureId = tuple.getFeatureId();
 
         return Observable.create(new Observable.OnSubscribe<Boolean>() {
 

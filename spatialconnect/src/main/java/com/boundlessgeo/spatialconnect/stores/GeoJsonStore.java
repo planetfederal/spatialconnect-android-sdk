@@ -100,9 +100,9 @@ public class GeoJsonStore extends SCDataStore {
     }
 
     @Override
-    public Observable<Boolean> delete(final SCSpatialFeature scSpatialFeature) {
+    public Observable<Boolean> delete(final SCKeyTuple keyTuple) {
         GeoJsonAdapter geoJsonAdapter = (GeoJsonAdapter) this.getAdapter();
-        geoJsonAdapter.delete(scSpatialFeature);
+        geoJsonAdapter.delete(keyTuple.getFeatureId());
         return Observable.create(new Observable.OnSubscribe<Boolean>() {
 
             @Override
@@ -111,7 +111,7 @@ public class GeoJsonStore extends SCDataStore {
                     // TODO: implement functionality here
                     subscriber.onNext(true);
                 } catch (Exception e) {
-                    Log.e(LOG_TAG, "Could not create delete with id " + scSpatialFeature.getId());
+                    Log.e(LOG_TAG, "Could not create delete with id " + keyTuple.getFeatureId());
                     subscriber.onError(e);
                 }
                 subscriber.onCompleted();
