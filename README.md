@@ -17,7 +17,6 @@ CRUD functionality on `SCSpatialFeature`s.  Without an adapter
 implementation, SpatialConnect will not consider the store to be a
 supported and will not attempt to connect.
 
-
 ### Geometry Object Model
 
 The SpatialConnect provides a custom geometry object model.  One reason this
@@ -34,7 +33,7 @@ properties) and the `SCGeometry`, which extends `SCSpatialFeature` with a
 this is that the `SCGeometry` object can always be represented as a
 [GeoJSON Geometry object](http://geojson.org/geojson-spec.html#geometry-objects).
 
-`SCSpatialFeature`s can have a geometry but they aren't required.  In the case where you don't have a geometry, a `SCSpatialFeature` is simply an object with an attribute that you want to query on.
+`SCSpatialFeature`s is the parent class of all geometries. This allows the library to handle spatial data types that do not contain a geometry. Supplemental data that contains no location can be stored, queried, and filtered with the functionality of the library. All data is treated as a feature is queried with a filter.
 
 ### Querying
 
