@@ -43,7 +43,7 @@ public abstract class SCDataStore implements SCSpatialStore
     private int version = 0;
     private String type;
     private Context context;
-    private SCDataStoreStatus status = SCDataStoreStatus.DATA_STORE_STOPPED;
+    private SCDataStoreStatus status = SCDataStoreStatus.SC_DATA_STORE_STOPPED;
     private String defaultLayerName;
 
     public SCDataStore(Context context, SCStoreConfig scStoreConfig)
