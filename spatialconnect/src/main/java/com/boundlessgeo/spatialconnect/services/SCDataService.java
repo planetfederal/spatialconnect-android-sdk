@@ -2,6 +2,8 @@ package com.boundlessgeo.spatialconnect.services;
 
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
+import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreLifeCycle;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
@@ -16,9 +18,11 @@ import java.util.Map;
 import java.util.Set;
 
 import rx.Observable;
+import rx.functions.Action0;
+import rx.functions.Action1;
 import rx.functions.Func1;
+import rx.observables.ConnectableObservable;
 import rx.subjects.PublishSubject;
-import rx.subjects.Subject;
 
 public class SCDataService extends SCService
 {
@@ -27,35 +31,95 @@ public class SCDataService extends SCService
     private Map<String, SCDataStore> stores;
     private boolean storesStarted;
     private final String DATA_SERVICE = "DataService";
-    private PublishSubject<SCStoreStatusEvent> storeStatusSubject;
-    public Observable<SCStoreStatusEvent> storeEvents;
+    protected PublishSubject<SCStoreStatusEvent> storeEventSubject;
+    public ConnectableObservable<SCStoreStatusEvent> storeEvents;
 
     public SCDataService()
     {
         super();
         this.supportedStores = new HashSet<>();
         this.stores = new HashMap<>();
-        this.storeStatusSubject = PublishSubject.create();
+        this.storeEventSubject = PublishSubject.create();
+        this.storeEvents = storeEventSubject.publish();
         addDefaultStoreImpls();
     }
 
     public void addDefaultStoreImpls()
     {
-        this.supportedStores.add("geojson.1");
-        this.supportedStores.add("geopackage.1");
+        this.supportedStores.add(GeoJsonStore.VersionKey());
+        this.supportedStores.add(GeoPackageStore.VersionKey());
     }
 
     public void startAllStores()
     {
+        Set<String> s = stores.keySet();
+        final int storesCount = s.size();
 
-        for (String key : stores.keySet())
+        storeEvents.filter(new Func1<SCStoreStatusEvent, Boolean>() {
+            @Override
+            public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
+                return scStoreStatusEvent.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING;
+            }
+        }).buffer(storesCount).take(1).subscribe(new Action1<List<SCStoreStatusEvent>>() {
+            @Override
+            public void call(List<SCStoreStatusEvent> l) {
+                SCStoreStatusEvent se = new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED, null);
+                SCDataService.this.storeEventSubject.onNext(se);
+            }
+        });
+
+        for (String key : s)
         {
             Object obj = stores.get(key);
             if (obj instanceof SCDataStoreLifeCycle)
             {
-                SCDataStoreLifeCycle store = (SCDataStoreLifeCycle) stores.get(key);
-                store.start();
+                this.startStore((SCDataStoreLifeCycle) stores.get(key));
             }
+        }
+    }
+
+    private void startStore(SCDataStoreLifeCycle s) {
+        s.start().subscribe(new Action1<SCStoreStatusEvent>() {
+            @Override
+            public void call(SCStoreStatusEvent s) {
+                System.out.println(s.getStatus() + " " + s.getStoreId());
+            }
+        },new Action1<Throwable>(){
+            @Override
+            public void call(Throwable t) {
+                System.out.println(t.getLocalizedMessage());
+            }
+        },new Action0() {
+            @Override
+            public void call() {
+                System.out.println();
+            }
+        });
+    }
+
+    public Observable<SCStoreStatusEvent> allStoresStartedObs()
+    {
+        Boolean allStarted = true;
+        for (String key : stores.keySet()) {
+            SCDataStore store = stores.get(key);
+            if (store.getStatus() != SCDataStoreStatus.SC_DATA_STORE_RUNNING) {
+                allStarted = false;
+                break;
+            }
+        }
+
+        if (allStarted) {
+            return Observable.empty();
+        } else {
+            return storeEvents.filter(
+                    new Func1<SCStoreStatusEvent, Boolean>() {
+                        @Override
+                        public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
+                            return (scStoreStatusEvent.getStatus() ==
+                                    SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED);
+                        }
+                    }
+            );
         }
     }
 
@@ -107,7 +171,7 @@ public class SCDataService extends SCService
         for (String key : stores.keySet())
         {
             SCDataStore scDataStore = stores.get(key);
-            if (scDataStore.getStatus().equals(SCDataStoreStatus.DATA_STORE_RUNNING))
+            if (scDataStore.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING))
             {
                 activeStores.add(scDataStore);
             }
@@ -147,7 +211,7 @@ public class SCDataService extends SCService
                             {
                                 Observable<SCSpatialFeature> results;
                                 SCDataStore ds = stores.get(dao.getId());
-                                if(ds != null && ds.getStatus() == SCDataStoreStatus.DATA_STORE_RUNNING)
+                                if(ds != null && ds.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING)
                                 {
                                     SCSpatialStore sp = (SCSpatialStore) ds;
                                     results = sp.query(dao.filter);

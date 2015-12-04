@@ -38,13 +38,16 @@ import rx.Subscriber;
 
 public class GeoJsonStore extends SCDataStore {
     private static final String LOG_TAG = GeoJsonStore.class.getSimpleName();
+    private static String TYPE = "geojson";
+    private static int VERSION = 1;
 
+    public static String VersionKey() {
+        return TYPE + "." + VERSION;
+    }
 
     public GeoJsonStore(Context context, SCStoreConfig scStoreConfig) {
         super(context, scStoreConfig);
         String STORE_NAME = "GeoJsonStore";
-        String TYPE = "geojson";
-        int VERSION = 1;
         this.setName(STORE_NAME);
         this.setType(TYPE);
         this.setVersion(VERSION);
@@ -119,25 +122,27 @@ public class GeoJsonStore extends SCDataStore {
         });
     }
 
-    public void start() {
-        this.setStatus(SCDataStoreStatus.DATA_STORE_STARTED);
+    public Observable start() {
+        this.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
         this.getAdapter().connect();
         if (this.getAdapter().getStatus().equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)) {
-            this.setStatus(SCDataStoreStatus.DATA_STORE_RUNNING);
+            this.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+            return Observable.empty();
         } else {
             stop();
+            return Observable.error(new Exception("Error starting GeoJSON store"));
         }
     }
 
     public void stop() {
-        this.setStatus(SCDataStoreStatus.DATA_STORE_STOPPED);
+        this.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
     }
 
     public void pause() {
-        this.setStatus(SCDataStoreStatus.DATA_STORE_PAUSED);
+        this.setStatus(SCDataStoreStatus.SC_DATA_STORE_PAUSED);
     }
 
     public void resume() {
-        this.setStatus(SCDataStoreStatus.DATA_STORE_RUNNING);
+        this.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
     }
 }
