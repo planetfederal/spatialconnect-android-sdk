@@ -105,7 +105,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
 
     // using a GeoJSON file to queryFeature is not going to be fast
     public Observable<SCSpatialFeature> query(final SCQueryFilter filter) {
-        HashSet<SCSpatialFeature> scSpatialFeatures = new HashSet<>();
+        HashSet<SCSpatialFeature> scSpatialFeatures = new HashSet<SCSpatialFeature>();
         SCGeometryFactory factory = new SCGeometryFactory();
         // TODO: updated the Json --> SCSpatialFetures code to use InputStreams instead of Strings
         final SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(

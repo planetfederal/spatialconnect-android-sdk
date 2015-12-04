@@ -25,8 +25,9 @@ package com.boundlessgeo.spatialconnect.stores;
 
 public enum SCDataStoreStatus
 {
-    DATA_STORE_STARTED,
-    DATA_STORE_RUNNING,
-    DATA_STORE_PAUSED,
-    DATA_STORE_STOPPED
+    SC_DATA_STORE_STARTED,
+    SC_DATA_STORE_RUNNING,
+    SC_DATA_STORE_PAUSED,
+    SC_DATA_STORE_STOPPED,
+    SC_DATA_SERVICE_ALLSTORESSTARTED
 }
