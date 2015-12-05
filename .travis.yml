@@ -45,4 +45,4 @@ before_script:
 script:
   - echo $ADB_INSTALL_TIMEOUT
   - android list target
-  - ./gradlew --stacktrace --debug connectedAndroidTest
+  - ./gradlew --stacktrace connectedAndroidTest
