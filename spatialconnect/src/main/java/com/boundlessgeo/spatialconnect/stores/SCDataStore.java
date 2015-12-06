@@ -35,6 +35,7 @@ import java.util.UUID;
 
 public abstract class SCDataStore implements SCSpatialStore
 {
+
     private SCDataAdapter adapter;
     // TODO: should we use the SCStoreConfig object instead of the store id?
     private String storeId;
@@ -42,7 +43,8 @@ public abstract class SCDataStore implements SCSpatialStore
     private int version = 0;
     private String type;
     private Context context;
-    private SCDataStoreStatus status = SCDataStoreStatus.DATA_STORE_STOPPED;
+    private SCDataStoreStatus status = SCDataStoreStatus.SC_DATA_STORE_STOPPED;
+    private String defaultLayerName;
 
     public SCDataStore(Context context, SCStoreConfig scStoreConfig)
     {
@@ -122,6 +124,14 @@ public abstract class SCDataStore implements SCSpatialStore
     public void setStatus(SCDataStoreStatus status)
     {
         this.status = status;
+    }
+
+    public String getDefaultLayerName() {
+        return defaultLayerName;
+    }
+
+    public void setDefaultLayerName(String defaultLayerName) {
+        this.defaultLayerName = defaultLayerName;
     }
 
     public Map<String, String> toMap()

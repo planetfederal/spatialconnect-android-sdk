@@ -33,3 +33,12 @@ proguard-project.txt
 
 # Log Files
 *.log
+
+# Android Studio
+.idea
+#.idea/workspace.xml - remove # and delete .idea if it better suit your needs.
+.gradle
+build/
+
+#NDK
+obj/

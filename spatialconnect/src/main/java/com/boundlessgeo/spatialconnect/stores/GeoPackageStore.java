@@ -40,10 +40,15 @@ import rx.functions.Func1;
 public class GeoPackageStore extends SCDataStore {
 
     private static final String STORE_NAME = "GeoPackageStore";
-    private static final String TYPE = "geopackage";
-    private static final int VERSION = 1;
     private static final String LOG_TAG = GeoPackageStore.class.getSimpleName();
     private static final GeometryFactory geometryFactory = new GeometryFactory();
+
+    private static String TYPE = "geopackage";
+    private static int VERSION = 1;
+
+    public static String VersionKey() {
+        return TYPE + "." + VERSION;
+    }
 
     /**
      * Constructor for GeoPackageStore that initializes the data store adapter
@@ -97,7 +102,8 @@ public class GeoPackageStore extends SCDataStore {
                                     if (geoPackage.getFeatureTables().contains(featureTableName)) {
                                         FeatureDao featureDao = geoPackage.getFeatureDao(featureTableName);
                                         try {
-                                            subscriber.onNext(featureDao.queryForAll());
+                                            FeatureCursor fc = featureDao.queryForAll();
+                                            subscriber.onNext(fc);
                                         } catch (Exception e) {
                                             Log.e(LOG_TAG, "Couldn't send next feature");
                                             subscriber.onError(e);
@@ -117,15 +123,17 @@ public class GeoPackageStore extends SCDataStore {
                 new Func1<FeatureCursor, Observable<SCSpatialFeature>>() {
                     @Override
                     public Observable<SCSpatialFeature> call(final FeatureCursor featureCursor) {
-
                         // create a new observable from scratch to emit features (SCGeometrys)
                         return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
 
                             @Override
                             public void call(Subscriber<? super SCSpatialFeature> subscriber) {
                                 try {
+                                    final int queryLimit = 100;
+                                    int queryCount = 0;
                                     while (featureCursor != null && !featureCursor.isClosed()
-                                            && featureCursor.moveToNext()) {
+                                            && featureCursor.moveToNext() && queryCount < queryLimit) {
+                                        queryCount++;
                                         try {
                                             SCSpatialFeature feature = createSCSpatialFeature(featureCursor.getRow());
                                             subscriber.onNext(feature);
@@ -162,8 +170,7 @@ public class GeoPackageStore extends SCDataStore {
                             }
                         }
 
-                )
-                .onBackpressureBuffer();
+                );
     }
 
     @Override
@@ -215,9 +222,9 @@ public class GeoPackageStore extends SCDataStore {
     }
 
     @Override
-    public Observable<Boolean> delete(final SCSpatialFeature scSpatialFeature) {
+    public Observable<Boolean> delete(final SCKeyTuple tuple) {
 
-        final String featureId = scSpatialFeature.getId();
+        final String featureId = tuple.getFeatureId();
 
         return Observable.create(new Observable.OnSubscribe<Boolean>() {
 
@@ -242,20 +249,22 @@ public class GeoPackageStore extends SCDataStore {
     }
 
     @Override
-    public void start() {
-        this.setStatus(SCDataStoreStatus.DATA_STORE_STARTED);
+    public Observable start() {
+        this.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
         this.getAdapter().connect();
         if (this.getAdapter().getStatus().equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)) {
-            this.setStatus(SCDataStoreStatus.DATA_STORE_RUNNING);
+            this.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+            return Observable.empty();
         } else {
-            this.setStatus(SCDataStoreStatus.DATA_STORE_STOPPED);
+            this.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
             Log.w(LOG_TAG, "Could not activate data store " + this.getStoreId());
+            return Observable.error(new Exception("Could not activate data store " + this.getStoreId()));
         }
     }
 
     @Override
     public void stop() {
-
+        this.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
     }
 
     @Override
