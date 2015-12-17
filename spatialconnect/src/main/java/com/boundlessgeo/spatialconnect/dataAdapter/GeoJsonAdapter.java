@@ -124,12 +124,9 @@ public class GeoJsonAdapter extends SCDataAdapter {
                                 } else {
                                     return false;
                                 }
-
                             }
                         }
-
-                )
-                .onBackpressureBuffer();
+                );
 
     }
 

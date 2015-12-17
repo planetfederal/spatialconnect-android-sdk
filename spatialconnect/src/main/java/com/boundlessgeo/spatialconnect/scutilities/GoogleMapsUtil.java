@@ -32,7 +32,7 @@ public class GoogleMapsUtil {
             case MULTIPOINT:
                 MultiPoint multiPoint = (MultiPoint) geomFeature.getGeometry();
                 for (Point point : Geom.iterate(multiPoint)) {
-                    addPointToMap(gmap, point, geomFeature.getId());
+                    addPointToMap(gmap, point, geomFeature.getId(), geomFeature.getKey().getStoreId());
                 }
                 break;
 
@@ -62,16 +62,14 @@ public class GoogleMapsUtil {
             opts.add(new LatLng(c.y, c.x));
         }
         gmap.addPolygon(opts);
-
     }
 
     private static void addPointToMap(GoogleMap gmap, SCGeometry feature) {
-        addPointToMap(gmap, (Point) feature.getGeometry(), feature.getId());
-
+        addPointToMap(gmap, (Point) feature.getGeometry(), feature.getId(), feature.getKey().getStoreId());
     }
 
-    private static void addPointToMap(GoogleMap gmap, Point point, String featureId) {
+    private static void addPointToMap(GoogleMap gmap, Point point, String featureId, String storeId) {
         LatLng latLng = new LatLng(point.getY(), point.getX());
-        gmap.addMarker(new MarkerOptions().position(latLng).title(featureId).snippet("description goes here"));
+        gmap.addMarker(new MarkerOptions().position(latLng).title(featureId).snippet(storeId));
     }
 }
