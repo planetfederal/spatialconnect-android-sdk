@@ -3,6 +3,7 @@ package com.boundlessgeo.spatialconnect.scutilities;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -70,6 +71,10 @@ public class GoogleMapsUtil {
 
     private static void addPointToMap(GoogleMap gmap, Point point, String featureId, String storeId) {
         LatLng latLng = new LatLng(point.getY(), point.getX());
-        gmap.addMarker(new MarkerOptions().position(latLng).title(featureId).snippet(storeId));
+        MarkerOptions mo = new MarkerOptions();
+        mo.position(latLng);
+        mo.title(featureId);
+        mo.snippet(storeId);
+        gmap.addMarker(mo);
     }
 }

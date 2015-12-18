@@ -72,6 +72,11 @@ public class GeoPackageStore extends SCDataStore {
     }
 
     @Override
+    public int getAuthorization() {
+        return 6;
+    }
+
+    @Override
     public Observable<SCSpatialFeature> query(final SCQueryFilter scFilter) {
         final GeoPackageAdapter adapter = (GeoPackageAdapter) this.getAdapter();
         final GeoPackageManager manager = adapter.getGeoPackageManager();

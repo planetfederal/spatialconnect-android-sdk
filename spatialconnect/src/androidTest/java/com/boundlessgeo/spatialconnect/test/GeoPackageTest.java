@@ -66,10 +66,10 @@ public class GeoPackageTest extends BaseTestCase {
             public void call(SCStoreStatusEvent scStoreStatusEvent) {
                 // this is the geopackage located http://www.geopackage.org/data/haiti-vectors-split.gpkg
                 SCDataStore gpkgStore = serviceManager.getDataService().getStoreById("1234");
-                SCQueryFilter filter = new SCQueryFilter();
+
                 // bbox around part of haiti
                 SCBoundingBox bbox = new SCBoundingBox(-73.3901, 18.6261, -72.5097, 19.1627);
-                filter.setPredicate(
+                SCQueryFilter filter = new SCQueryFilter(
                         new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
                 );
                 /** test that there are 1871 features returned.  the reference queryFeature to find this number is:
