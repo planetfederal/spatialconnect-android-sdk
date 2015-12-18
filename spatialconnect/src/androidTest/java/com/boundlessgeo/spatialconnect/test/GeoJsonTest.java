@@ -30,9 +30,8 @@ public class GeoJsonTest extends BaseTestCase {
 
     public void testSearchGeoJsonStore() {
         SCDataStore geoJsonStore = serviceManager.getDataService().getStoreById("504");
-        SCQueryFilter filter = new SCQueryFilter();
         SCBoundingBox bbox = new SCBoundingBox(-90.114326, 29.921762, -90.063558, 29.938573);
-        filter.setPredicate(
+        SCQueryFilter filter = new SCQueryFilter(
                 new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
         );
         geoJsonStore.query(filter).count().subscribe(new Action1<Integer>() {

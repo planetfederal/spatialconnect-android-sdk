@@ -24,12 +24,20 @@
 package com.boundlessgeo.spatialconnect.query;
 
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class SCQueryFilter
 {
     //private List<SCPredicate> predicates;
     private SCPredicate predicate;
+    private List<String> layerIds;
+    private List<String> featureIds;
 
-    public SCQueryFilter() {}
+    public SCQueryFilter() {
+        layerIds = new ArrayList<>();
+        featureIds = new ArrayList<>();
+    }
 
     public SCQueryFilter(SCPredicate scPredicate)
     {
@@ -41,8 +49,12 @@ public class SCQueryFilter
         return predicate;
     }
 
-    public void setPredicate(SCPredicate predicate)
-    {
-        this.predicate = predicate;
+    public void addLayerId(String id) {
+        layerIds.add(id);
     }
+
+    public void addFeatureId(String id) {
+        featureIds.add(id);
+    }
+
 }

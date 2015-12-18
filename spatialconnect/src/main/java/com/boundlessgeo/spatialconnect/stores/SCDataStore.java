@@ -56,6 +56,10 @@ public abstract class SCDataStore implements SCSpatialStore
         }
     }
 
+    public int getAuthorization() {
+        return 4;
+    }
+
     public SCDataAdapter getAdapter()
     {
         return this.adapter;
