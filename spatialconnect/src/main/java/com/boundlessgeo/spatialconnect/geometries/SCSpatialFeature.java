@@ -99,6 +99,14 @@ public class SCSpatialFeature
         this.properties = properties;
     }
 
+    public void setStoreId(String storeId) {
+        this.storeId = storeId;
+    }
+
+    public void setLayerId(String layerId) {
+        this.layerId = layerId;
+    }
+
     public SCKeyTuple getKey() {
         return new SCKeyTuple(this.storeId,this.layerId,this.id);
     }

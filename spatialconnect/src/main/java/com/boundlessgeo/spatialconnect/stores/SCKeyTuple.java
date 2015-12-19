@@ -68,6 +68,16 @@ public class SCKeyTuple {
         return sb.toString();
     }
 
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.storeId);
+        sb.append('.');
+        sb.append(this.layerId);
+        sb.append('.');
+        sb.append(this.featureId);
+        return sb.toString();
+    }
+
     private String encodeString(String s) throws UnsupportedEncodingException {
         byte[] data = s.getBytes("UTF-8");
         return Base64.encodeToString(data,Base64.DEFAULT);
