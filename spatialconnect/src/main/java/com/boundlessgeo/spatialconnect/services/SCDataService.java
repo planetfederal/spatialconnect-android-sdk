@@ -46,8 +46,8 @@ public class SCDataService extends SCService
 
     public void addDefaultStoreImpls()
     {
-        this.supportedStores.add(GeoJsonStore.VersionKey());
-        this.supportedStores.add(GeoPackageStore.VersionKey());
+        this.supportedStores.add(GeoJsonStore.versionKey());
+        this.supportedStores.add(GeoPackageStore.versionKey());
     }
 
     public void startAllStores()

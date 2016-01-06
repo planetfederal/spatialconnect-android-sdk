@@ -41,14 +41,13 @@ public class GeoJsonStore extends SCDataStore {
     private static String TYPE = "geojson";
     private static int VERSION = 1;
 
-    public static String VersionKey() {
+    public static String versionKey() {
         return TYPE + "." + VERSION;
     }
 
     public GeoJsonStore(Context context, SCStoreConfig scStoreConfig) {
         super(context, scStoreConfig);
-        String STORE_NAME = "GeoJsonStore";
-        this.setName(STORE_NAME);
+        this.setName(scStoreConfig.getName());
         this.setType(TYPE);
         this.setVersion(VERSION);
         this.setAdapter(new GeoJsonAdapter(context, scStoreConfig));

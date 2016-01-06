@@ -46,7 +46,7 @@ public class GeoPackageStore extends SCDataStore {
     private static String TYPE = "geopackage";
     private static int VERSION = 1;
 
-    public static String VersionKey() {
+    public static String versionKey() {
         return TYPE + "." + VERSION;
     }
 
@@ -62,7 +62,7 @@ public class GeoPackageStore extends SCDataStore {
     public GeoPackageStore(Context context, SCStoreConfig scStoreConfig) {
         super(context, scStoreConfig);
         // TODO: revist if we want to have setters
-        this.setName(STORE_NAME);
+        this.setName(scStoreConfig.getName());
         this.setType(TYPE);
         this.setVersion(VERSION);
         this.getKey();
