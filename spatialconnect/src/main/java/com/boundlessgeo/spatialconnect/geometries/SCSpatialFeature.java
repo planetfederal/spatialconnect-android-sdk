@@ -24,6 +24,7 @@
 package com.boundlessgeo.spatialconnect.geometries;
 
 
+import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.util.Date;
@@ -36,6 +37,8 @@ public class SCSpatialFeature
     /**
      * For a GeoPackage, the ID will follow the convention storeId.featureTableName.idOfRow
      */
+    protected String storeId;
+    protected String layerId;
     protected String id;
     protected Date created;
     protected Date modified;
@@ -94,5 +97,17 @@ public class SCSpatialFeature
     public void setProperties(Map<String, Object> properties)
     {
         this.properties = properties;
+    }
+
+    public void setStoreId(String storeId) {
+        this.storeId = storeId;
+    }
+
+    public void setLayerId(String layerId) {
+        this.layerId = layerId;
+    }
+
+    public SCKeyTuple getKey() {
+        return new SCKeyTuple(this.storeId,this.layerId,this.id);
     }
 }

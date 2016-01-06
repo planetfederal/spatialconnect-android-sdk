@@ -33,6 +33,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCGeometryCollection;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 
 import org.apache.commons.io.FileUtils;
 
@@ -51,6 +52,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
     private static final String NAME = "GeoJsonAdapter";
     private static final String TYPE = "GeoJson";
     private static final int VERSION = 1;
+    private static final String DEFAULTLAYER = "d";
     private Context context;
     private static final String LOG_TAG = GeoPackageAdapter.class.getSimpleName();
 
@@ -103,9 +105,9 @@ public class GeoJsonAdapter extends SCDataAdapter {
         super.disconnect();
     }
 
-    // using a GeoJSON file to query is not going to be fast
+    // using a GeoJSON file to queryFeature is not going to be fast
     public Observable<SCSpatialFeature> query(final SCQueryFilter filter) {
-        HashSet<SCSpatialFeature> scSpatialFeatures = new HashSet<>();
+        HashSet<SCSpatialFeature> scSpatialFeatures = new HashSet<SCSpatialFeature>();
         SCGeometryFactory factory = new SCGeometryFactory();
         // TODO: updated the Json --> SCSpatialFetures code to use InputStreams instead of Strings
         final SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(
@@ -113,23 +115,27 @@ public class GeoJsonAdapter extends SCDataAdapter {
         );
 
         return Observable.from(collection.getFeatures())
-                .filter(
-                        new Func1<SCSpatialFeature, Boolean>() {
-                            @Override
-                            public Boolean call(SCSpatialFeature feature) {
-                                if (feature instanceof SCGeometry &&
-                                        ((SCGeometry) feature).getGeometry() != null &&
-                                        filter.getPredicate().isInBoundingBox((SCGeometry) feature)) {
-                                    return true;
-                                } else {
-                                    return false;
-                                }
-
-                            }
-                        }
-
-                )
-                .onBackpressureBuffer();
+          .filter(
+            new Func1<SCSpatialFeature, Boolean>() {
+              @Override
+              public Boolean call(SCSpatialFeature feature) {
+                if (feature instanceof SCGeometry &&
+                  ((SCGeometry) feature).getGeometry() != null &&
+                  filter.getPredicate().isInBoundingBox((SCGeometry) feature)) {
+                  return true;
+                } else {
+                  return false;
+                }
+              }
+            }
+          ).map(new Func1<SCSpatialFeature, SCSpatialFeature>() {
+            @Override
+            public SCSpatialFeature call(SCSpatialFeature scSpatialFeature) {
+              scSpatialFeature.setLayerId(DEFAULTLAYER);
+              scSpatialFeature.setStoreId(GeoJsonAdapter.this.scStoreConfig.getUniqueID());
+              return scSpatialFeature;
+            }
+          });
 
     }
 
@@ -142,7 +148,8 @@ public class GeoJsonAdapter extends SCDataAdapter {
 
     }
 
-    public void delete(SCSpatialFeature scSpatialFeature) {
+    public void delete(String featureId) {
+
     }
 
 

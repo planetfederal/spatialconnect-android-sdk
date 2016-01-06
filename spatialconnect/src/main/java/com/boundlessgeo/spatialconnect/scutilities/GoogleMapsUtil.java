@@ -3,6 +3,7 @@ package com.boundlessgeo.spatialconnect.scutilities;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -32,7 +33,7 @@ public class GoogleMapsUtil {
             case MULTIPOINT:
                 MultiPoint multiPoint = (MultiPoint) geomFeature.getGeometry();
                 for (Point point : Geom.iterate(multiPoint)) {
-                    addPointToMap(gmap, point, geomFeature.getId());
+                    addPointToMap(gmap, point, geomFeature.getKey().toString(), geomFeature.getKey().getStoreId());
                 }
                 break;
 
@@ -62,16 +63,18 @@ public class GoogleMapsUtil {
             opts.add(new LatLng(c.y, c.x));
         }
         gmap.addPolygon(opts);
-
     }
 
-    private static void addPointToMap(GoogleMap gmap, SCGeometry feature) {
-        addPointToMap(gmap, (Point) feature.getGeometry(), feature.getId());
-
+    public static Marker addPointToMap(GoogleMap gmap, SCGeometry feature) {
+        return addPointToMap(gmap, (Point) feature.getGeometry(), feature.getId(), feature.getKey().getStoreId());
     }
 
-    private static void addPointToMap(GoogleMap gmap, Point point, String featureId) {
+    public static Marker addPointToMap(GoogleMap gmap, Point point, String featureId, String storeId) {
         LatLng latLng = new LatLng(point.getY(), point.getX());
-        gmap.addMarker(new MarkerOptions().position(latLng).title(featureId).snippet("description goes here"));
+        MarkerOptions mo = new MarkerOptions();
+        mo.position(latLng);
+        mo.title(featureId);
+        mo.snippet(storeId);
+        return gmap.addMarker(mo);
     }
 }
