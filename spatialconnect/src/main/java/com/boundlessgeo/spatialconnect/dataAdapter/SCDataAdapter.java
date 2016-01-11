@@ -26,6 +26,13 @@ package com.boundlessgeo.spatialconnect.dataAdapter;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 
+import rx.Observable;
+
+/**
+ * Instances of SCDataAdapter are responsible for connecting to a data store defined in an SCStoreConfig.
+ *
+ * @param <T>
+ */
 public abstract class SCDataAdapter<T>
 {
     private String name;
@@ -36,7 +43,7 @@ public abstract class SCDataAdapter<T>
     protected SCStoreConfig scStoreConfig;
 
     public SCDataAdapter() {}
-    
+
     public SCDataAdapter(String name, String type, int version)
     {
         this.name = name;
@@ -45,9 +52,10 @@ public abstract class SCDataAdapter<T>
 
     }
 
-    public void connect()
+    public Observable connect()
     {
         this.status = SCDataAdapterStatus.DATA_ADAPTER_CONNECTING;
+        return null;
     }
 
     public void connected()
