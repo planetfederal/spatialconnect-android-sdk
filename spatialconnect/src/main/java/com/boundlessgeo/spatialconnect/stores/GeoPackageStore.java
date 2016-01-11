@@ -19,10 +19,13 @@ import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKBReader;
 import com.vividsolutions.jts.io.WKBWriter;
 
+import java.io.IOException;
+import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.Map;
 
 import mil.nga.geopackage.GeoPackage;
+import mil.nga.geopackage.GeoPackageConstants;
 import mil.nga.geopackage.GeoPackageManager;
 import mil.nga.geopackage.features.user.FeatureCursor;
 import mil.nga.geopackage.features.user.FeatureDao;
@@ -30,6 +33,10 @@ import mil.nga.geopackage.features.user.FeatureRow;
 import mil.nga.geopackage.geom.GeoPackageGeometryData;
 import mil.nga.geopackage.tiles.overlay.GeoPackageOverlayFactory;
 import mil.nga.geopackage.tiles.user.TileDao;
+import mil.nga.wkb.io.ByteReader;
+import mil.nga.wkb.io.ByteWriter;
+import mil.nga.wkb.io.WkbGeometryReader;
+import mil.nga.wkb.io.WkbGeometryWriter;
 import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Func1;
@@ -104,7 +111,9 @@ public class GeoPackageStore extends SCDataStore {
                             public void call(Subscriber<? super FeatureCursor> subscriber) {
 
                                 for (String featureTableName : geoPackage.getFeatureTables()) {
-                                    if (geoPackage.getFeatureTables().contains(featureTableName)) {
+                                    if (geoPackage.getFeatureTables().contains(featureTableName)
+                                      // TODO: update this when we want to edit non-point geometries
+                                      && featureTableName.equals("point_features")) {
                                         FeatureDao featureDao = geoPackage.getFeatureDao(featureTableName);
                                         try {
                                             FeatureCursor fc = featureDao.queryForAll();
@@ -115,8 +124,6 @@ public class GeoPackageStore extends SCDataStore {
                                         }
                                     }
                                 }
-
-                                subscriber.onCompleted();
                             }
                         });
                     }
@@ -217,7 +224,7 @@ public class GeoPackageStore extends SCDataStore {
                         subscriber.onNext(Boolean.FALSE);
                     }
                 } catch (Exception e) {
-                    Log.e(LOG_TAG, "Could not create feature with id " + scSpatialFeature.getId());
+                    Log.e(LOG_TAG, "Could not update feature with id " + scSpatialFeature.getId());
                     subscriber.onError(e);
                 }
                 subscriber.onCompleted();
@@ -254,17 +261,45 @@ public class GeoPackageStore extends SCDataStore {
     }
 
     @Override
-    public Observable start() {
-        this.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
-        this.getAdapter().connect();
-        if (this.getAdapter().getStatus().equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)) {
-            this.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-            return Observable.empty();
-        } else {
-            this.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-            Log.w(LOG_TAG, "Could not activate data store " + this.getStoreId());
-            return Observable.error(new Exception("Could not activate data store " + this.getStoreId()));
-        }
+    public Observable<SCStoreStatusEvent> start() {
+        final String storeId = this.getStoreId();
+        final GeoPackageStore storeInstance = this;
+
+        return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
+          @Override
+          public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
+
+            // subscribe to an Observable/stream that lets us know when the adapter is connected or disconnected
+            storeInstance.getAdapter().connect().subscribe(new Subscriber<SCDataAdapterStatus>() {
+
+                @Override
+                public void onCompleted() {
+                }
+
+                @Override
+                public void onError(Throwable e) {
+                    Log.w(LOG_TAG, "Could not activate data store " + storeId);
+                    storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+                    subscriber.onError(new Exception("Could not activate data store " + storeId));
+                }
+
+                @Override
+                public void onNext(SCDataAdapterStatus status) {
+                    if (status.equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTING)) {
+                        Log.w(LOG_TAG, "Data Store " + storeId + " started to connect");
+                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                        subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STARTED, storeId));
+                    }
+                    if (status.equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)) {
+                        Log.w(LOG_TAG, "Data Store " + storeId + " is now running");
+                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                        subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, storeId));
+                    }
+                }
+            });
+          }
+        });
+
     }
 
     @Override
@@ -336,7 +371,9 @@ public class GeoPackageStore extends SCDataStore {
                 props.put(columnName, row.getValue(columnName));
             }
         }
-
+        // populate the layer and store id
+        scSpatialFeature.setLayerId(row.getTable().getTableName());
+        scSpatialFeature.setStoreId(this.getStoreId());
         return scSpatialFeature;
     }
 
@@ -379,10 +416,12 @@ public class GeoPackageStore extends SCDataStore {
         if (scSpatialFeature instanceof SCGeometry) {
             Geometry geom = ((SCGeometry) scSpatialFeature).getGeometry();
             if (geom != null) {
-                GeoPackageGeometryData geometryData = new GeoPackageGeometryData(
-                        new WKBWriter().write(geom)
-                );
+              try {
+                GeoPackageGeometryData geometryData = new GeoPackageGeometryData(getStandardGeoPackageBinary(geom));
                 featureRow.setGeometry(geometryData);
+              } catch (IOException e) {
+                e.printStackTrace();
+              }
             }
         }
 
@@ -431,4 +470,74 @@ public class GeoPackageStore extends SCDataStore {
         }
     }
 
+    /**
+     * Returns a byte array containing the Geometry as a GeoPackage WKB defined by <a
+     * href="http://www.geopackage.org/spec/#gpb_data_blob_format"> the spec</a>.
+     */
+    private byte[] getStandardGeoPackageBinary(Geometry geometry) throws IOException {
+        byte[] bytes;
+        ByteWriter writer = new ByteWriter();
+
+        // Write GP as the 2 byte magic number
+        writer.writeString(GeoPackageConstants.GEO_PACKAGE_GEOMETRY_MAGIC_NUMBER);
+
+        // Write a byte as the version, value of 0 = version 1
+        writer.writeByte(GeoPackageConstants.GEO_PACKAGE_GEOMETRY_VERSION_1);
+
+        // Build and write a flags byte
+        byte flags = buildFlagsByte(geometry.isEmpty());
+        writer.writeByte(flags);
+        writer.setByteOrder(java.nio.ByteOrder.nativeOrder());
+
+        // Write the 4 byte srs id int
+        writer.writeInt(geometry.getSRID());
+
+        // Write the envelope
+        writer.writeDouble(geometry.getEnvelopeInternal().getMinX());
+        writer.writeDouble(geometry.getEnvelopeInternal().getMaxX());
+        writer.writeDouble(geometry.getEnvelopeInternal().getMinY());
+        writer.writeDouble(geometry.getEnvelopeInternal().getMaxY());
+
+        // Write the WKBGeometry
+        WkbGeometryWriter.writeGeometry(writer,
+                // create mil.nga.wkb.geom.Geometry from WKBGeometry byte array
+                WkbGeometryReader.readGeometry(new ByteReader(new WKBWriter().write(geometry)))
+        );
+
+        // Get the bytes
+        bytes = writer.getBytes();
+
+        // Close the writer
+        writer.close();
+
+        return bytes;
+    }
+
+    /**
+     * Build the flags byte from the flag values.  See http://www.geopackage.org/spec/#flags_layout
+     * @return envelope indicator
+     */
+    private byte buildFlagsByte(boolean empty) {
+
+        byte flag = 0;
+
+        // Add the binary type to bit 5, 0 for standard and 1 for extended
+        int binaryType =  0;
+        flag += (binaryType << 5);
+
+        // Add the empty geometry flag to bit 4, 0 for non-empty and 1 for
+        // empty
+        int emptyValue = empty ? 1 : 0;
+        flag += (emptyValue << 4);
+
+        // Add the envelope contents indicator code (3-bit unsigned integer to bits 3, 2, and 1)
+        int envelopeIndicator = empty ? 0 : 1;
+        flag += (envelopeIndicator << 1);
+
+        // Add the byte order to bit 0, 0 for Big Endian and 1 for Little Endian
+        int byteOrderValue = (java.nio.ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN) ? 0 : 1;
+        flag += byteOrderValue;
+
+        return flag;
+    }
 }

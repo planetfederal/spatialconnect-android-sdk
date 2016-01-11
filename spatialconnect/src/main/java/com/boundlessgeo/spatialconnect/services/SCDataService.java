@@ -76,13 +76,24 @@ public class SCDataService extends SCService
                 this.startStore((SCDataStoreLifeCycle) stores.get(key));
             }
         }
+//
+//        // TODO: notify the listView adapter in DataStoreManagerFragment....but don't want tight coupling
+//        // maybe startAllStores should return an Observable as well
+//        storeEventSubject.subscribe(new Action1<SCStoreStatusEvent>() {
+//          @Override
+//          public void call(SCStoreStatusEvent scStoreStatusEvent) {
+//            if (scStoreStatusEvent.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+//              // adapter.notifyDataSetChanged();
+//            }
+//          }
+//        });
     }
 
     private void startStore(SCDataStoreLifeCycle s) {
         s.start().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
             public void call(SCStoreStatusEvent s) {
-                System.out.println(s.getStatus() + " " + s.getStoreId());
+                storeEventSubject.onNext(s);
             }
         },new Action1<Throwable>(){
             @Override
@@ -92,7 +103,7 @@ public class SCDataService extends SCService
         },new Action0() {
             @Override
             public void call() {
-                System.out.println();
+                System.out.println("Completed the starting of the store.");
             }
         });
     }
