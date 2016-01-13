@@ -79,8 +79,8 @@ public class GeoPackageStore extends SCDataStore {
     }
 
     @Override
-    public int getAuthorization() {
-        return 6;
+    public DataStorePermissionEnum getAuthorization() {
+        return DataStorePermissionEnum.READ_WRITE;
     }
 
     @Override
