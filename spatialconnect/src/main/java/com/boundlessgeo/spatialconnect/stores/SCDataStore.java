@@ -56,8 +56,8 @@ public abstract class SCDataStore implements SCSpatialStore
         }
     }
 
-    public int getAuthorization() {
-        return 4;
+    public DataStorePermissionEnum getAuthorization() {
+        return DataStorePermissionEnum.READ;
     }
 
     public SCDataAdapter getAdapter()
@@ -152,5 +152,9 @@ public abstract class SCDataStore implements SCSpatialStore
     @Override
     public String toString() {
         return storeId + "." + name;
+    }
+
+    public enum DataStorePermissionEnum {
+        READ, READ_WRITE
     }
 }
