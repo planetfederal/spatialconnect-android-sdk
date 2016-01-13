@@ -124,6 +124,7 @@ public class GeoPackageStore extends SCDataStore {
                                         }
                                     }
                                 }
+                                subscriber.onCompleted();
                             }
                         });
                     }
@@ -162,8 +163,8 @@ public class GeoPackageStore extends SCDataStore {
                                     subscriber.onCompleted();
                                 }
                             }
-
-                        });
+                        }).onBackpressureBuffer();  // this is needed otherwise the filter can't keep up and will
+                        // throw MissingBackpressureException
                     }
                 })
                 // filter out the features that aren't within the filter's bounding box
@@ -181,7 +182,6 @@ public class GeoPackageStore extends SCDataStore {
 
                             }
                         }
-
                 );
     }
 
