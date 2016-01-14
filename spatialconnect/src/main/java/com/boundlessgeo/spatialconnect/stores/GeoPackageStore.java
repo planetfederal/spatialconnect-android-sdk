@@ -188,14 +188,38 @@ public class GeoPackageStore extends SCDataStore {
     @Override
     public Observable<Boolean> create(final SCSpatialFeature scSpatialFeature) {
 
-        final FeatureRow newRow = toFeatureRow(scSpatialFeature);
+        // for now we'll only allow writing to the point_features table
+        // TODO: reafactor this when refactoring away from id as store.layer.featureid
+        final GeoPackageManager manager = ((GeoPackageAdapter) this.getAdapter()).getGeoPackageManager();
+        final GeoPackage geoPackage = manager.open(this.getAdapter().getDataStoreName());
+        final FeatureDao featureDao = geoPackage.getFeatureDao("point_features");
+        final FeatureRow newRow = featureDao.newRow();
+
+        // populate the new row with feature data
+        Geometry geom = ((SCGeometry) scSpatialFeature).getGeometry();
+        if (geom != null) {
+          try {
+            GeoPackageGeometryData geometryData = new GeoPackageGeometryData(getStandardGeoPackageBinary(geom));
+            newRow.setGeometry(geometryData);
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+        }
+        // add all the properties to the matching columns
+        for (String key : scSpatialFeature.getProperties().keySet()) {
+          if (Arrays.asList(featureDao.getTable().getColumnNames()).contains(key)) {
+            if (!key.equals("id")) {
+              newRow.setValue(key, scSpatialFeature.getProperties().get(key));
+            }
+          }
+        }
 
         return Observable.create(new Observable.OnSubscribe<Boolean>() {
 
             @Override
             public void call(Subscriber<? super Boolean> subscriber) {
                 try {
-                    getFeatureDao(scSpatialFeature.getId()).create(newRow);
+                   featureDao.create(newRow);
                     subscriber.onNext(Boolean.TRUE);
                 } catch (Exception e) {
                     Log.e(LOG_TAG, "Could not create feature with id " + scSpatialFeature.getId());
