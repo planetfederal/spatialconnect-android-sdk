@@ -111,9 +111,7 @@ public class GeoPackageStore extends SCDataStore {
                             public void call(Subscriber<? super FeatureCursor> subscriber) {
 
                                 for (String featureTableName : geoPackage.getFeatureTables()) {
-                                    if (geoPackage.getFeatureTables().contains(featureTableName)
-                                      // TODO: update this when we want to edit non-point geometries
-                                      && featureTableName.equals("point_features")) {
+                                    if (geoPackage.getFeatureTables().contains(featureTableName)) {
                                         FeatureDao featureDao = geoPackage.getFeatureDao(featureTableName);
                                         try {
                                             FeatureCursor fc = featureDao.queryForAll();
