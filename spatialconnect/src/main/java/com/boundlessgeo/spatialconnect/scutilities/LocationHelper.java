@@ -18,6 +18,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 
 import rx.Observable;
+import rx.subjects.AsyncSubject;
 import rx.subjects.PublishSubject;
 
 
@@ -25,6 +26,12 @@ import rx.subjects.PublishSubject;
  * LocationHelper is used to provide GPS functionality to a GoogleMap or other component that needs the users current
  * location.  It can enable/disable GPS listening, can get the users location using the GPS provider, and also handles
  * the process of asking the user for permission to use the GPS to obtain their current location.
+ *
+ * For android 6.0 (API 23) you need to explicitly get permission to use GPS location at runtime.  See
+ * <a href="http://developer.android..com/training/permissions/requesting.html"> the docs </a> for more info.
+ *
+ *
+ * http://developer.android.com/training/location/retrieve-current.html
  */
 public class LocationHelper implements ActivityCompat.OnRequestPermissionsResultCallback,
         GoogleMap.OnMyLocationButtonClickListener, LocationListener {
@@ -34,8 +41,10 @@ public class LocationHelper implements ActivityCompat.OnRequestPermissionsResult
     private LocationManager locationManager;
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1; // 1 is an arbitrary request code
     private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 10; // 10 meters
-    private static final long MIN_TIME_BETWEEN_UPDATES = 1000 * 60 * 1; // 1 minute
+    private static final long MIN_TIME_BETWEEN_UPDATES = 1000; // every second
     private static final PublishSubject<Location> LOCATION_SUBJECT = PublishSubject.create();
+    private static final AsyncSubject<Boolean> PERMISSION_SUBJECT = AsyncSubject.create();
+
 
     public LocationHelper(Context context) {
         this.context = context;
@@ -121,9 +130,13 @@ public class LocationHelper implements ActivityCompat.OnRequestPermissionsResult
 
                     // permission was granted, so now simulate the button being clicked with the permission granted
                     this.onMyLocationButtonClick();
+                    PERMISSION_SUBJECT.onNext(true);
+                    PERMISSION_SUBJECT.onCompleted();
                 } else {
                     // permission denied, boo! Disable the
                     // functionality that depends on this permission.
+                    PERMISSION_SUBJECT.onNext(false);
+                    PERMISSION_SUBJECT.onCompleted();
                 }
                 return;
             }
@@ -182,6 +195,15 @@ public class LocationHelper implements ActivityCompat.OnRequestPermissionsResult
             locationManager.removeUpdates(this);
         }
     }
+
+   public Observable<Boolean> requestGPSPermission() {
+       ActivityCompat.requestPermissions(
+          (Activity) context,
+          new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+          PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION
+       );
+       return PERMISSION_SUBJECT;
+   }
 
 }
 
