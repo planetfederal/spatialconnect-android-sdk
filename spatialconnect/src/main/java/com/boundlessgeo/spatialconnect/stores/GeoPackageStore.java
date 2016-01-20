@@ -52,6 +52,7 @@ public class GeoPackageStore extends SCDataStore {
 
     private static String TYPE = "geopackage";
     private static int VERSION = 1;
+    private static final int DEFUALT_FEATURE_LIMIT = 100;
 
     public static String versionKey() {
         return TYPE + "." + VERSION;
@@ -87,6 +88,9 @@ public class GeoPackageStore extends SCDataStore {
     public Observable<SCSpatialFeature> query(final SCQueryFilter scFilter) {
         final GeoPackageAdapter adapter = (GeoPackageAdapter) this.getAdapter();
         final GeoPackageManager manager = adapter.getGeoPackageManager();
+        int numberOfLayers = manager.open(adapter.getDataStoreName()).getFeatureTables().size();
+
+        final int featuresPerStoreLimit = Math.round(DEFUALT_FEATURE_LIMIT / numberOfLayers);
 
         // create a stream for the geopackage database name of this store
         Observable<String> databaseStream = Observable.just(adapter.getDataStoreName());
@@ -129,6 +133,7 @@ public class GeoPackageStore extends SCDataStore {
                 }
         );
 
+
         // return the stream of matching features
         return featureCursorStream.flatMap(
                 new Func1<FeatureCursor, Observable<SCSpatialFeature>>() {
@@ -136,18 +141,20 @@ public class GeoPackageStore extends SCDataStore {
                     public Observable<SCSpatialFeature> call(final FeatureCursor featureCursor) {
                         // create a new observable from scratch to emit features (SCGeometrys)
                         return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
-
                             @Override
                             public void call(Subscriber<? super SCSpatialFeature> subscriber) {
                                 try {
-                                    final int queryLimit = 100;
-                                    int queryCount = 0;
+                                    int featuresCount = 0;
                                     while (featureCursor != null && !featureCursor.isClosed()
-                                            && featureCursor.moveToNext() && queryCount < queryLimit) {
-                                        queryCount++;
+                                            && featureCursor.moveToNext() && featuresCount < featuresPerStoreLimit) {
                                         try {
                                             SCSpatialFeature feature = createSCSpatialFeature(featureCursor.getRow());
-                                            subscriber.onNext(feature);
+                                            if (feature instanceof SCGeometry &&
+                                                    ((SCGeometry) feature).getGeometry() != null &&
+                                                    scFilter.getPredicate().isInBoundingBox((SCGeometry) feature)) {
+                                                featuresCount++;
+                                                subscriber.onNext(feature);
+                                            }
                                         } catch (ParseException e) {
                                             Log.w(LOG_TAG, "Couldn't parse the geometry.");
                                             subscriber.onError(e);
@@ -164,23 +171,7 @@ public class GeoPackageStore extends SCDataStore {
                         }).onBackpressureBuffer();  // this is needed otherwise the filter can't keep up and will
                         // throw MissingBackpressureException
                     }
-                })
-                // filter out the features that aren't within the filter's bounding box
-                .filter(
-                        new Func1<SCSpatialFeature, Boolean>() {
-                            @Override
-                            public Boolean call(SCSpatialFeature feature) {
-                                if (feature instanceof SCGeometry &&
-                                        ((SCGeometry) feature).getGeometry() != null &&
-                                        scFilter.getPredicate().isInBoundingBox((SCGeometry) feature)) {
-                                    return true;
-                                } else {
-                                    return false;
-                                }
-
-                            }
-                        }
-                );
+                });
     }
 
     @Override
