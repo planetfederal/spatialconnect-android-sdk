@@ -88,8 +88,10 @@ public class GeoPackageStore extends SCDataStore {
     public Observable<SCSpatialFeature> query(final SCQueryFilter scFilter) {
         final GeoPackageAdapter adapter = (GeoPackageAdapter) this.getAdapter();
         final GeoPackageManager manager = adapter.getGeoPackageManager();
-        int numberOfLayers = manager.open(adapter.getDataStoreName()).getFeatureTables().size();
-
+        int numberOfLayers = 1;
+        if (manager.open(adapter.getDataStoreName()).getFeatureTables().size() == 0) {
+          numberOfLayers = manager.open(adapter.getDataStoreName()).getFeatureTables().size();
+        }
         final int featuresPerStoreLimit = Math.round(DEFUALT_FEATURE_LIMIT / numberOfLayers);
 
         // create a stream for the geopackage database name of this store
@@ -317,7 +319,7 @@ public class GeoPackageStore extends SCDataStore {
 
     @Override
     public void stop() {
-        this.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+      this.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
     }
 
     @Override
@@ -419,7 +421,7 @@ public class GeoPackageStore extends SCDataStore {
         // add all the properties to the matching columns
         for (String key : scSpatialFeature.getProperties().keySet()) {
             if (Arrays.asList(featureDao.getTable().getColumnNames()).contains(key)) {
-                if (!key.equals(featureRow.getPkColumn().getName())) {
+              if (!key.equals(featureRow.getPkColumn().getName())) {
                     featureRow.setValue(key, scSpatialFeature.getProperties().get(key));
                 }
             }
