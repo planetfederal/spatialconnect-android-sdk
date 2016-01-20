@@ -428,7 +428,7 @@ public class GeoPackageStore extends SCDataStore {
         // add all the properties to the matching columns
         for (String key : scSpatialFeature.getProperties().keySet()) {
             if (Arrays.asList(featureDao.getTable().getColumnNames()).contains(key)) {
-                if (!key.equals("id")) {
+                if (!key.equals(featureRow.getPkColumn().getName())) {
                     featureRow.setValue(key, scSpatialFeature.getProperties().get(key));
                 }
             }
