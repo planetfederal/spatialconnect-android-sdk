@@ -62,10 +62,8 @@ public class GeoPackageStore extends SCDataStore {
      * Constructor for GeoPackageStore that initializes the data store adapter
      * based on the scStoreConfig.
      *
-     * @param context
-     *         instance of the current activity's context
-     * @param scStoreConfig
-     *         instance of the configuration needed to configure the store
+     * @param context       instance of the current activity's context
+     * @param scStoreConfig instance of the configuration needed to configure the store
      */
     public GeoPackageStore(Context context, SCStoreConfig scStoreConfig) {
         super(context, scStoreConfig);
@@ -89,8 +87,8 @@ public class GeoPackageStore extends SCDataStore {
         final GeoPackageAdapter adapter = (GeoPackageAdapter) this.getAdapter();
         final GeoPackageManager manager = adapter.getGeoPackageManager();
         int numberOfLayers = 1;
-        if (manager.open(adapter.getDataStoreName()).getFeatureTables().size() == 0) {
-          numberOfLayers = manager.open(adapter.getDataStoreName()).getFeatureTables().size();
+        if (manager.open(adapter.getDataStoreName()).getFeatureTables().size() > 0) {
+            numberOfLayers = manager.open(adapter.getDataStoreName()).getFeatureTables().size();
         }
         final int featuresPerStoreLimit = Math.round(DEFUALT_FEATURE_LIMIT / numberOfLayers);
 
@@ -189,20 +187,20 @@ public class GeoPackageStore extends SCDataStore {
         // populate the new row with feature data
         Geometry geom = ((SCGeometry) scSpatialFeature).getGeometry();
         if (geom != null) {
-          try {
-            GeoPackageGeometryData geometryData = new GeoPackageGeometryData(getStandardGeoPackageBinary(geom));
-            newRow.setGeometry(geometryData);
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
+            try {
+                GeoPackageGeometryData geometryData = new GeoPackageGeometryData(getStandardGeoPackageBinary(geom));
+                newRow.setGeometry(geometryData);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         // add all the properties to the matching columns
         for (String key : scSpatialFeature.getProperties().keySet()) {
-          if (Arrays.asList(featureDao.getTable().getColumnNames()).contains(key)) {
-            if (!key.equals("id")) {
-              newRow.setValue(key, scSpatialFeature.getProperties().get(key));
+            if (Arrays.asList(featureDao.getTable().getColumnNames()).contains(key)) {
+                if (!key.equals("id")) {
+                    newRow.setValue(key, scSpatialFeature.getProperties().get(key));
+                }
             }
-          }
         }
 
         return Observable.create(new Observable.OnSubscribe<Boolean>() {
@@ -210,7 +208,7 @@ public class GeoPackageStore extends SCDataStore {
             @Override
             public void call(Subscriber<? super Boolean> subscriber) {
                 try {
-                   featureDao.create(newRow);
+                    featureDao.create(newRow);
                     subscriber.onNext(Boolean.TRUE);
                 } catch (Exception e) {
                     Log.e(LOG_TAG, "Could not create feature with id " + scSpatialFeature.getId());
@@ -281,45 +279,45 @@ public class GeoPackageStore extends SCDataStore {
         final GeoPackageStore storeInstance = this;
 
         return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
-          @Override
-          public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
+            @Override
+            public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
 
-            // subscribe to an Observable/stream that lets us know when the adapter is connected or disconnected
-            storeInstance.getAdapter().connect().subscribe(new Subscriber<SCDataAdapterStatus>() {
+                // subscribe to an Observable/stream that lets us know when the adapter is connected or disconnected
+                storeInstance.getAdapter().connect().subscribe(new Subscriber<SCDataAdapterStatus>() {
 
-                @Override
-                public void onCompleted() {
-                }
-
-                @Override
-                public void onError(Throwable e) {
-                    Log.w(LOG_TAG, "Could not activate data store " + storeId);
-                    storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-                    subscriber.onError(new Exception("Could not activate data store " + storeId));
-                }
-
-                @Override
-                public void onNext(SCDataAdapterStatus status) {
-                    if (status.equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTING)) {
-                        Log.w(LOG_TAG, "Data Store " + storeId + " started to connect");
-                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                        subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STARTED, storeId));
+                    @Override
+                    public void onCompleted() {
                     }
-                    if (status.equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)) {
-                        Log.w(LOG_TAG, "Data Store " + storeId + " is now running");
-                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                        subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, storeId));
+
+                    @Override
+                    public void onError(Throwable e) {
+                        Log.w(LOG_TAG, "Could not activate data store " + storeId);
+                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+                        subscriber.onError(new Exception("Could not activate data store " + storeId));
                     }
-                }
-            });
-          }
+
+                    @Override
+                    public void onNext(SCDataAdapterStatus status) {
+                        if (status.equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTING)) {
+                            Log.w(LOG_TAG, "Data Store " + storeId + " started to connect");
+                            storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                            subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STARTED, storeId));
+                        }
+                        if (status.equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)) {
+                            Log.w(LOG_TAG, "Data Store " + storeId + " is now running");
+                            storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                            subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, storeId));
+                        }
+                    }
+                });
+            }
         });
 
     }
 
     @Override
     public void stop() {
-      this.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+        this.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
     }
 
     @Override
@@ -355,11 +353,8 @@ public class GeoPackageStore extends SCDataStore {
     /**
      * Creates an SCSpatialFeature instance from a FeatureRow.
      *
-     * @param row
-     *         a populated FeatureRow instance
-     *
+     * @param row a populated FeatureRow instance
      * @return SCSpatialFeature instance populated with the data from the FeatureRow
-     *
      * @throws ParseException
      */
     protected SCSpatialFeature createSCSpatialFeature(final FeatureRow row) throws ParseException {
@@ -396,17 +391,15 @@ public class GeoPackageStore extends SCDataStore {
      * Helper method that returns a new FeatureRow instance based on the properties of an
      * SCSptaialFeature instance.  If the SCSpatialFeature instance represents an existing
      * FeatureRow, then that row is used, otherwise a new instance is created.
-     *
+     * <p/>
      * Note that it is not possible to set the id of a new FeatureRow because the
      * <a href="http://www.geopackage.org/spec/#requirement_feature_integer_pk">
      * GeoPackage specification</a> requires that the id is auto incremented.  Also, when
      * constructing the FeatureRow, this method will ignore any properties of the SCSpatialFeature
      * instance that do not already have a corresponding column in the feature table.
      *
-     * @param scSpatialFeature
-     *         instance of an SCSpatialFeature that will be converted to a new
-     *         FeatureRow instance.
-     *
+     * @param scSpatialFeature instance of an SCSpatialFeature that will be converted to a new
+     *                         FeatureRow instance.
      * @return a FeatureRow instance populated with all the properties from the scSpatialFeature
      */
     protected FeatureRow toFeatureRow(final SCSpatialFeature scSpatialFeature) {
@@ -421,8 +414,41 @@ public class GeoPackageStore extends SCDataStore {
         // add all the properties to the matching columns
         for (String key : scSpatialFeature.getProperties().keySet()) {
             if (Arrays.asList(featureDao.getTable().getColumnNames()).contains(key)) {
-              if (!key.equals(featureRow.getPkColumn().getName())) {
-                    featureRow.setValue(key, scSpatialFeature.getProperties().get(key));
+                if (!key.equals(featureRow.getPkColumn().getName())) {
+                    // ugly casting to make types pass validation
+                    String stringValue = String.valueOf(scSpatialFeature.getProperties().get(key));
+                    switch (featureRow.getColumn(key).getDataType()) {
+                        case SMALLINT: {
+                            featureRow.setValue(key, Short.valueOf(stringValue));
+                            break;
+                        }
+                        case MEDIUMINT: {
+                            featureRow.setValue(key, Integer.valueOf(stringValue));
+                            break;
+                        }
+                        case INT: {
+                            featureRow.setValue(key, Long.valueOf(stringValue));
+                            break;
+                        }
+                        case INTEGER: {
+                            featureRow.setValue(key, Long.valueOf(stringValue));
+                            break;
+                        }
+                        case DOUBLE: {
+                            featureRow.setValue(key, Double.valueOf(stringValue));
+                            break;
+                        }
+                        case REAL: {
+                            featureRow.setValue(key, Double.valueOf(stringValue));
+                            break;
+                        }
+                        default: {
+                            featureRow.setValue(key,
+                                    featureRow.getColumn(key).getDataType().getClassType().cast(stringValue)
+                            );
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -431,12 +457,12 @@ public class GeoPackageStore extends SCDataStore {
         if (scSpatialFeature instanceof SCGeometry) {
             Geometry geom = ((SCGeometry) scSpatialFeature).getGeometry();
             if (geom != null) {
-              try {
-                GeoPackageGeometryData geometryData = new GeoPackageGeometryData(getStandardGeoPackageBinary(geom));
-                featureRow.setGeometry(geometryData);
-              } catch (IOException e) {
-                e.printStackTrace();
-              }
+                try {
+                    GeoPackageGeometryData geometryData = new GeoPackageGeometryData(getStandardGeoPackageBinary(geom));
+                    featureRow.setGeometry(geometryData);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
@@ -447,9 +473,7 @@ public class GeoPackageStore extends SCDataStore {
      * Helper method that returns the FeatureDao instance based on the feature table name found
      * within the scSpatialFeature's id.
      *
-     * @param featureId
-     *         the feature id of the SCSpatialFeature instance
-     *
+     * @param featureId the feature id of the SCSpatialFeature instance
      * @return the instance of the FeatureDao used to interact with the feature table that the
      * feature belongs to
      */
@@ -461,12 +485,16 @@ public class GeoPackageStore extends SCDataStore {
     }
 
 
-    /** returns the store id from an id with format storeId.featureTableName.idOfRow **/
+    /**
+     * returns the store id from an id with format storeId.featureTableName.idOfRow
+     **/
     protected static String getStoreId(String featureId) {
         return featureId.split("\\.")[0];
     }
 
-    /** returns the feature table name from an id with format storeId.featureTableName.idOfRow **/
+    /**
+     * returns the feature table name from an id with format storeId.featureTableName.idOfRow
+     **/
     protected static String getFeatureTableName(String featureId) {
         if (featureId.split("\\.").length >= 1) {
             return featureId.split("\\.")[1];
@@ -475,7 +503,9 @@ public class GeoPackageStore extends SCDataStore {
         }
     }
 
-    /** returns the rowId from an id with format storeId.featureTableName.idOfRow **/
+    /**
+     * returns the rowId from an id with format storeId.featureTableName.idOfRow
+     **/
     protected static String getRowId(String featureId) {
         if (featureId.split("\\.").length >= 2) {
             return featureId.split("\\.")[2];
@@ -530,6 +560,7 @@ public class GeoPackageStore extends SCDataStore {
 
     /**
      * Build the flags byte from the flag values.  See http://www.geopackage.org/spec/#flags_layout
+     *
      * @return envelope indicator
      */
     private byte buildFlagsByte(boolean empty) {
@@ -537,7 +568,7 @@ public class GeoPackageStore extends SCDataStore {
         byte flag = 0;
 
         // Add the binary type to bit 5, 0 for standard and 1 for extended
-        int binaryType =  0;
+        int binaryType = 0;
         flag += (binaryType << 5);
 
         // Add the empty geometry flag to bit 4, 0 for non-empty and 1 for
