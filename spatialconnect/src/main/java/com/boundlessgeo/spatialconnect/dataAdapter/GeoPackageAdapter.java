@@ -49,7 +49,7 @@ import rx.schedulers.Schedulers;
 public class GeoPackageAdapter extends SCDataAdapter {
 
     private static final String NAME = "GeoPackageAdapter";
-    private static final String TYPE = "GeoPackage";
+    private static final String TYPE = "gpkg";
     private static final int VERSION = 1;
     private Context context;
     private final String LOG_TAG = GeoPackageAdapter.class.getSimpleName();

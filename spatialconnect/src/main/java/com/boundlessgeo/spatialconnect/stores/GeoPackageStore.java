@@ -50,7 +50,7 @@ public class GeoPackageStore extends SCDataStore {
     private static final String LOG_TAG = GeoPackageStore.class.getSimpleName();
     private static final GeometryFactory geometryFactory = new GeometryFactory();
 
-    private static String TYPE = "geopackage";
+    private static String TYPE = "gpkg";
     private static int VERSION = 1;
     private static final int DEFUALT_FEATURE_LIMIT = 100;
 

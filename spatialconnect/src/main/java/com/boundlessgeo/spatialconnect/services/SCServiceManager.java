@@ -67,11 +67,11 @@ public class SCServiceManager {
                                 new GeoJsonStore(context, scStoreConfig)
                         );
                         Log.d(LOG_TAG, "Registered geojson.1 store.");
-                    } else if (key.equals("geopackage.1")) {
+                    } else if (key.equals("gpkg.1")) {
                         dataService.registerStore(
                                 new GeoPackageStore(context, scStoreConfig)
                         );
-                        Log.d(LOG_TAG, "Registered geopackage.1 store.");
+                        Log.d(LOG_TAG, "Registered gpkg.1 store.");
                     }
                 }
             }

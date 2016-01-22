@@ -65,7 +65,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
         super.connect();
 
         // if the file was packaged with the application, then attempt to connect
-        if (scStoreConfig.isInApp()) {
+        if (scStoreConfig.isMainBundle()) {
             // first check if the GeoJson file already exists in the internal storage location specified in the uri
             File f = new File(context.getFilesDir(), scStoreConfig.getUri());
             if (!f.exists()) {
