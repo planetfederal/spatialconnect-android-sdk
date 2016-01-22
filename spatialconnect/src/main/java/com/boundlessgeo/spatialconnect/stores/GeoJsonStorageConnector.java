@@ -44,7 +44,7 @@ public class GeoJsonStorageConnector
     {
         this.context = context;
         this.scStoreConfig = scStoreConfig;
-        if(scStoreConfig.isInApp())
+        if(scStoreConfig.isMainBundle())
         {
             this.storageType = AndroidStorageType.INTERNAL;
         }
@@ -53,7 +53,7 @@ public class GeoJsonStorageConnector
             this.storageType = AndroidStorageType.EXTERNAL;
         }
     }
-    
+
     public String getGeoJsonTextFromFile()
     {
         return SCFileUtilities.readTextFile(scStoreConfig.getUri(), storageType, context);

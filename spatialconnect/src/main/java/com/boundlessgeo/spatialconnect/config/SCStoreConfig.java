@@ -44,7 +44,7 @@ public class SCStoreConfig
     /**
      * Indicates whether the store is packaged within the APK itself.
      */
-    private boolean isInApp;
+    private boolean isMainBundle;
 
     /**
      * The URI to the store.  Could be a file path or an HTTP(S) URL
@@ -84,9 +84,9 @@ public class SCStoreConfig
         this.version = version;
     }
 
-    public boolean isInApp() { return isInApp; }
+    public boolean isMainBundle() { return isMainBundle; }
 
-    public void setIsInApp(boolean isInApp) { this.isInApp = isInApp; }
+    public void setIsMainBundle(boolean isMainBundle) { this.isMainBundle = isMainBundle; }
 
     public String getUri()
     {
