@@ -24,6 +24,9 @@ import java.util.Map;
 import java.util.Scanner;
 
 /**
+ * Based on the WebViewJavascriptBridge but sets up the SCJavacriptBridgeHandler to call the appropriate handlers
+ * instead of using callbacks.
+ *
  * @see <a href="https://github.com/boundlessgeo/WebViewJavascriptBridge/blob/master/Android/WebViewJavascriptBridge/src/com/fangjian/WebViewJavascriptBridge.java">https://github.com/boundlessgeo/WebViewJavascriptBridge/blob/master/Android/WebViewJavascriptBridge/src/com/fangjian/WebViewJavascriptBridge.java</a>
  */
 public class WebViewJavascriptBridge implements Serializable {
@@ -39,6 +42,8 @@ public class WebViewJavascriptBridge implements Serializable {
     public WebViewJavascriptBridge(Activity context, WebView webview, WVJBHandler handler) {
         this.mContext = context;
         this.mWebView = webview;
+        // pass this instance to the bridge so it can call the appropriate handlers
+        ((SCJavascriptBridgeHandler) handler).setBridge(this);
         this._messageHandler = handler;
         _messageHandlers = new HashMap<String, WVJBHandler>();
         _responseCallbacks = new HashMap<String, WVJBResponseCallback>();
@@ -137,11 +142,8 @@ public class WebViewJavascriptBridge implements Serializable {
             if (null != handlerName) {
                 handler = _messageHandlers.get(handlerName);
                 if (null == handler) {
-                    Log.e("test", "WVJB Warning: No handle" +
-                            "" +
-                            "r for " + handlerName);
+                    Log.e("test", "WVJB Warning: No handler for " + handlerName);
                     return;
-
                 }
             } else {
                 handler = _messageHandler;
