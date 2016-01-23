@@ -133,8 +133,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
             public SCSpatialFeature call(SCSpatialFeature scSpatialFeature) {
               scSpatialFeature.setLayerId(DEFAULTLAYER);
               scSpatialFeature.setStoreId(GeoJsonAdapter.this.scStoreConfig.getUniqueID());
-              String originalFeatureId = scSpatialFeature.getId();
-              scSpatialFeature.setId(scStoreConfig.getUniqueID() + "." + DEFAULTLAYER + "." + originalFeatureId);
+              scSpatialFeature.setId(scSpatialFeature.getId());
               return scSpatialFeature;
             }
           });
