@@ -73,7 +73,7 @@ public class GoogleMapsUtil {
         LatLng latLng = new LatLng(point.getY(), point.getX());
         MarkerOptions mo = new MarkerOptions();
         mo.position(latLng);
-        mo.title(featureId);
+        mo.title(featureId.split("\\.")[1] + "." + featureId.split("\\.")[2]);
         mo.snippet(storeId);
         return gmap.addMarker(mo);
     }
