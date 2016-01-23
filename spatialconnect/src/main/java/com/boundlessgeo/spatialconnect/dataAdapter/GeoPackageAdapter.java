@@ -28,6 +28,8 @@ import android.content.Context;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
+import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -53,18 +55,20 @@ public class GeoPackageAdapter extends SCDataAdapter {
     private static final int VERSION = 1;
     private Context context;
     private final String LOG_TAG = GeoPackageAdapter.class.getSimpleName();
+    private GeoPackageStore store;
 
     /**
      * GeoPackage manager
      */
     private GeoPackageManager manager;
 
-    public GeoPackageAdapter(Context context, SCStoreConfig scStoreConfig) {
+    public GeoPackageAdapter(Context context, SCStoreConfig scStoreConfig, GeoPackageStore store) {
         super(NAME, TYPE, VERSION);
         this.context = context;
         this.scStoreConfig = scStoreConfig;
         // initialize geopackage manager
         manager = GeoPackageFactory.getManager(context);
+        this.store = store;
     }
 
     @Override
@@ -76,7 +80,6 @@ public class GeoPackageAdapter extends SCDataAdapter {
              public void call(final Subscriber<? super SCDataAdapterStatus> subscriber) {
 
                  adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTING);
-                 subscriber.onNext(SCDataAdapterStatus.DATA_ADAPTER_CONNECTING);
 
                  URL theUrl = null;
                  try {
@@ -93,6 +96,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                  if (!manager.exists(scStoreConfig.getName())) {
                      final URL url = theUrl;
                      Log.d(LOG_TAG, "Attempting to download geopackage from " + url);
+                     store.setStatus(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING);
 
                      downloadGeopackage(scStoreConfig, theUrl)
                              .subscribeOn(Schedulers.newThread())
@@ -105,7 +109,9 @@ public class GeoPackageAdapter extends SCDataAdapter {
                                          Log.w(LOG_TAG, "Failed to import GeoPackage from " + url);
                                          Log.w(LOG_TAG, "Could not connect to GeoPackage");
                                          adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
-                                         subscriber.onNext(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+                                         store.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+                                         subscriber.onError(new Throwable("Failed to import GeoPackage from " + url));
+
                                      } else {
                                          Log.d(LOG_TAG, "Successfully downloaded geopackage from " + url);
                                          // connect to the geopackage on the local filesystem
@@ -113,10 +119,12 @@ public class GeoPackageAdapter extends SCDataAdapter {
 
                                          if (geoPackage != null) {
                                              adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
-                                             subscriber.onNext(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
+                                             store.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                             subscriber.onCompleted();
                                          } else {
                                              adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
-                                             subscriber.onNext(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+                                             store.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+                                             subscriber.onError(new Throwable("geopackage was null"));
                                          }
                                      }
                                  }
@@ -124,7 +132,8 @@ public class GeoPackageAdapter extends SCDataAdapter {
                  } else {
                      Log.d(LOG_TAG, "GeoPackage " + scStoreConfig.getName() + " already downloaded.");
                      adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
-                     subscriber.onNext(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
+                     store.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                     subscriber.onCompleted();
                  }
              }
          });

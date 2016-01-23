@@ -73,7 +73,7 @@ public class GeoPackageStore extends SCDataStore {
         this.setVersion(VERSION);
         this.getKey();
         // setup the adapter for this store
-        GeoPackageAdapter adapter = new GeoPackageAdapter(context, scStoreConfig);
+        GeoPackageAdapter adapter = new GeoPackageAdapter(context, scStoreConfig, this);
         this.setAdapter(adapter);
     }
 
@@ -278,6 +278,8 @@ public class GeoPackageStore extends SCDataStore {
         final String storeId = this.getStoreId();
         final GeoPackageStore storeInstance = this;
 
+        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
+
         return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
             @Override
             public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
@@ -287,6 +289,8 @@ public class GeoPackageStore extends SCDataStore {
 
                     @Override
                     public void onCompleted() {
+                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                        subscriber.onCompleted();
                     }
 
                     @Override
@@ -298,16 +302,6 @@ public class GeoPackageStore extends SCDataStore {
 
                     @Override
                     public void onNext(SCDataAdapterStatus status) {
-                        if (status.equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTING)) {
-                            Log.w(LOG_TAG, "Data Store " + storeId + " started to connect");
-                            storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                            subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STARTED, storeId));
-                        }
-                        if (status.equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)) {
-                            Log.w(LOG_TAG, "Data Store " + storeId + " is now running");
-                            storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                            subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, storeId));
-                        }
                     }
                 });
             }
