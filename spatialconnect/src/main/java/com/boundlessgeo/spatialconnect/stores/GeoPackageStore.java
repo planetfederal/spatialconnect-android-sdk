@@ -176,12 +176,8 @@ public class GeoPackageStore extends SCDataStore {
 
     @Override
     public Observable<Boolean> create(final SCSpatialFeature scSpatialFeature) {
-
-        // for now we'll only allow writing to the point_features table
-        // TODO: reafactor this when refactoring away from id as store.layer.featureid
-        final GeoPackageManager manager = ((GeoPackageAdapter) this.getAdapter()).getGeoPackageManager();
-        final GeoPackage geoPackage = manager.open(this.getAdapter().getDataStoreName());
-        final FeatureDao featureDao = geoPackage.getFeatureDao("point_features");
+        final String layerId = scSpatialFeature.getKey().getLayerId();
+        final FeatureDao featureDao = getFeatureDao(layerId);  // layerId is the table name
         final FeatureRow newRow = featureDao.newRow();
 
         // populate the new row with feature data
@@ -224,14 +220,15 @@ public class GeoPackageStore extends SCDataStore {
     public Observable<Boolean> update(final SCSpatialFeature scSpatialFeature) {
 
         final FeatureRow rowToUpdate = toFeatureRow(scSpatialFeature);
+        final String layerId = scSpatialFeature.getKey().getLayerId();
+        final FeatureDao featureDao = getFeatureDao(layerId);  // layerId is the table name
 
         return Observable.create(new Observable.OnSubscribe<Boolean>() {
 
             @Override
             public void call(Subscriber<? super Boolean> subscriber) {
                 try {
-                    if (rowToUpdate != null &&
-                            getFeatureDao(scSpatialFeature.getId()).update(rowToUpdate) == 1) {
+                    if (rowToUpdate != null && featureDao.update(rowToUpdate) == 1) {
                         subscriber.onNext(Boolean.TRUE);
                     } else {
                         subscriber.onNext(Boolean.FALSE);
@@ -248,16 +245,17 @@ public class GeoPackageStore extends SCDataStore {
 
     @Override
     public Observable<Boolean> delete(final SCKeyTuple tuple) {
-
         final String featureId = tuple.getFeatureId();
+        final String layerId = tuple.getLayerId();
+        final FeatureDao featureDao = getFeatureDao(layerId);  // layerId is the table name
 
         return Observable.create(new Observable.OnSubscribe<Boolean>() {
 
             @Override
             public void call(Subscriber<? super Boolean> subscriber) {
                 try {
-                    Long rowId = Long.valueOf(getRowId(featureId));
-                    if (getFeatureDao(featureId).deleteById(rowId) == 1) {
+                    Long rowId = Long.valueOf(featureId);
+                    if (featureDao.deleteById(rowId) == 1) {
                         subscriber.onNext(Boolean.TRUE);
                     } else {
                         Log.w(LOG_TAG, "Expected 1 row to have been deleted for feature with id "
@@ -362,8 +360,6 @@ public class GeoPackageStore extends SCDataStore {
         } else {
             scSpatialFeature = new SCSpatialFeature();
         }
-        // set the id as storeId.featureTableName.idOfRow
-        scSpatialFeature.setId(String.valueOf(row.getId()));
         // populate properties map with data from each column
         Map<String, Object> props = scSpatialFeature.getProperties();
         for (String columnName : row.getColumnNames()) {
@@ -371,9 +367,11 @@ public class GeoPackageStore extends SCDataStore {
                 props.put(columnName, row.getValue(columnName));
             }
         }
-        // populate the layer and store id
-        scSpatialFeature.setLayerId(row.getTable().getTableName());
+        // populate the store, layer and feature ids
         scSpatialFeature.setStoreId(this.getStoreId());
+        scSpatialFeature.setLayerId(row.getTable().getTableName()); // layer is a table name in a geopackage
+        scSpatialFeature.setId(String.valueOf(row.getId())); // id is the id of the row in that table
+
         return scSpatialFeature;
     }
 
@@ -393,8 +391,9 @@ public class GeoPackageStore extends SCDataStore {
      * @return a FeatureRow instance populated with all the properties from the scSpatialFeature
      */
     protected FeatureRow toFeatureRow(final SCSpatialFeature scSpatialFeature) {
-        final String featureId = scSpatialFeature.getId();
-        final FeatureDao featureDao = getFeatureDao(featureId);
+        final String featureId = scSpatialFeature.getKey().getFeatureId();
+        final String layerId = scSpatialFeature.getKey().getLayerId();
+        final FeatureDao featureDao = getFeatureDao(layerId);  // layerId is the table name
 
         FeatureRow featureRow = featureDao.queryForIdRow(Long.valueOf(featureId));
         if (featureRow == null) {
@@ -460,49 +459,15 @@ public class GeoPackageStore extends SCDataStore {
     }
 
     /**
-     * Helper method that returns the FeatureDao instance based on the feature table name found
-     * within the scSpatialFeature's id.
+     * Helper method that returns the FeatureDao instance based on the feature table name.
      *
-     * @param featureId the feature id of the SCSpatialFeature instance
-     * @return the instance of the FeatureDao used to interact with the feature table that the
-     * feature belongs to
+     * @param featureTableName the name of the SCSpatialFeature's layer attribute
+     * @return the instance of the FeatureDao used to interact with the feature table
      */
-    public FeatureDao getFeatureDao(String featureId) {
+    public FeatureDao getFeatureDao(String featureTableName) {
         GeoPackageManager manager = ((GeoPackageAdapter) this.getAdapter()).getGeoPackageManager();
         GeoPackage geoPackage = manager.open(this.getAdapter().getDataStoreName());
-        // TODO: what do we do if we can't parse the a table name???
-        return geoPackage.getFeatureDao(getFeatureTableName(featureId));
-    }
-
-
-    /**
-     * returns the store id from an id with format storeId.featureTableName.idOfRow
-     **/
-    protected static String getStoreId(String featureId) {
-        return featureId.split("\\.")[0];
-    }
-
-    /**
-     * returns the feature table name from an id with format storeId.featureTableName.idOfRow
-     **/
-    protected static String getFeatureTableName(String featureId) {
-        if (featureId.split("\\.").length >= 1) {
-            return featureId.split("\\.")[1];
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * returns the rowId from an id with format storeId.featureTableName.idOfRow
-     **/
-    protected static String getRowId(String featureId) {
-        if (featureId.split("\\.").length >= 2) {
-            return featureId.split("\\.")[2];
-        } else {
-            // TODO: how should we handle new feature ids...just put a -1 or put nothing?
-            return null;
-        }
+        return geoPackage.getFeatureDao(featureTableName);
     }
 
     /**
