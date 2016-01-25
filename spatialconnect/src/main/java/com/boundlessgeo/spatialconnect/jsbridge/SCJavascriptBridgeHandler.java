@@ -159,7 +159,16 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 }
             }
             if (command.equals(BridgeCommand.DATASERVICE_UPDATEFEATURE)) {
-              SCKeyTuple featureKey = getFeatureKey(bridgeMessage);
+              SCKeyTuple featureKey = null;
+              try {
+                featureKey = getFeatureKeyFromUpdateMessage(bridgeMessage);
+              } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+                return;
+              } catch (IOException e) {
+                e.printStackTrace();
+                return;
+              }
 
               manager.getDataService().getStoreById(featureKey.getStoreId())
                         .update(getFeature(bridgeMessage))
@@ -185,8 +194,14 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                         );
             }
             if (command.equals(BridgeCommand.DATASERVICE_DELETEFEATURE)) {
-                SCKeyTuple featureKey = getFeatureKey(bridgeMessage);
-                manager.getDataService().getStoreById(featureKey.getStoreId())
+              SCKeyTuple featureKey = null;
+              try {
+                featureKey = getFeatureKeyFromDeleteMessage(bridgeMessage);
+              } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+                return;
+              }
+              manager.getDataService().getStoreById(featureKey.getStoreId())
                         .delete(featureKey)
                         .subscribeOn(Schedulers.io())
                         .subscribe(
@@ -214,13 +229,30 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
         }
     }
 
-    private SCKeyTuple getFeatureKey(JsonNode payload) {
-        // see: https://github.com/boundlessgeo/spatialconnect-js/blob/development/src/sc.js#L95
-        return new SCKeyTuple(
-                payload.get("payload").asText().split("\\.")[0],
-                payload.get("payload").asText().split("\\.")[1],
-                payload.get("payload").asText().split("\\.")[2]
-        );
+    private SCKeyTuple getFeatureKeyFromDeleteMessage(JsonNode payload) throws UnsupportedEncodingException {
+        String encodedStoreId = payload.get("payload").asText().split("\\.")[0];
+        String encodedLayerId = payload.get("payload").asText().split("\\.")[1];
+        String encodedFeatureId = payload.get("payload").asText().split("\\.")[2];
+        return getDecodedTuple(encodedStoreId, encodedLayerId, encodedFeatureId);
+    }
+
+
+    private SCKeyTuple getFeatureKeyFromUpdateMessage(JsonNode payload) throws UnsupportedEncodingException,
+                                                                               IOException {
+      String encodedTuple = MAPPER.readTree(payload.get("payload").get("feature").asText()).get("id").asText();
+      String encodedStoreId = encodedTuple.split("\\.")[0];
+      String encodedLayerId = encodedTuple.split("\\.")[1];
+      String encodedFeatureId = encodedTuple.split("\\.")[2];
+      return getDecodedTuple(encodedStoreId, encodedLayerId, encodedFeatureId);
+    }
+
+    private SCKeyTuple getDecodedTuple(String encodedStoreId,
+                                       String encodedLayerId,
+                                       String encodedFeatureId) throws UnsupportedEncodingException {
+      String decodedStoreId = new String(Base64.decode(encodedStoreId.getBytes("UTF-8"), Base64.DEFAULT));
+      String decodedLayerId = new String(Base64.decode(encodedLayerId.getBytes("UTF-8"), Base64.DEFAULT));
+      String decodedFeatureId = new String(Base64.decode(encodedFeatureId.getBytes("UTF-8"), Base64.DEFAULT));
+      return new SCKeyTuple(decodedStoreId, decodedLayerId, decodedFeatureId);
     }
 
     private SCSpatialFeature getFeature(JsonNode payload) {
