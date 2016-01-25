@@ -159,8 +159,9 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 }
             }
             if (command.equals(BridgeCommand.DATASERVICE_UPDATEFEATURE)) {
-                // TODO: send the storeId so we know where to save
-                manager.getDataService().getStoreById("a5d93796-5026-46f7-a2ff-e5dec85heh6b")
+              SCKeyTuple featureKey = getFeatureKey(bridgeMessage);
+
+              manager.getDataService().getStoreById(featureKey.getStoreId())
                         .update(getFeature(bridgeMessage))
                         .subscribeOn(Schedulers.io())
                         .subscribe(
@@ -214,12 +215,11 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
     }
 
     private SCKeyTuple getFeatureKey(JsonNode payload) {
-        // TODO: refactor to send SCKeyTuple instead of just id
         // see: https://github.com/boundlessgeo/spatialconnect-js/blob/development/src/sc.js#L95
         return new SCKeyTuple(
-                "a5d93796-5026-46f7-a2ff-e5dec85heh6b",
-                "point_features",
-                payload.get("payload").asText()
+                payload.get("payload").asText().split("\\.")[0],
+                payload.get("payload").asText().split("\\.")[1],
+                payload.get("payload").asText().split("\\.")[2]
         );
     }
 

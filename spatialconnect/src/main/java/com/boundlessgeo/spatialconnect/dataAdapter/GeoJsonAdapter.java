@@ -131,8 +131,8 @@ public class GeoJsonAdapter extends SCDataAdapter {
           ).map(new Func1<SCSpatialFeature, SCSpatialFeature>() {
             @Override
             public SCSpatialFeature call(SCSpatialFeature scSpatialFeature) {
+              scSpatialFeature.setStoreId(scStoreConfig.getUniqueID());
               scSpatialFeature.setLayerId(DEFAULTLAYER);
-              scSpatialFeature.setStoreId(GeoJsonAdapter.this.scStoreConfig.getUniqueID());
               scSpatialFeature.setId(scSpatialFeature.getId());
               return scSpatialFeature;
             }

@@ -1,6 +1,7 @@
 package com.boundlessgeo.spatialconnect.scutilities;
 
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
+import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
@@ -33,7 +34,7 @@ public class GoogleMapsUtil {
             case MULTIPOINT:
                 MultiPoint multiPoint = (MultiPoint) geomFeature.getGeometry();
                 for (Point point : Geom.iterate(multiPoint)) {
-                    addPointToMap(gmap, point, geomFeature.getKey().toString(), geomFeature.getKey().getStoreId());
+                    addPointToMap(gmap, point, geomFeature.getKey());
                 }
                 break;
 
@@ -66,15 +67,15 @@ public class GoogleMapsUtil {
     }
 
     public static Marker addPointToMap(GoogleMap gmap, SCGeometry feature) {
-        return addPointToMap(gmap, (Point) feature.getGeometry(), feature.getId(), feature.getKey().getStoreId());
+        return addPointToMap(gmap, (Point) feature.getGeometry(), feature.getKey());
     }
 
-    public static Marker addPointToMap(GoogleMap gmap, Point point, String featureId, String storeId) {
+    public static Marker addPointToMap(GoogleMap gmap, Point point, SCKeyTuple tuple) {
         LatLng latLng = new LatLng(point.getY(), point.getX());
         MarkerOptions mo = new MarkerOptions();
         mo.position(latLng);
-        mo.title(featureId.split("\\.")[1] + "." + featureId.split("\\.")[2]);
-        mo.snippet(storeId);
+        mo.title(tuple.getLayerId() + "." + tuple.getFeatureId());
+        mo.snippet(tuple.getStoreId());
         return gmap.addMarker(mo);
     }
 }

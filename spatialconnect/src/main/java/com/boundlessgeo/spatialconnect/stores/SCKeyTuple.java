@@ -31,7 +31,6 @@ public class SCKeyTuple {
     private String storeId;
     private String layerId;
     private String featureId;
-    private String compositeKey;
 
     public SCKeyTuple(String s, String l, String f) {
         this.storeId = s;
