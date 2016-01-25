@@ -363,11 +363,7 @@ public class GeoPackageStore extends SCDataStore {
             scSpatialFeature = new SCSpatialFeature();
         }
         // set the id as storeId.featureTableName.idOfRow
-        scSpatialFeature.setId(String.format("%s.%s.%s",
-                        this.getStoreId(),
-                        row.getTable().getTableName(),
-                        Long.toString(row.getId()))
-        );
+        scSpatialFeature.setId(String.valueOf(row.getId()));
         // populate properties map with data from each column
         Map<String, Object> props = scSpatialFeature.getProperties();
         for (String columnName : row.getColumnNames()) {
@@ -400,7 +396,7 @@ public class GeoPackageStore extends SCDataStore {
         final String featureId = scSpatialFeature.getId();
         final FeatureDao featureDao = getFeatureDao(featureId);
 
-        FeatureRow featureRow = featureDao.queryForIdRow(Long.valueOf(getRowId(featureId)));
+        FeatureRow featureRow = featureDao.queryForIdRow(Long.valueOf(featureId));
         if (featureRow == null) {
             featureRow = featureDao.newRow();
         }
