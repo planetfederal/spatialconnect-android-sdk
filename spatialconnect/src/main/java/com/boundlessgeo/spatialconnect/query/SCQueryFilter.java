@@ -33,6 +33,7 @@ public class SCQueryFilter
     private SCPredicate predicate;
     private List<String> layerIds;
     private List<String> featureIds;
+    private int limit = 100;
 
     public SCQueryFilter() {
         layerIds = new ArrayList<>();
@@ -41,6 +42,8 @@ public class SCQueryFilter
 
     public SCQueryFilter(SCPredicate scPredicate)
     {
+        this.layerIds = new ArrayList<>();
+        this.featureIds = new ArrayList<>();
         this.predicate = scPredicate;
     }
 
@@ -56,5 +59,22 @@ public class SCQueryFilter
     public void addFeatureId(String id) {
         featureIds.add(id);
     }
+
+    public List<String> getLayerIds() {
+        return this.layerIds;
+    }
+
+    public List<String> getFeatureIds() {
+        return this.featureIds;
+    }
+    public int getLimit() {
+
+        return limit;
+    }
+
+    public void setLimit(int limit) {
+        this.limit = limit;
+    }
+
 
 }
