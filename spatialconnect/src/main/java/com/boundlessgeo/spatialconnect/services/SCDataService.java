@@ -1,5 +1,7 @@
 package com.boundlessgeo.spatialconnect.services;
 
+import android.util.Log;
+
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
@@ -30,7 +32,7 @@ public class SCDataService extends SCService
     private Set<String> supportedStores; // the strings are store keys: type.version
     private Map<String, SCDataStore> stores;
     private boolean storesStarted;
-    private final String DATA_SERVICE = "DataService";
+    private final String LOG_TAG = "SCDataService";
     protected PublishSubject<SCStoreStatusEvent> storeEventSubject;
     public ConnectableObservable<SCStoreStatusEvent> storeEvents;
 
@@ -46,8 +48,8 @@ public class SCDataService extends SCService
 
     public void addDefaultStoreImpls()
     {
-        this.supportedStores.add(GeoJsonStore.VersionKey());
-        this.supportedStores.add(GeoPackageStore.VersionKey());
+        this.supportedStores.add(GeoJsonStore.versionKey());
+        this.supportedStores.add(GeoPackageStore.versionKey());
     }
 
     public void startAllStores()
@@ -55,17 +57,19 @@ public class SCDataService extends SCService
         Set<String> s = stores.keySet();
         final int storesCount = s.size();
 
-        storeEvents.filter(new Func1<SCStoreStatusEvent, Boolean>() {
-            @Override
-            public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
-                return scStoreStatusEvent.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING;
-            }
-        }).buffer(storesCount).take(1).subscribe(new Action1<List<SCStoreStatusEvent>>() {
-            @Override
-            public void call(List<SCStoreStatusEvent> l) {
-                SCStoreStatusEvent se = new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED, null);
-                SCDataService.this.storeEventSubject.onNext(se);
-            }
+        storeEventSubject.filter(new Func1<SCStoreStatusEvent, Boolean>() {
+          @Override
+          public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
+            Log.d(LOG_TAG, "This store is now running: " + scStoreStatusEvent.getStoreId());
+            return scStoreStatusEvent.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING;
+          }
+        })
+          .buffer(storesCount).take(1).subscribe(new Action1<List<SCStoreStatusEvent>>() {
+          @Override
+          public void call(List<SCStoreStatusEvent> l) {
+            SCStoreStatusEvent se = new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED, null);
+            storeEventSubject.onNext(se);
+          }
         });
 
         for (String key : s)
@@ -78,11 +82,11 @@ public class SCDataService extends SCService
         }
     }
 
-    private void startStore(SCDataStoreLifeCycle s) {
+    private void startStore(final SCDataStoreLifeCycle s) {
+        SCDataStore dataStore = (SCDataStore) s;
         s.start().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
             public void call(SCStoreStatusEvent s) {
-                System.out.println(s.getStatus() + " " + s.getStoreId());
             }
         },new Action1<Throwable>(){
             @Override
@@ -92,7 +96,9 @@ public class SCDataService extends SCService
         },new Action0() {
             @Override
             public void call() {
-                System.out.println();
+                storeEventSubject.onNext(
+                  new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, ((SCDataStore) s).getStoreId())
+                );
             }
         });
     }
@@ -111,7 +117,7 @@ public class SCDataService extends SCService
         if (allStarted) {
             return Observable.empty();
         } else {
-            return storeEvents.filter(
+            return storeEventSubject.filter(
                     new Func1<SCStoreStatusEvent, Boolean>() {
                         @Override
                         public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
@@ -179,6 +185,15 @@ public class SCDataService extends SCService
         return activeStores;
     }
 
+    public List<SCDataStore> getAllStores() {
+      List<SCDataStore> activeStores = new ArrayList<>();
+      for (String key : stores.keySet()) {
+        SCDataStore scDataStore = stores.get(key);
+          activeStores.add(scDataStore);
+      }
+      return activeStores;
+    }
+
     /**
      * Returns an active SCDataStore instance that matches the id.
      *
@@ -186,7 +201,7 @@ public class SCDataService extends SCService
      * @return the active SCDataStore instance or null if one doesn't exist
      */
     public SCDataStore getStoreById(String id) {
-        for (SCDataStore store : getActiveStores()) {
+        for (SCDataStore store : getAllStores()) {
             if (store.getStoreId().equals(id)) {
                 return store;
             }

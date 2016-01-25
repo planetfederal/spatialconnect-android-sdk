@@ -33,7 +33,6 @@ import com.boundlessgeo.spatialconnect.geometries.SCGeometryCollection;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 
 import org.apache.commons.io.FileUtils;
 
@@ -62,11 +61,11 @@ public class GeoJsonAdapter extends SCDataAdapter {
         this.scStoreConfig = scStoreConfig;
     }
 
-    public void connect() {
+    public Observable connect() {
         super.connect();
 
         // if the file was packaged with the application, then attempt to connect
-        if (scStoreConfig.isInApp()) {
+        if (scStoreConfig.isMainBundle()) {
             // first check if the GeoJson file already exists in the internal storage location specified in the uri
             File f = new File(context.getFilesDir(), scStoreConfig.getUri());
             if (!f.exists()) {
@@ -95,10 +94,11 @@ public class GeoJsonAdapter extends SCDataAdapter {
                 }
             } else { // the file already exists so set the status to connected
                 super.connected();
-                return;
+                return null;
             }
         }
         // TODO: else, look for the geojson file in other locations
+        return null;
     }
 
     public void disconnect() {
@@ -133,6 +133,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
             public SCSpatialFeature call(SCSpatialFeature scSpatialFeature) {
               scSpatialFeature.setLayerId(DEFAULTLAYER);
               scSpatialFeature.setStoreId(GeoJsonAdapter.this.scStoreConfig.getUniqueID());
+              scSpatialFeature.setId(scSpatialFeature.getId());
               return scSpatialFeature;
             }
           });

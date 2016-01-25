@@ -8,6 +8,7 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.scutilities.LocationHelper;
 
 import rx.Observable;
+import rx.functions.Action1;
 
 /**
  * The SCSensorService provides access to various sensors inputs that can be captured by the mobile device.  This
@@ -38,12 +39,28 @@ public class SCSensorService extends SCService {
      */
     public void startGPSListener() {
         if (locationHelper.isGPSPermissionGranted()) {
-            if (!gpsListenerStarted()) {
+            if (!gpsListenerStarted) {
                 locationHelper.enableGps();
                 gpsListenerStarted = true;
+                return;
             }
+            else {
+              Log.w(LOG_TAG, "Attempted to start GPS listener but was unsuccessful.");
+            }
+        } else {
+            // explicitly ask for permission
+            locationHelper.requestGPSPermission().subscribe(new Action1<Boolean>() {
+                @Override
+                public void call(Boolean permissionGranted) {
+                    if (permissionGranted) {
+                        locationHelper.enableGps();
+                        gpsListenerStarted = true;
+                    } else {
+                        Log.w(LOG_TAG, "Cannot start GPS listener b/c permission was denied.");
+                    }
+                }
+            });
         }
-        Log.w(LOG_TAG, "Attempted to start GPS listener but was unsuccessful.");
     }
 
     /**
@@ -55,20 +72,12 @@ public class SCSensorService extends SCService {
     }
 
     /**
-     * Ensures the GPS location listener has started and then returns an Observable sequence of Location instances.
+     * Returns an Observable sequence of Location instances.
      *
-     * @return Observable stream of Location or null
+     * @return Observable stream of Location
      */
     public Observable<Location> getLastKnownLocation() {
-        if (!gpsListenerStarted) {
-            if (!gpsListenerStarted()) {
-                return null;
-            }
-        }
         return locationHelper.getLocation();
     }
 
-    public boolean gpsListenerStarted() {
-        return this.gpsListenerStarted;
-    }
 }

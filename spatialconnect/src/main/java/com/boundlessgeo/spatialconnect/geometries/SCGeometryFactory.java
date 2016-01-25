@@ -1027,7 +1027,7 @@ public class SCGeometryFactory
         }
         catch (Exception ex)
         {
-            Log.e(TAG, "Error in get geometryFromGeoJson(String)", ex);
+            Log.e(TAG, "Error in get geometryFromGeoJson(String). Check the syntax: " + json, ex);
         }
         if (geometry != null)
         {

@@ -60,18 +60,17 @@ public class SCServiceManager {
             for (SCStoreConfig scStoreConfig : scStoreConfigs) {
                 String key =
                         scStoreConfig.getType() + "." + scStoreConfig.getVersion();
-                Log.d(LOG_TAG, "Attempting to register " + key);
                 if (dataService.isStoreSupported(key)) {
                     if (key.equals("geojson.1")) {
                         dataService.registerStore(
                                 new GeoJsonStore(context, scStoreConfig)
                         );
-                        Log.d(LOG_TAG, "Registered geojson.1 store.");
-                    } else if (key.equals("geopackage.1")) {
+                        Log.d(LOG_TAG, "Registered geojson.1 store " + scStoreConfig.getName());
+                    } else if (key.equals("gpkg.1")) {
                         dataService.registerStore(
                                 new GeoPackageStore(context, scStoreConfig)
                         );
-                        Log.d(LOG_TAG, "Registered geopackage.1 store.");
+                        Log.d(LOG_TAG, "Registered gpkg.1 store " + scStoreConfig.getName());
                     }
                 }
             }
