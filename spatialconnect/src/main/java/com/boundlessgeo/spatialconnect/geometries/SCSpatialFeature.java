@@ -108,6 +108,6 @@ public class SCSpatialFeature
     }
 
     public SCKeyTuple getKey() {
-        return new SCKeyTuple(this.storeId,this.layerId,this.id);
+        return new SCKeyTuple(this.storeId, this.layerId, this.id);
     }
 }

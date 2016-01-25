@@ -41,7 +41,7 @@ public class SCFileUtilities
     public static boolean isStorageAvailable(Context context, SCStoreConfig scStoreConfig)
     {
         boolean storageStatus = false;
-        if(!scStoreConfig.isInApp())
+        if(!scStoreConfig.isMainBundle())
         {
             // since the file is not packaged with the app, we check if external storage is available
             storageStatus = isExternalStorageAvailable();
