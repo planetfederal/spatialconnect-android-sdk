@@ -159,73 +159,81 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 }
             }
             if (command.equals(BridgeCommand.DATASERVICE_UPDATEFEATURE)) {
-              SCKeyTuple featureKey = getFeatureKey(bridgeMessage);
+              try {
+                SCSpatialFeature featureToUpdate = getFeature(bridgeMessage.get("payload").get("feature").asText());
+                manager.getDataService().getStoreById(featureToUpdate.getKey().getStoreId())
+                  .update(featureToUpdate)
+                  .subscribeOn(Schedulers.io())
+                  .subscribe(
+                    new Subscriber<Boolean>() {
+                      @Override
+                      public void onCompleted() {
+                        Log.d("BridgeHandler", "update completed");
+                      }
 
-              manager.getDataService().getStoreById(featureKey.getStoreId())
-                        .update(getFeature(bridgeMessage))
-                        .subscribeOn(Schedulers.io())
-                        .subscribe(
-                                new Subscriber<Boolean>() {
-                                    @Override
-                                    public void onCompleted() {
-                                        Log.d("BridgeHandler", "update completed");
-                                    }
+                      @Override
+                      public void onError(Throwable e) {
+                        e.printStackTrace();
+                        Log.e("BridgeHandler", "onError()\n" + e.getLocalizedMessage());
+                      }
 
-                                    @Override
-                                    public void onError(Throwable e) {
-                                        e.printStackTrace();
-                                        Log.e("BridgeHandler", "onError()\n" + e.getLocalizedMessage());
-                                    }
-
-                                    @Override
-                                    public void onNext(Boolean updated) {
-                                        Log.d("BridgeHandler", "feature updated!");
-                                    }
-                                }
-                        );
+                      @Override
+                      public void onNext(Boolean updated) {
+                        Log.d("BridgeHandler", "feature updated!");
+                      }
+                    }
+                  );
+              } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+              }
             }
             if (command.equals(BridgeCommand.DATASERVICE_DELETEFEATURE)) {
-                SCKeyTuple featureKey = getFeatureKey(bridgeMessage);
+              try {
+                SCKeyTuple featureKey = new SCKeyTuple(bridgeMessage.get("payload").asText());
                 manager.getDataService().getStoreById(featureKey.getStoreId())
-                        .delete(featureKey)
-                        .subscribeOn(Schedulers.io())
-                        .subscribe(
-                                new Subscriber<Boolean>() {
-                                    @Override
-                                    public void onCompleted() {
-                                        Log.d("BridgeHandler", "delete completed");
-                                    }
+                  .delete(featureKey)
+                  .subscribeOn(Schedulers.io())
+                  .subscribe(
+                    new Subscriber<Boolean>() {
+                      @Override
+                      public void onCompleted() {
+                        Log.d("BridgeHandler", "delete completed");
+                      }
 
-                                    @Override
-                                    public void onError(Throwable e) {
-                                        e.printStackTrace();
-                                        Log.e("BridgeHandler", "onError()\n" + e.getLocalizedMessage());
-                                    }
+                      @Override
+                      public void onError(Throwable e) {
+                        e.printStackTrace();
+                        Log.e("BridgeHandler", "onError()\n" + e.getLocalizedMessage());
+                      }
 
-                                    @Override
-                                    public void onNext(Boolean updated) {
-                                        Log.d("BridgeHandler", "feature deleted!");
-                                    }
-                                }
-                        );
-
-
+                      @Override
+                      public void onNext(Boolean updated) {
+                        Log.d("BridgeHandler", "feature deleted!");
+                      }
+                    }
+                  );
+              } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+              }
             }
         }
     }
 
-    private SCKeyTuple getFeatureKey(JsonNode payload) {
-        // see: https://github.com/boundlessgeo/spatialconnect-js/blob/development/src/sc.js#L95
-        return new SCKeyTuple(
-                payload.get("payload").asText().split("\\.")[0],
-                payload.get("payload").asText().split("\\.")[1],
-                payload.get("payload").asText().split("\\.")[2]
-        );
-    }
-
-    private SCSpatialFeature getFeature(JsonNode payload) {
-        String featureString = payload.get("payload").get("feature").asText();
-        return new SCGeometryFactory().getSpatialFeatureFromFeatureJson(featureString);
+    /**
+     * Returns an SCSpatialFeature instance based on the GeoJSON Feature string sent from the bridge.
+     *
+     * @param featureString the GeoJSON string representing the feature
+     * @return
+     * @throws UnsupportedEncodingException
+     */
+    private SCSpatialFeature getFeature(String featureString) throws UnsupportedEncodingException {
+        SCSpatialFeature feature = new SCGeometryFactory().getSpatialFeatureFromFeatureJson(featureString);
+        SCKeyTuple decodedTuple = new SCKeyTuple(feature.getId());
+        // update feature with decoded values
+        feature.setStoreId(decodedTuple.getStoreId());
+        feature.setLayerId(decodedTuple.getLayerId());
+        feature.setId(decodedTuple.getFeatureId());
+        return feature;
     }
 
     // gets either a 1 or a 0 indicating turn on/off something
