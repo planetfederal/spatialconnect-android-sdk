@@ -21,7 +21,9 @@ import com.vividsolutions.jts.io.WKBWriter;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import mil.nga.geopackage.GeoPackage;
@@ -40,6 +42,7 @@ import mil.nga.wkb.io.WkbGeometryWriter;
 import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Func1;
+import rx.schedulers.Schedulers;
 
 /**
  * Provides capabilities for interacting with a single GeoPackage.
@@ -52,7 +55,6 @@ public class GeoPackageStore extends SCDataStore {
 
     private static String TYPE = "gpkg";
     private static int VERSION = 1;
-    private static final int DEFUALT_FEATURE_LIMIT = 100;
 
     public static String versionKey() {
         return TYPE + "." + VERSION;
@@ -84,94 +86,79 @@ public class GeoPackageStore extends SCDataStore {
 
     @Override
     public Observable<SCSpatialFeature> query(final SCQueryFilter scFilter) {
-        final GeoPackageAdapter adapter = (GeoPackageAdapter) this.getAdapter();
-        final GeoPackageManager manager = adapter.getGeoPackageManager();
-        int numberOfLayers = 1;
-        if (manager.open(adapter.getDataStoreName()).getFeatureTables().size() > 0) {
-            numberOfLayers = manager.open(adapter.getDataStoreName()).getFeatureTables().size();
-        }
-        final int featuresPerStoreLimit = Math.round(DEFUALT_FEATURE_LIMIT / numberOfLayers);
+        return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
+            @Override
+            public void call(Subscriber<? super SCSpatialFeature> subscriber) {
+                final GeoPackageAdapter adapter =
+                  (GeoPackageAdapter) GeoPackageStore.this.getAdapter();
+                final GeoPackageManager manager = adapter.getGeoPackageManager();
+                String geopackageName = adapter.getDataStoreName();
+                final GeoPackage gp = manager.open(geopackageName);
+                List<String> layerIds = scFilter.getLayerIds();
+                List<String> featureTables = gp.getFeatureTables();
+                List<String> queryTables = new ArrayList<>();
 
-        // create a stream for the geopackage database name of this store
-        Observable<String> databaseStream = Observable.just(adapter.getDataStoreName());
+                if (featureTables.size() < 1) {
+                  subscriber.onCompleted();
+                }
 
-        // create a stream of geopackage
-        Observable<GeoPackage> geoPackageStream = databaseStream.flatMap(
-                new Func1<String, Observable<GeoPackage>>() {
-                    @Override
-                    public Observable<GeoPackage> call(String geopackageName) {
-                        return Observable.just(manager.open(geopackageName));
+                if (layerIds.size() != 0) {
+                    for (String tName : layerIds) {
+                        for (String fName: featureTables) {
+                            if (tName.equalsIgnoreCase(fName)) {
+                                queryTables.add(fName);
+                            }
+                        }
+                    }
+                } else {
+                    queryTables.addAll(featureTables);
+                }
+
+                int limit = scFilter.getLimit();
+                int featuresCount = 0;
+                int numLayers = queryTables.size();
+                int perLayer = limit / numLayers;
+
+                for (String featureTableName : queryTables){
+                    FeatureDao featureDao = gp.getFeatureDao(featureTableName);
+                    FeatureCursor featureCursor = null;
+                    try {
+                        featureCursor = featureDao.queryForAll();
+                        int layerCount = 0;
+                        while (featureCursor != null && !featureCursor.isClosed()
+                                && featureCursor.moveToNext() && featuresCount < limit
+                                && layerCount <= perLayer) {
+                            try {
+                                SCSpatialFeature feature = createSCSpatialFeature(featureCursor.getRow());
+                                if (feature instanceof SCGeometry &&
+                                        ((SCGeometry) feature).getGeometry() != null &&
+                                        scFilter.getPredicate().isInBoundingBox((SCGeometry) feature)) {
+                                    featuresCount++;
+                                    layerCount++;
+                                    subscriber.onNext(feature);
+                                }
+                            } catch (ParseException e) {
+                                Log.w(LOG_TAG, "Couldn't parse the geometry.");
+                                subscriber.onError(e);
+                            } catch (Exception e) {
+                                Log.e(LOG_TAG, "Unexpected exception.");
+                                subscriber.onError(e);
+                            }
+                        }
+
+                    } catch (Exception e) {
+                        Log.e(LOG_TAG, "Couldn't send next feature");
+                    } finally {
+                      if (featureCursor != null) {
+                        featureCursor.close();
+                      }
                     }
                 }
-        );
-
-        Observable<FeatureCursor> featureCursorStream = geoPackageStream.flatMap(
-                new Func1<GeoPackage, Observable<FeatureCursor>>() {
-                    @Override
-                    public Observable<FeatureCursor> call(final GeoPackage geoPackage) {
-
-                        return Observable.create(new Observable.OnSubscribe<FeatureCursor>() {
-                            @Override
-                            public void call(Subscriber<? super FeatureCursor> subscriber) {
-
-                                for (String featureTableName : geoPackage.getFeatureTables()) {
-                                    if (geoPackage.getFeatureTables().contains(featureTableName)) {
-                                        FeatureDao featureDao = geoPackage.getFeatureDao(featureTableName);
-                                        try {
-                                            FeatureCursor fc = featureDao.queryForAll();
-                                            subscriber.onNext(fc);
-                                        } catch (Exception e) {
-                                            Log.e(LOG_TAG, "Couldn't send next feature");
-                                            subscriber.onError(e);
-                                        }
-                                    }
-                                }
-                                subscriber.onCompleted();
-                            }
-                        });
-                    }
-                }
-        );
-
-
-        // return the stream of matching features
-        return featureCursorStream.flatMap(
-                new Func1<FeatureCursor, Observable<SCSpatialFeature>>() {
-                    @Override
-                    public Observable<SCSpatialFeature> call(final FeatureCursor featureCursor) {
-                        // create a new observable from scratch to emit features (SCGeometrys)
-                        return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
-                            @Override
-                            public void call(Subscriber<? super SCSpatialFeature> subscriber) {
-                                try {
-                                    int featuresCount = 0;
-                                    while (featureCursor != null && !featureCursor.isClosed()
-                                            && featureCursor.moveToNext() && featuresCount < featuresPerStoreLimit) {
-                                        try {
-                                            SCSpatialFeature feature = createSCSpatialFeature(featureCursor.getRow());
-                                            if (feature instanceof SCGeometry &&
-                                                    ((SCGeometry) feature).getGeometry() != null &&
-                                                    scFilter.getPredicate().isInBoundingBox((SCGeometry) feature)) {
-                                                featuresCount++;
-                                                subscriber.onNext(feature);
-                                            }
-                                        } catch (ParseException e) {
-                                            Log.w(LOG_TAG, "Couldn't parse the geometry.");
-                                            subscriber.onError(e);
-                                        } catch (Exception e) {
-                                            Log.e(LOG_TAG, "Unexpected exception.");
-                                            subscriber.onError(e);
-                                        }
-                                    }
-                                } finally {
-                                    featureCursor.close();
-                                    subscriber.onCompleted();
-                                }
-                            }
-                        }).onBackpressureBuffer();  // this is needed otherwise the filter can't keep up and will
-                        // throw MissingBackpressureException
-                    }
-                });
+                subscriber.onCompleted();
+            }
+        }).subscribeOn(Schedulers.io())
+          .onBackpressureBuffer();  // this is needed otherwise the filter can't keep up and will
+        // throw MissingBackpressureException
     }
 
     @Override
