@@ -39,7 +39,7 @@ public class SCKeyTuple {
     }
 
     public SCKeyTuple(String compositeKey) throws UnsupportedEncodingException {
-        String[] strs = compositeKey.split(".");
+        String[] strs = compositeKey.split("\\.");
         this.storeId = this.decodeString(strs[0]);
         this.layerId = this.decodeString(strs[1]);
         this.featureId = this.decodeString(strs[2]);

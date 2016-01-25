@@ -391,7 +391,7 @@ public class GeoPackageStore extends SCDataStore {
      * @return a FeatureRow instance populated with all the properties from the scSpatialFeature
      */
     protected FeatureRow toFeatureRow(final SCSpatialFeature scSpatialFeature) {
-        final String featureId = scSpatialFeature.getId();
+        final String featureId = scSpatialFeature.getKey().getFeatureId();
         final String layerId = scSpatialFeature.getKey().getLayerId();
         final FeatureDao featureDao = getFeatureDao(layerId);  // layerId is the table name
 
