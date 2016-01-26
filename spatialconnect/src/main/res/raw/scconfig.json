@@ -12,7 +12,7 @@
       "type":"gpkg",
       "version":"1",
       "name":"Haiti",
-      "uri":"http://www.geopackage.org/data/haiti-vectors-split.gpkg",
+      "uri":"https://s3.amazonaws.com/test.spacon/haiti4mobile.gpkg",
       "id":"a5d93796-5026-46f7-a2ff-e5dec85heh6b"
     },
     {
