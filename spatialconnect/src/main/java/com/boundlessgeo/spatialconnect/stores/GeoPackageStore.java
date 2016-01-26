@@ -162,6 +162,40 @@ public class GeoPackageStore extends SCDataStore {
     }
 
     @Override
+    public Observable<SCSpatialFeature> queryById(final SCKeyTuple keyTuple) {
+        return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>(){
+
+            @Override
+            public void call(Subscriber<? super SCSpatialFeature> subscriber) {
+                final GeoPackageAdapter adapter =
+                    (GeoPackageAdapter) GeoPackageStore.this.getAdapter();
+                final GeoPackageManager manager = adapter.getGeoPackageManager();
+                String geopackageName = adapter.getDataStoreName();
+                final GeoPackage gp = manager.open(geopackageName);
+                FeatureDao featureDao = gp.getFeatureDao(keyTuple.getLayerId());
+                FeatureCursor featureCursor = featureDao.queryForId(Long.parseLong(keyTuple.getFeatureId()));
+                if (featureCursor.moveToFirst()) {
+                    try {
+                        SCSpatialFeature feature = createSCSpatialFeature(featureCursor.getRow());
+                        subscriber.onNext(feature);
+                    } catch (ParseException e) {
+                        Log.w(LOG_TAG, "Couldn't parse the geometry.");
+                        subscriber.onError(e);
+                    } catch (Exception e) {
+                        Log.e(LOG_TAG, "Unexpected exception.");
+                        subscriber.onError(e);
+                    } finally {
+                      featureCursor.close();
+                      subscriber.onCompleted();
+                    }
+
+                }
+            }
+        });
+
+    }
+
+    @Override
     public Observable<Boolean> create(final SCSpatialFeature scSpatialFeature) {
         final String layerId = scSpatialFeature.getKey().getLayerId();
         final FeatureDao featureDao = getFeatureDao(layerId);  // layerId is the table name
@@ -263,7 +297,7 @@ public class GeoPackageStore extends SCDataStore {
         final String storeId = this.getStoreId();
         final GeoPackageStore storeInstance = this;
 
-        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
+      storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
 
         return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
             @Override

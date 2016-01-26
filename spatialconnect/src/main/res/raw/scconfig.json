@@ -9,14 +9,6 @@
       "name":"Simple"
     },
     {
-      "type":"geojson",
-      "version":"1",
-      "name":"20m Points",
-      "isMainBundle":true,
-      "uri":"gz_2010_us_500_11_20m.json",
-      "id":"a5d93796-5026-46f7-a2ff-e5dec85d116b"
-    },
-    {
       "type":"gpkg",
       "version":"1",
       "name":"Haiti",

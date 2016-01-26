@@ -2,6 +2,7 @@ package com.boundlessgeo.spatialconnect.services;
 
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
@@ -9,6 +10,7 @@ import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreLifeCycle;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
+import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 
@@ -20,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 
 import rx.Observable;
+import rx.Subscriber;
 import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
@@ -65,11 +68,11 @@ public class SCDataService extends SCService
           }
         })
           .buffer(storesCount).take(1).subscribe(new Action1<List<SCStoreStatusEvent>>() {
-          @Override
-          public void call(List<SCStoreStatusEvent> l) {
-            SCStoreStatusEvent se = new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED, null);
-            storeEventSubject.onNext(se);
-          }
+            @Override
+            public void call(List<SCStoreStatusEvent> l) {
+                SCStoreStatusEvent se = new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED, null);
+                storeEventSubject.onNext(se);
+            }
         });
 
         for (String key : s)
@@ -241,7 +244,7 @@ public class SCDataService extends SCService
         return queryresults;
     }
 
-    public Observable<SCSpatialFeature> queryAllStores(SCQueryFilter filter) {
+    public Observable<SCSpatialFeature> queryAllStores(final SCQueryFilter filter) {
         Observable<SCSpatialFeature> queryResults =
                 Observable
                         .just(filter)

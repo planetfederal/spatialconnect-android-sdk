@@ -34,6 +34,7 @@ import rx.Observable;
 public interface SCSpatialStore extends SCDataStoreLifeCycle
 {
     Observable query(SCQueryFilter scFilter);
+    Observable queryById(SCKeyTuple keyTuple);
     Observable create(SCSpatialFeature scSpatialFeature);
     Observable update(SCSpatialFeature scSpatialFeature);
     Observable delete(SCKeyTuple keyTuple);
