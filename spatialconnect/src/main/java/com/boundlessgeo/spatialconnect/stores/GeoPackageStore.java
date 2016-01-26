@@ -41,7 +41,6 @@ import mil.nga.wkb.io.WkbGeometryReader;
 import mil.nga.wkb.io.WkbGeometryWriter;
 import rx.Observable;
 import rx.Subscriber;
-import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 /**
@@ -196,7 +195,7 @@ public class GeoPackageStore extends SCDataStore {
     }
 
     @Override
-    public Observable<Boolean> create(final SCSpatialFeature scSpatialFeature) {
+    public Observable<SCSpatialFeature> create(final SCSpatialFeature scSpatialFeature) {
         final String layerId = scSpatialFeature.getKey().getLayerId();
         final FeatureDao featureDao = getFeatureDao(layerId);  // layerId is the table name
         final FeatureRow newRow = featureDao.newRow();
@@ -220,15 +219,16 @@ public class GeoPackageStore extends SCDataStore {
             }
         }
 
-        return Observable.create(new Observable.OnSubscribe<Boolean>() {
+        return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
 
             @Override
-            public void call(Subscriber<? super Boolean> subscriber) {
+            public void call(Subscriber<? super SCSpatialFeature> subscriber) {
                 try {
-                    featureDao.create(newRow);
-                    subscriber.onNext(Boolean.TRUE);
+                    long rowId = featureDao.create(newRow);
+                    FeatureRow newRow = featureDao.queryForIdRow(rowId);
+                    subscriber.onNext(createSCSpatialFeature(newRow));
                 } catch (Exception e) {
-                    Log.e(LOG_TAG, "Could not create feature with id " + scSpatialFeature.getId());
+                    Log.e(LOG_TAG, "Could not create feature");
                     subscriber.onError(e);
                 }
                 subscriber.onCompleted();
