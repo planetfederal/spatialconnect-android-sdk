@@ -1,7 +1,6 @@
 package com.boundlessgeo.spatialconnect.jsbridge;
 
 import android.location.Location;
-import android.util.Base64;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
@@ -132,9 +131,14 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
 
                                         @Override
                                         public void onNext(SCSpatialFeature feature) {
+                                          try {
                                             // base64 encode id and set it before sending across wire
-                                            encodeFeatureId(feature);
+                                            String encodedId = ((SCGeometry) feature).getKey().encodedCompositeKey();
+                                            feature.setId(encodedId);
                                             bridge.callHandler("spatialQuery", ((SCGeometry) feature).toJson());
+                                          } catch (UnsupportedEncodingException e) {
+                                            e.printStackTrace();
+                                          }
                                         }
                                     }
                             );
@@ -202,9 +206,7 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
             }
             if (command.equals(BridgeCommand.DATASERVICE_CREATEFEATURE)) {
               try {
-                SCSpatialFeature newFeature = getNewFeature(bridgeMessage.get("payload").get("feature").asText());
-                newFeature.setStoreId(bridgeMessage.get("payload").get("storeId").asText());
-                newFeature.setLayerId("point_features");  // TODO: update spatialconnect-js to send layerId oncreateFeature
+                SCSpatialFeature newFeature = getNewFeature(bridgeMessage.get("payload"));
                 manager.getDataService().getStoreById(newFeature.getKey().getStoreId())
                   .create(newFeature)
                   .subscribeOn(Schedulers.io())
@@ -223,10 +225,15 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
 
                       @Override
                       public void onNext(SCSpatialFeature feature) {
-                        // base64 encode id and set it before sending across wire
-                        encodeFeatureId(feature);
-                        bridge.callHandler("createFeature", ((SCGeometry) feature).toJson());
-                        Log.d("BridgeHandler", "feature created!");
+                        try {
+                          // base64 encode id and set it before sending across wire
+                          String encodedId = ((SCGeometry) feature).getKey().encodedCompositeKey();
+                          feature.setId(encodedId);
+                          bridge.callHandler("createFeature", ((SCGeometry) feature).toJson());
+                          Log.d("BridgeHandler", "feature created!");
+                        } catch (UnsupportedEncodingException e) {
+                          e.printStackTrace();
+                        }
                       }
                     }
                   );
@@ -255,16 +262,17 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
     }
 
     /**
-     * Returns an SCSpatialFeature instance based on the GeoJSON Feature string sent from the bridge for creating.
-     *
-     * TODO: this method should read the payload and parse out the storeId, and layerId.
-     *
-     * @param featureString the GeoJSON string representing the feature
+     * Returns an SCSpatialFeature instance based on the message from the bridge to create a new feature.
+     **
+     * @param payload the JsonNode representing the message payload
      * @return
      * @throws UnsupportedEncodingException
      */
-    private SCSpatialFeature getNewFeature(String featureString) throws UnsupportedEncodingException {
+    private SCSpatialFeature getNewFeature(JsonNode payload) throws UnsupportedEncodingException {
+      String featureString = payload.get("feature").asText();
       SCSpatialFeature feature = new SCGeometryFactory().getSpatialFeatureFromFeatureJson(featureString);
+      feature.setStoreId(payload.get("storeId").asText());
+      feature.setLayerId(payload.get("layerId").asText());
       return feature;
     }
 
@@ -288,28 +296,6 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
             e.printStackTrace();
         }
         return null;
-    }
-
-    private void encodeFeatureId(SCSpatialFeature feature) {
-      try {
-        String storeId = Base64.encodeToString(
-          feature.getKey().getStoreId().getBytes("UTF-8"),
-          Base64.DEFAULT
-        );
-        String layerId = Base64.encodeToString(
-          feature.getKey().getLayerId().getBytes("UTF-8"),
-          Base64.DEFAULT
-        );
-        String featureId = Base64.encodeToString(
-          feature.getKey().getFeatureId().getBytes("UTF-8"),
-          Base64.DEFAULT
-        );
-        feature.setId(
-          String.format("%s.%s.%s", storeId, layerId, featureId)
-        );
-      } catch (UnsupportedEncodingException e) {
-        e.printStackTrace();
-      }
     }
 
     private SCQueryFilter getFilter(JsonNode payload) {
