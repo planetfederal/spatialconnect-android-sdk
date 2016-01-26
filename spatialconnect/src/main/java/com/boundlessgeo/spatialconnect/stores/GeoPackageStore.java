@@ -144,7 +144,6 @@ public class GeoPackageStore extends SCDataStore {
                                 subscriber.onError(e);
                             }
                         }
-
                     } catch (Exception e) {
                         Log.e(LOG_TAG, "Couldn't send next feature");
                     } finally {
