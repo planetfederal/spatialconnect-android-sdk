@@ -62,6 +62,11 @@ public class GeoJsonStore extends SCDataStore {
     }
 
     @Override
+    public Observable<SCSpatialFeature> queryById(SCKeyTuple keyTuple) {
+        return query(null);
+    }
+
+    @Override
     public Observable<Boolean> create(final SCSpatialFeature scSpatialFeature) {
         GeoJsonAdapter geoJsonAdapter = (GeoJsonAdapter) this.getAdapter();
         geoJsonAdapter.create(scSpatialFeature);
