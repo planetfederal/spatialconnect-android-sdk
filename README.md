@@ -1,14 +1,26 @@
-# spatialconnect-android
+# spatialconnect-android-sdk
 SpatialConnect library for Android
 
 
 # Overview
 
-SpatialConnect is a library that makes it easier for developers to write
-apps that connect to multiple spatial data stores online and offline.
-It provides native API and a Javascript bridge API.  Additionally, it leverages RxJava for I/O with the data stores.  The library is packaged in the [aar format](http://tools.android.com/tech-docs/new-build-system/aar-format)
+SpatialConnect is a collection of libraries that makes it easier for developers to write
+apps that connect to multiple spatial data stores online and offline. It leverages [Reactive Extentsions](http://reactivex.io/) for communicating with the data stores using a common API across [iOS](https://github.com/boundlessgeo/spatialconnect-ios-sdk), [Android](https://github.com/boundlessgeo/spatialconnect-android-sdk), and [Javascript](https://github.com/boundlessgeo/spatialconnect-js) runtimes.
+ 
+This library provides native APIs for Android as well as a Javascript bridge to communicate to the native API from mobile browsers.   The SpatialConnect Android SDK is packaged in the [aar format](http://tools.android.com/tech-docs/new-build-system/aar-format) and can be imported as a dependency to your Android app.
 
-### Data Stores
+
+## Core Concepts
+
+SpatialConnect consists of a collection of services which each handle specific functionality.  For instance, the `SCDataService` handles reads and writes to data stores while the `SCSensorService` handles subscribing to and reciving GPS updates.  All services are managed by the `SCServiceManager` which is responsible for loading a configuration file that will initialize the services and data stores.  All services and data stores in SpatialConnect provide an API that returns an [Observable](http://reactivex.io/documentation/observable.html) that emits data or events for subscribers to consume.
+
+### Services and the ServiceManager
+
+SpatialConnect services are the building blocks that developers can use for interacting with the mobile device and data stores.  Currently there are 3 services, the `SCDataService`, the `SCNetworkService`, and the `SCSensorService`.  The `SCServiceManager` is responsible for managing the service lifecycle (registering them, starting/stopping them, etc).  When you create an instance of the `SCServiceManager`, it will enable all the services and read the configuration file to determine what to do next.  If data stores are defined, it will attempt to register each store with the `SCDataService`.
+
+### Data Stores and the DataService
+The `SCDataService` is responsible for interacting with the data stores.     
+
 
 Developers need to create a new data store by creating a class that implements the `SCSpatialStore` interface and updating a configuration file to let SpatialConnect know
 that the store exists.  Each data store should also extend `SCDataStore` and provide
@@ -16,6 +28,12 @@ an `SCDataAdapter` that the store uses as the implementation of
 CRUD functionality on `SCSpatialFeature`s.  Without an adapter
 implementation, SpatialConnect will not consider the store to be a
 supported and will not attempt to connect.
+
+
+### Querying
+
+To query the stores for `SCSpatialFeature`s, you need to create a `SCQueryFilter` with `SCPredicate`s and pass it to the query function of your `SCDataAdapter`.
+
 
 ### Geometry Object Model
 
@@ -35,17 +53,7 @@ this is that the `SCGeometry` object can always be represented as a
 
 `SCSpatialFeature`s is the parent class of all geometries. This allows the library to handle spatial data types that do not contain a geometry. Supplemental data that contains no location can be stored, queried, and filtered with the functionality of the library. All data is treated as a feature is queried with a filter.
 
-### Querying
 
-To query the stores for `SCSpatialFeature`s, you need to create a `SCQueryFilter` with `SCPredicate`s and pass it to the query function of your `SCDataAdapter`.
-
-
-### Services and the SCServiceManager
-
-SpatialConnect services are the building blocks that developers can use for interacting with the mobile device and data stores.  Currently there are 3 services, the `SCDataService`, the `SCNetworkService`, and the `SCSensorService`.  The SCServiceManager is the class responsible for managing the service lifecycle (registering them, starting/stopping them, etc).  When you create an instance of the SCServiceManager, it will enable all the services and read the configuration file to determine what to do next.  If data stores are defined, it will attempt to register each store with the SCDataService.
-
-#### SCDataService
-The SCDataService is responsible for interacting with the data stores.  Upon initialization,   
 
 
 
