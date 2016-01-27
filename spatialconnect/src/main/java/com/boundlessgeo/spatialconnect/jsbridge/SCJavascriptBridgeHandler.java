@@ -93,8 +93,11 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                     if (sb.length() != 0) {
                         sb.append(",");
                     }
-                    sb.append("{").append("\"storeid\":\"").append(store.getStoreId()).append("\",");
-                    sb.append("\"name\":\"").append(store.toString()).append("\"}");
+                    sb.append("{");
+                    sb.append("\"name\":\"").append(store.getName()).append("\",");
+                    sb.append("\"storeId\":\"").append(store.getStoreId()).append("\",");
+                    sb.append("\"type\":\"").append(store.getType()).append("\"");
+                    sb.append("}");
                 }
                 bridge.callHandler("storesList", "{\"stores\": [" + sb.toString() + "]}");
                 return;
