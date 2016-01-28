@@ -145,7 +145,7 @@ this is that the `SCGeometry` object can always be represented as a
 [GeoJSON Geometry object](http://geojson.org/geojson-spec.html#geometry-objects).
 
 
-> `SCSpatialFeature` is the parent class of all `SCGeometry`s. This allows the library to handle data types that do not contain a geometry.  A practical side effect of this design is that data containing no location attribute can still be stored, queried, and filtered with the functionality of the SpatialConnect.
+> `SCSpatialFeature` is the parent class of all `SCGeometry`s. This allows the library to handle data types that do not contain a geometry.  A useful aspect of this design is that data containing no location attribute can still be stored, queried, and filtered with the functionality of SpatialConnect.
 
 The SpatialConnect provides a custom geometry object model using the `SCGeometry`.  One reason this
 is necessary is b/c we need to identify objects by their ids (in case
@@ -155,7 +155,7 @@ GeoJSON spec but it doesn’t strictly follow either because it’s trying to be
 a useful, developer-friendly abstraction.
 
 
-As mentioned before, each `SCSpatialFeature` contains a `SCKeyTuple` containing the layer id, store id, and feature id.  When sending a `SCSpatialFeature` through the Javascript bridge, we Base64 encode each part of the tuple and use that for the GeoJSON Feature's id.  This will allow us to keep track of features even after they are edited by a Javascript maping client like OpenLayers. 
+As mentioned before, each `SCSpatialFeature` contains a `SCKeyTuple` containing the layer id, store id, and feature id.  When sending a `SCSpatialFeature` through the Javascript bridge, we Base64 encode each part of the tuple and use that for the GeoJSON Feature's id.  This will allow us to keep track of features even after they are edited by a Javascript mapping client like OpenLayers.
 
 ### Examples
 
