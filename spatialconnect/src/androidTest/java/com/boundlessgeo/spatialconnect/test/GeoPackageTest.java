@@ -24,12 +24,12 @@ import rx.functions.Action1;
 public class GeoPackageTest extends BaseTestCase {
 
     private SCServiceManager serviceManager;
+    private final static String HAITI_GPKG_ID = "a5d93796-5026-46f7-a2ff-e5dec85heh6b";
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
         serviceManager = new SCServiceManager(activity);
-        serviceManager.startAllServices();
     }
 
     @Override
@@ -55,7 +55,7 @@ public class GeoPackageTest extends BaseTestCase {
                         );
                     }
                 }
-                assertTrue("A geopackage store should be active.", containsGeoPackageStore);
+                assertTrue("A geopackage store should be running.", containsGeoPackageStore);
             }
         });
     }
@@ -65,7 +65,7 @@ public class GeoPackageTest extends BaseTestCase {
             @Override
             public void call(SCStoreStatusEvent scStoreStatusEvent) {
                 // this is the geopackage located http://www.geopackage.org/data/haiti-vectors-split.gpkg
-                SCDataStore gpkgStore = serviceManager.getDataService().getStoreById("1234");
+                SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
 
                 // bbox around part of haiti
                 SCBoundingBox bbox = new SCBoundingBox(-73.3901, 18.6261, -72.5097, 19.1627);
@@ -115,7 +115,7 @@ public class GeoPackageTest extends BaseTestCase {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
             public void call(SCStoreStatusEvent scStoreStatusEvent) {
-                SCDataStore gpkgStore = serviceManager.getDataService().getStoreById("1234");
+                SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
                 SCSpatialFeature scSpatialFeature = new SCSpatialFeature();
                 scSpatialFeature.setId("1234.point_features.5555");
                 scSpatialFeature.getProperties().put("prop1", "prop1_value");
@@ -137,7 +137,7 @@ public class GeoPackageTest extends BaseTestCase {
                 Random rand = new Random();
                 final String randomId = String.valueOf(rand.nextInt((100)));
                 final String featureId = "1234.point_features." + randomId;
-                final SCDataStore gpkgStore = serviceManager.getDataService().getStoreById("1234");
+                final SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
                 final SCSpatialFeature scSpatialFeature = new SCSpatialFeature();
                 // try to update the first feature from the haiti sample geopackage
                 scSpatialFeature.setId(featureId);
@@ -164,7 +164,7 @@ public class GeoPackageTest extends BaseTestCase {
             @Override
             public void call(SCStoreStatusEvent scStoreStatusEvent) {
                 final String featureId = "1234.point_features.3";
-                final SCDataStore gpkgStore = serviceManager.getDataService().getStoreById("1234");
+                final SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
                 SCSpatialFeature scSpatialFeature = new SCSpatialFeature();
                 scSpatialFeature.setId(featureId);
                 SCKeyTuple t = scSpatialFeature.getKey();

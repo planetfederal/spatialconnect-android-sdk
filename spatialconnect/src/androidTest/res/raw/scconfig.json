@@ -3,9 +3,9 @@
     {
       "type": "geojson",
       "version": "1",
-      "uri": "all.geojson",
+      "uri": "nola_polling_places.json",
       "isMainBundle":true,
-      "id":"63602599-3ad3-439f-9c49-3c8a7579933b",
+      "id":"50402599-3ad3-439f-9c49-3c8a7579933b",
       "name":"Simple"
     },
     {

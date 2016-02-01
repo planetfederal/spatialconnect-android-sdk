@@ -3,15 +3,14 @@ package com.boundlessgeo.spatialconnect.services;
 import android.content.Context;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.R;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.config.Stores;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
+import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
 import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
-import java.io.InputStream;
+import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +27,7 @@ public class SCServiceManager {
     private SCSensorService sensorService;
     private Context context;
     private final String LOG_TAG = SCServiceManager.class.getSimpleName();
+    private static final String CONFIGS_DIR = "configs";
 
     public SCServiceManager(Context context) {
         this.services = new HashMap<>();
@@ -36,7 +36,7 @@ public class SCServiceManager {
         this.sensorService = new SCSensorService(context);
         this.context = context;
         addDefaultServices();
-        initializeDataStores(this.context.getResources().openRawResource(R.raw.scconfig));
+        loadConfigs();
     }
 
     public void addDefaultServices() {
@@ -46,38 +46,48 @@ public class SCServiceManager {
     }
 
     /**
-     * Reads the static config file packaged with the APK to determine what data stores are defined,
-     * then register each supported data store with the dataService.
-     *
-     * @param inputStream instance of the inputstream of the SpatialConnect config file
+     * Loads all config files and registers the stores in each config. The config files need to be valid JSON files
+     * with an ".scfg" extension and must be packaged within the app's
+     * <a href="http://developer.android.com/guide/topics/data/data-storage.html#filesExternal">external storage</a>
+     * directory for config files.
      */
-    public void initializeDataStores(InputStream inputStream) {
-        Log.i(LOG_TAG, "Initializing data stores.");
+    public void loadConfigs() {
+        Log.i(LOG_TAG,
+                "Searching for config files in external storage directory " + context.getExternalFilesDir(CONFIGS_DIR)
+        );
+        File[] configFiles = SCFileUtilities.findFilesByExtension(context.getExternalFilesDir(CONFIGS_DIR), ".scfg");
+        for (File file : configFiles) {
+            Log.d(LOG_TAG, "Registering stores for config " + file.getName());
+            registerStores(file);
+        }
+    }
+
+    /**
+     * Reads a config file to determine what stores are defined, then registers each supported data store with the
+     * dataService.
+     *
+     * @param f - a valid SpatialConnect config file
+     */
+    protected void registerStores(File f) {
         try {
-            final ObjectMapper mapper = ObjectMappers.getMapper();
-            final Stores stores = mapper.readValue(inputStream, Stores.class);
+            final Stores stores = ObjectMappers.getMapper().readValue(f, Stores.class);
             final List<SCStoreConfig> scStoreConfigs = stores.getStores();
             for (SCStoreConfig scStoreConfig : scStoreConfigs) {
-                String key =
-                        scStoreConfig.getType() + "." + scStoreConfig.getVersion();
+                String key = scStoreConfig.getType() + "." + scStoreConfig.getVersion();
                 if (dataService.isStoreSupported(key)) {
                     if (key.equals("geojson.1")) {
-                        dataService.registerStore(
-                                new GeoJsonStore(context, scStoreConfig)
-                        );
+                        dataService.registerStore(new GeoJsonStore(context, scStoreConfig));
                         Log.d(LOG_TAG, "Registered geojson.1 store " + scStoreConfig.getName());
-                    } else if (key.equals("gpkg.1")) {
-                        dataService.registerStore(
-                                new GeoPackageStore(context, scStoreConfig)
-                        );
+                    }
+                    else if (key.equals("gpkg.1")) {
+                        dataService.registerStore(new GeoPackageStore(context, scStoreConfig));
                         Log.d(LOG_TAG, "Registered gpkg.1 store " + scStoreConfig.getName());
                     }
                 }
             }
         } catch (Exception ex) {
             //TODO: test this with a bad config file.
-            Log.e(LOG_TAG, "Error loading configuration file", ex);
-            System.exit(0);
+            Log.w(LOG_TAG, "Couldn't register stores for " + f.getName(), ex);
         }
     }
 
@@ -122,7 +132,6 @@ public class SCServiceManager {
     }
 
 
-    //region Getters
     public Map<String, SCService> getServices() {
         return services;
     }
@@ -142,7 +151,5 @@ public class SCServiceManager {
     public Context getContext() {
         return context;
     }
-
-    //endregion
 }
 

@@ -27,7 +27,7 @@ package com.boundlessgeo.spatialconnect.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * Represents a JSON object in the scconfig.json file describing a store.
+ * Represents a JSON object describing a SCSpatialStore.
  */
 public class SCStoreConfig
 {

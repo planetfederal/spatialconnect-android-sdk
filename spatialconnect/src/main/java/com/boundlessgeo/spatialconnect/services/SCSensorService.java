@@ -80,4 +80,12 @@ public class SCSensorService extends SCService {
         return locationHelper.getLocation();
     }
 
+    /**
+     * Helper method to determine if SCSensorService has enabled the gps.
+     *
+     * @return  true if gpsListener has been started, false otherwise.
+     */
+    public boolean gpsListenerStarted() {
+        return this.gpsListenerStarted;
+    }
 }
