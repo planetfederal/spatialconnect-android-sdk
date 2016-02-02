@@ -1,6 +1,8 @@
 # spatialconnect-android-sdk
 SpatialConnect library for Android
 
+[![Build
+Status](https://travis-ci.org/boundlessgeo/spatialconnect-android-sdk.svg?branch=develop)](https://travis-ci.org/boundlessgeo/spatialconnect-android-sdk)
 
 # Overview
 
