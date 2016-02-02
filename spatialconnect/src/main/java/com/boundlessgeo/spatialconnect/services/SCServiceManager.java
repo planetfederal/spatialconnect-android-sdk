@@ -29,6 +29,13 @@ public class SCServiceManager {
     private final String LOG_TAG = SCServiceManager.class.getSimpleName();
     private static final String CONFIGS_DIR = "configs";
 
+    /**
+     * The default SCServiceManager constructor will scan through the app's config directory in its
+     * <a href="http://developer.android.com/guide/topics/data/data-storage.html#filesExternal">external storage</a>
+     * and register all stores defined within those config files.
+     *
+     * @param context
+     */
     public SCServiceManager(Context context) {
         this.services = new HashMap<>();
         this.dataService = new SCDataService();
@@ -36,6 +43,29 @@ public class SCServiceManager {
         this.sensorService = new SCSensorService(context);
         this.context = context;
         addDefaultServices();
+        loadConfigs();
+    }
+
+    /**
+     * Constructor for instantiating a service manager with a config file (or group of files).  It will first
+     * register all the stores defined in the config file(s) passed in, then it will scan the default configs
+     * directory for existing configurations and load those as well.
+     *
+     * @param context
+     * @param configFiles
+     */
+    public SCServiceManager(Context context, File... configFiles) {
+        this.services = new HashMap<>();
+        this.dataService = new SCDataService();
+        this.networkService = new SCNetworkService();
+        this.sensorService = new SCSensorService(context);
+        this.context = context;
+        addDefaultServices();
+        for (File file : configFiles) {
+            Log.d(LOG_TAG, "Registering stores for config " + file.getName());
+            registerStores(file);
+        }
+        // also load any existing configs
         loadConfigs();
     }
 
@@ -52,10 +82,14 @@ public class SCServiceManager {
      * directory for config files.
      */
     public void loadConfigs() {
+        File configsDir = context.getExternalFilesDir(CONFIGS_DIR);
+        if (!configsDir.exists()) {
+            configsDir.mkdir();
+        }
         Log.i(LOG_TAG,
-                "Searching for config files in external storage directory " + context.getExternalFilesDir(CONFIGS_DIR)
+                "Searching for config files in external storage directory " + configsDir.toString()
         );
-        File[] configFiles = SCFileUtilities.findFilesByExtension(context.getExternalFilesDir(CONFIGS_DIR), ".scfg");
+        File[] configFiles = SCFileUtilities.findFilesByExtension(configsDir, ".scfg");
         for (File file : configFiles) {
             Log.d(LOG_TAG, "Registering stores for config " + file.getName());
             registerStores(file);

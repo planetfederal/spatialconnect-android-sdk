@@ -106,4 +106,31 @@ public class WebBundleUtil {
     public File getRootBundlesDir() {
         return rootBundlesDir;
     }
+
+    /**
+     * Given a path to the unzipped web bundle directory (as a File object), recursively traverse the directory to find
+     * the index.html file within the bundle and return it.
+     *
+     * @param bundleDir
+     * @return
+     */
+    public File getIndexFromBundle(File bundleDir) {
+        File root = new File(bundleDir.getAbsolutePath());
+        File[] list = root.listFiles();
+        File file = null;
+        if (list == null) return null;
+        for (File f : list) {
+            if (f.isDirectory()) {
+                return getIndexFromBundle(f);
+            }
+            else {
+                if (f.getAbsolutePath().contains("index.html")) {
+                    file = f;
+                    break;
+                }
+            }
+        }
+        return file;
+    }
+
 }
