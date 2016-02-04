@@ -1,6 +1,7 @@
 package com.boundlessgeo.spatialconnect.services;
 
 import android.content.Context;
+import android.os.Environment;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
@@ -47,9 +48,8 @@ public class SCServiceManager {
     }
 
     /**
-     * Constructor for instantiating a service manager with a config file (or group of files).  It will first
-     * register all the stores defined in the config file(s) passed in, then it will scan the default configs
-     * directory for existing configurations and load those as well.
+     * Constructor for instantiating a service manager with a config file (or group of files).  It will register all
+     * the stores defined in the config file(s) passed in.
      *
      * @param context
      * @param configFiles
@@ -65,8 +65,6 @@ public class SCServiceManager {
             Log.d(LOG_TAG, "Registering stores for config " + file.getName());
             registerStores(file);
         }
-        // also load any existing configs
-        loadConfigs();
     }
 
     public void addDefaultServices() {
@@ -82,18 +80,29 @@ public class SCServiceManager {
      * directory for config files.
      */
     public void loadConfigs() {
-        File configsDir = context.getExternalFilesDir(CONFIGS_DIR);
-        if (!configsDir.exists()) {
-            configsDir.mkdir();
+        if (isExternalStorageWritable()) {
+            File configsDir = context.getExternalFilesDir(CONFIGS_DIR);
+            if (configsDir == null || !configsDir.exists()) {
+                configsDir.mkdir();
+            }
+            Log.i(LOG_TAG,
+                    "Searching for config files in external storage directory " + configsDir.toString()
+            );
+            File[] configFiles = SCFileUtilities.findFilesByExtension(configsDir, ".scfg");
+            for (File file : configFiles) {
+                Log.d(LOG_TAG, "Registering stores for config " + file.getName());
+                registerStores(file);
+            }
         }
-        Log.i(LOG_TAG,
-                "Searching for config files in external storage directory " + configsDir.toString()
-        );
-        File[] configFiles = SCFileUtilities.findFilesByExtension(configsDir, ".scfg");
-        for (File file : configFiles) {
-            Log.d(LOG_TAG, "Registering stores for config " + file.getName());
-            registerStores(file);
+    }
+
+    /* Checks if external storage is available for read and write */
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
         }
+        return false;
     }
 
     /**
