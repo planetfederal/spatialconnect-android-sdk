@@ -6,6 +6,11 @@ import android.test.ActivityInstrumentationTestCase2;
 
 import com.boundlessgeo.spatialconnect.SpatialConnectActivity;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
 public class BaseTestCase extends ActivityInstrumentationTestCase2<SpatialConnectActivity> {
 
     /**
@@ -17,6 +22,11 @@ public class BaseTestCase extends ActivityInstrumentationTestCase2<SpatialConnec
      * Test context
      */
     protected Context testContext = null;
+
+    /**
+     * Test context
+     */
+    protected File testConfigFile;
 
     /**
      * Constructor
@@ -37,6 +47,19 @@ public class BaseTestCase extends ActivityInstrumentationTestCase2<SpatialConnec
                 "com.boundlessgeo.spatialconnect.test",
                 Context.CONTEXT_IGNORE_SECURITY
         );
+        try {
+            testConfigFile = File.createTempFile("config.scfg", null, activity.getCacheDir());
+            // read test scconfig.json file from test resources directory
+            InputStream is = testContext.getResources().openRawResource(R.raw.scconfig);
+            FileOutputStream fos = new FileOutputStream(testConfigFile);
+            byte[] data = new byte[is.available()];
+            is.read(data);
+            fos.write(data);
+            is.close();
+            fos.close();
+        } catch (IOException ex) {
+            System.exit(0);
+        }
     }
 
     @Override
