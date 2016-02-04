@@ -29,7 +29,7 @@ public class GeoPackageTest extends BaseTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        serviceManager = new SCServiceManager(activity, testConfigFile);
+        serviceManager = new SCServiceManager(activity);
     }
 
     @Override
