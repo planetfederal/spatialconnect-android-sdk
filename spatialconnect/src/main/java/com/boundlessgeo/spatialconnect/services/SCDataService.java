@@ -2,7 +2,6 @@ package com.boundlessgeo.spatialconnect.services;
 
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
@@ -10,7 +9,6 @@ import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreLifeCycle;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
-import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 
@@ -22,7 +20,6 @@ import java.util.Map;
 import java.util.Set;
 
 import rx.Observable;
-import rx.Subscriber;
 import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
@@ -36,7 +33,20 @@ public class SCDataService extends SCService
     private Map<String, SCDataStore> stores;
     private boolean storesStarted;
     private final String LOG_TAG = "SCDataService";
+
+    /**
+     * The storeEventSubject is like an internal event bus, its job is to receive {@link SCStoreStatusEvent}s
+     * published by each time a {@link SCDataStore} calls onNext() and then publish them to the storeEvents
+     * subscriber, which in turn, will update its subscribers.
+     */
     protected PublishSubject<SCStoreStatusEvent> storeEventSubject;
+
+    /**
+     * This is the Observable that subscribers in your app will subscribe to so that they can receive {@link
+     * SCStoreStatusEvent}s.  Subscribers must explicitly call {@link rx.observables.ConnectableObservable#connect()}
+     * connect to start receiving events b/c storeEvents is a ConnectableObservable. We use a ConnectableObservable
+     * so that multiple subscribers can connect before beginning to emit the events about the {@link SCDataStore}s.
+     */
     public ConnectableObservable<SCStoreStatusEvent> storeEvents;
 
     public SCDataService()
@@ -44,7 +54,9 @@ public class SCDataService extends SCService
         super();
         this.supportedStores = new HashSet<>();
         this.stores = new HashMap<>();
+        // "cold" observable used to emit {@see com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent}s
         this.storeEventSubject = PublishSubject.create();
+        // turns the "cold" storeEventSubject observable into a "hot" ConnectableObservable
         this.storeEvents = storeEventSubject.publish();
         addDefaultStoreImpls();
     }

@@ -1,6 +1,7 @@
 package com.boundlessgeo.spatialconnect.services;
 
 import android.content.Context;
+import android.os.Environment;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
@@ -29,6 +30,13 @@ public class SCServiceManager {
     private final String LOG_TAG = SCServiceManager.class.getSimpleName();
     private static final String CONFIGS_DIR = "configs";
 
+    /**
+     * The default SCServiceManager constructor will scan through the app's config directory in its
+     * <a href="http://developer.android.com/guide/topics/data/data-storage.html#filesExternal">external storage</a>
+     * and register all stores defined within those config files.
+     *
+     * @param context
+     */
     public SCServiceManager(Context context) {
         this.services = new HashMap<>();
         this.dataService = new SCDataService();
@@ -37,6 +45,26 @@ public class SCServiceManager {
         this.context = context;
         addDefaultServices();
         loadConfigs();
+    }
+
+    /**
+     * Constructor for instantiating a service manager with a config file (or group of files).  It will register all
+     * the stores defined in the config file(s) passed in.
+     *
+     * @param context
+     * @param configFiles
+     */
+    public SCServiceManager(Context context, File... configFiles) {
+        this.services = new HashMap<>();
+        this.dataService = new SCDataService();
+        this.networkService = new SCNetworkService();
+        this.sensorService = new SCSensorService(context);
+        this.context = context;
+        addDefaultServices();
+        for (File file : configFiles) {
+            Log.d(LOG_TAG, "Registering stores for config " + file.getName());
+            registerStores(file);
+        }
     }
 
     public void addDefaultServices() {
@@ -52,14 +80,29 @@ public class SCServiceManager {
      * directory for config files.
      */
     public void loadConfigs() {
-        Log.i(LOG_TAG,
-                "Searching for config files in external storage directory " + context.getExternalFilesDir(CONFIGS_DIR)
-        );
-        File[] configFiles = SCFileUtilities.findFilesByExtension(context.getExternalFilesDir(CONFIGS_DIR), ".scfg");
-        for (File file : configFiles) {
-            Log.d(LOG_TAG, "Registering stores for config " + file.getName());
-            registerStores(file);
+        if (isExternalStorageWritable()) {
+            File configsDir = context.getExternalFilesDir(CONFIGS_DIR);
+            if (configsDir == null || !configsDir.exists()) {
+                configsDir.mkdir();
+            }
+            Log.i(LOG_TAG,
+                    "Searching for config files in external storage directory " + configsDir.toString()
+            );
+            File[] configFiles = SCFileUtilities.findFilesByExtension(configsDir, ".scfg");
+            for (File file : configFiles) {
+                Log.d(LOG_TAG, "Registering stores for config " + file.getName());
+                registerStores(file);
+            }
         }
+    }
+
+    /* Checks if external storage is available for read and write */
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
     }
 
     /**
