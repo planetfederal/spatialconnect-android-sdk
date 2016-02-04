@@ -139,7 +139,6 @@ public class GeoPackageAdapter extends SCDataAdapter {
                      Log.d(LOG_TAG, "GeoPackage " + scStoreConfig.getName() + " already downloaded.");
                      adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
                      store.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                     // terminate the subscription
                      subscriber.onCompleted();
                  }
              }

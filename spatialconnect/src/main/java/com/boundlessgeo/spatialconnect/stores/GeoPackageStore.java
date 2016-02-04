@@ -118,7 +118,7 @@ public class GeoPackageStore extends SCDataStore {
                 int numLayers = queryTables.size();
                 int perLayer = limit / numLayers;
 
-                for (String featureTableName : queryTables) {
+                for (String featureTableName : queryTables){
                     FeatureDao featureDao = gp.getFeatureDao(featureTableName);
                     FeatureCursor featureCursor = null;
                     try {
