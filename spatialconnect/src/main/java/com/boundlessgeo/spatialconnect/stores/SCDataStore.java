@@ -33,6 +33,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Subclasses of SCDataStore provide read/write access to a single data store using an {@link SCDataAdapter}.  Instances
+ * of SCDataStore are initialized with an {@link SCStoreConfig} which provides the information needed to connect to the
+ * underlying data source.
+ * <p></p>
+ * Some implementations may throw {@link SCDataStoreException} if a problem arises that the client cannot recover from.
+ * For example, trying to write to a table that doesn't exist will throw a {@link SCDataStoreException}.
+ */
 public abstract class SCDataStore implements SCSpatialStore
 {
 
