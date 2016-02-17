@@ -20,14 +20,18 @@ import java.util.Map;
 import java.util.Set;
 
 import rx.Observable;
+import rx.Subscriber;
 import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.observables.ConnectableObservable;
-import rx.subjects.PublishSubject;
+import rx.subjects.BehaviorSubject;
 
-public class SCDataService extends SCService
-{
+/**
+ * The SCDataService is responsible for starting, stopping, and managing access to {@link SCDataStore} instances.  This
+ * includes exposing methods to query accross multiple SCDataStore instances.
+ */
+public class SCDataService extends SCService {
     private SCServiceStatus status;
     private Set<String> supportedStores; // the strings are store keys: type.version
     private Map<String, SCDataStore> stores;
@@ -36,10 +40,9 @@ public class SCDataService extends SCService
 
     /**
      * The storeEventSubject is like an internal event bus, its job is to receive {@link SCStoreStatusEvent}s
-     * published by each time a {@link SCDataStore} calls onNext() and then publish them to the storeEvents
-     * subscriber, which in turn, will update its subscribers.
+     * published by a {@link SCDataStore}.
      */
-    protected PublishSubject<SCStoreStatusEvent> storeEventSubject;
+    protected BehaviorSubject<SCStoreStatusEvent> storeEventSubject;
 
     /**
      * This is the Observable that subscribers in your app will subscribe to so that they can receive {@link
@@ -49,49 +52,45 @@ public class SCDataService extends SCService
      */
     public ConnectableObservable<SCStoreStatusEvent> storeEvents;
 
-    public SCDataService()
-    {
+    public SCDataService() {
         super();
         this.supportedStores = new HashSet<>();
         this.stores = new HashMap<>();
-        // "cold" observable used to emit {@see com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent}s
-        this.storeEventSubject = PublishSubject.create();
+        // "cold" observable used to emit SCStoreStatusEvents
+        this.storeEventSubject = BehaviorSubject.create();
         // turns the "cold" storeEventSubject observable into a "hot" ConnectableObservable
         this.storeEvents = storeEventSubject.publish();
         addDefaultStoreImpls();
     }
 
-    public void addDefaultStoreImpls()
-    {
+    public void addDefaultStoreImpls() {
         this.supportedStores.add(GeoJsonStore.versionKey());
         this.supportedStores.add(GeoPackageStore.versionKey());
     }
 
-    public void startAllStores()
-    {
+    private void startAllStores() {
         Set<String> s = stores.keySet();
         final int storesCount = s.size();
 
         storeEventSubject.filter(new Func1<SCStoreStatusEvent, Boolean>() {
-          @Override
-          public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
-            Log.d(LOG_TAG, "This store is now running: " + scStoreStatusEvent.getStoreId());
-            return scStoreStatusEvent.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING;
-          }
+            @Override
+            public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
+                Log.d(LOG_TAG, "This store is now running: " + scStoreStatusEvent.getStoreId());
+                return scStoreStatusEvent.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING;
+            }
         })
-          .buffer(storesCount).take(1).subscribe(new Action1<List<SCStoreStatusEvent>>() {
+                .buffer(storesCount).take(1).subscribe(new Action1<List<SCStoreStatusEvent>>() {
             @Override
             public void call(List<SCStoreStatusEvent> l) {
+                // when all stores have started, send the SC_DATA_SERVICE_ALLSTORESSTARTED status
                 SCStoreStatusEvent se = new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED, null);
                 storeEventSubject.onNext(se);
             }
         });
 
-        for (String key : s)
-        {
+        for (String key : s) {
             Object obj = stores.get(key);
-            if (obj instanceof SCDataStoreLifeCycle)
-            {
+            if (obj instanceof SCDataStoreLifeCycle) {
                 this.startStore((SCDataStoreLifeCycle) stores.get(key));
             }
         }
@@ -103,61 +102,67 @@ public class SCDataService extends SCService
             @Override
             public void call(SCStoreStatusEvent s) {
             }
-        },new Action1<Throwable>(){
+        }, new Action1<Throwable>() {
             @Override
             public void call(Throwable t) {
                 System.out.println(t.getLocalizedMessage());
             }
-        },new Action0() {
+        }, new Action0() {
             @Override
             public void call() {
                 storeEventSubject.onNext(
-                  new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, ((SCDataStore) s).getStoreId())
+                        new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, ((SCDataStore) s).getStoreId())
                 );
             }
         });
     }
 
-    public Observable<SCStoreStatusEvent> allStoresStartedObs()
-    {
-        Boolean allStarted = true;
-        for (String key : stores.keySet()) {
-            SCDataStore store = stores.get(key);
-            if (store.getStatus() != SCDataStoreStatus.SC_DATA_STORE_RUNNING) {
-                allStarted = false;
-                break;
-            }
-        }
-
-        if (allStarted) {
-            return Observable.empty();
-        } else {
-            return storeEventSubject.filter(
-                    new Func1<SCStoreStatusEvent, Boolean>() {
-                        @Override
-                        public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
-                            return (scStoreStatusEvent.getStatus() ==
-                                    SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED);
-                        }
+    /**
+     * Emits an event when all stores have been started and then calls the subscriber's onComplete().
+     *
+     * @return an Observable that completes when all stores are started.
+     */
+    public Observable<SCStoreStatusEvent> allStoresStartedObs() {
+        return Observable.create(
+                new Observable.OnSubscribe<SCStoreStatusEvent>() {
+                    @Override
+                    public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
+                        // filter the events
+                        storeEventSubject.filter(
+                                new Func1<SCStoreStatusEvent, Boolean>() {
+                                    @Override
+                                    public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
+                                        return (scStoreStatusEvent.getStatus() ==
+                                                SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED);
+                                    }
+                                }
+                        ).subscribe(new Action1<SCStoreStatusEvent>() {
+                            @Override
+                            public void call(final SCStoreStatusEvent scStoreStatusEvent) {
+                                subscriber.onNext(scStoreStatusEvent);
+                                subscriber.onCompleted();
+                            }
+                        });
                     }
-            );
-        }
+                }
+        );
     }
 
-    public void start()
-    {
+
+    /**
+     * Calling start on the {@link SCDataService} will start all registered {@link SCDataStore}s.
+     */
+    public void start() {
         super.start();
         startAllStores();
         this.storesStarted = true;
     }
 
-    public void addSupportedStoreKey(String key)
-    {
+    public void addSupportedStoreKey(String key) {
         this.supportedStores.add(key);
     }
 
-    public void removeSupportedStoreKey(String key)
-    {
+    public void removeSupportedStoreKey(String key) {
         this.supportedStores.remove(key);
     }
 
@@ -166,18 +171,15 @@ public class SCDataService extends SCService
         this.stores.put(store.getStoreId(), store);
     }
 
-    public void unregisterStore(SCDataStore store)
-    {
+    public void unregisterStore(SCDataStore store) {
         this.stores.remove(store.getStoreId());
     }
 
-    public List<String> getSupportedStoreKeys()
-    {
+    public List<String> getSupportedStoreKeys() {
         return new ArrayList<>(supportedStores);
     }
 
-    public boolean isStoreSupported(String key)
-    {
+    public boolean isStoreSupported(String key) {
         return supportedStores.contains(key);
     }
 
@@ -186,14 +188,11 @@ public class SCDataService extends SCService
      *
      * @return the list of active data stores
      */
-    public List<SCDataStore> getActiveStores()
-    {
+    public List<SCDataStore> getActiveStores() {
         List<SCDataStore> activeStores = new ArrayList<>();
-        for (String key : stores.keySet())
-        {
+        for (String key : stores.keySet()) {
             SCDataStore scDataStore = stores.get(key);
-            if (scDataStore.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING))
-            {
+            if (scDataStore.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
                 activeStores.add(scDataStore);
             }
         }
@@ -201,12 +200,12 @@ public class SCDataService extends SCService
     }
 
     public List<SCDataStore> getAllStores() {
-      List<SCDataStore> activeStores = new ArrayList<>();
-      for (String key : stores.keySet()) {
-        SCDataStore scDataStore = stores.get(key);
-          activeStores.add(scDataStore);
-      }
-      return activeStores;
+        List<SCDataStore> activeStores = new ArrayList<>();
+        for (String key : stores.keySet()) {
+            SCDataStore scDataStore = stores.get(key);
+            activeStores.add(scDataStore);
+        }
+        return activeStores;
     }
 
     /**
@@ -228,26 +227,21 @@ public class SCDataService extends SCService
     /*
      * StoreQueryDAO is an inner class
      */
-    public Observable<SCSpatialFeature> queryStore(String id, SCQueryFilter filter)
-    {
+    public Observable<SCSpatialFeature> queryStore(String id, SCQueryFilter filter) {
         StoreQueryDAO dao = new StoreQueryDAO(id, filter);
         Observable<SCSpatialFeature> queryresults =
                 Observable
                         .just(dao)
-                        .flatMap(new Func1<StoreQueryDAO, Observable<SCSpatialFeature>>()
-                        {
+                        .flatMap(new Func1<StoreQueryDAO, Observable<SCSpatialFeature>>() {
                             @Override
-                            public Observable<SCSpatialFeature> call(StoreQueryDAO dao)
-                            {
+                            public Observable<SCSpatialFeature> call(StoreQueryDAO dao) {
                                 Observable<SCSpatialFeature> results;
                                 SCDataStore ds = stores.get(dao.getId());
-                                if(ds != null && ds.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING)
-                                {
-                                    SCSpatialStore sp = (SCSpatialStore) ds;
+                                if (ds != null && ds.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING) {
+                                    SCSpatialStore sp = ds;
                                     results = sp.query(dao.filter);
                                 }
-                                else
-                                {
+                                else {
                                     results = Observable.empty();
                                 }
                                 return results;
@@ -267,7 +261,7 @@ public class SCDataService extends SCService
 
                                 List<Observable<SCSpatialFeature>> queryResults = new ArrayList<>();
                                 for (SCDataStore ds : runningStores) {
-                                    SCSpatialStore sp = (SCSpatialStore) ds;
+                                    SCSpatialStore sp = ds;
                                     queryResults.add(sp.query(filter));
                                 }
 
@@ -278,24 +272,20 @@ public class SCDataService extends SCService
         return queryResults;
     }
 
-    class StoreQueryDAO
-    {
+    class StoreQueryDAO {
         private String id;
         private SCQueryFilter filter;
 
-        public StoreQueryDAO(String id, SCQueryFilter filter)
-        {
+        public StoreQueryDAO(String id, SCQueryFilter filter) {
             this.id = id;
             this.filter = filter;
         }
 
-        public String getId()
-        {
+        public String getId() {
             return id;
         }
 
-        public SCQueryFilter getFilter()
-        {
+        public SCQueryFilter getFilter() {
             return filter;
         }
     }
