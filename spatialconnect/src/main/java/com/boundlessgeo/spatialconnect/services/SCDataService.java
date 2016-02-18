@@ -43,7 +43,7 @@ import rx.subjects.BehaviorSubject;
 
 /**
  * The SCDataService is responsible for starting, stopping, and managing access to {@link SCDataStore} instances.  This
- * includes exposing methods to query accross multiple SCDataStore instances.
+ * includes exposing methods to query across multiple SCDataStore instances.
  */
 public class SCDataService extends SCService {
     private SCServiceStatus status;

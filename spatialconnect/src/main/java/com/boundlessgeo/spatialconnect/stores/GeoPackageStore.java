@@ -132,11 +132,15 @@ public class GeoPackageStore extends SCDataStore {
                 int perLayer = limit / numLayers;
 
                 for (String featureTableName : queryTables) {
-                    FeatureDao featureDao = getFeatureDao(featureTableName);
-                    // if the feature table doesn't exist then we will skip it without throwing an error.
-                    if (featureDao == null) {
-                        return;
+                    final FeatureDao featureDao;
+                    try {
+                        featureDao = getFeatureDao(featureTableName);  // layerId is the table name
                     }
+                    catch (GeoPackageException ex) {
+                        // if the feature table doesn't exist then we will skip it without throwing an error.
+                        continue;
+                    }
+
                     FeatureCursor featureCursor = null;
                     try {
                         featureCursor = featureDao.queryForAll();
@@ -216,15 +220,20 @@ public class GeoPackageStore extends SCDataStore {
     @Override
     public Observable<SCSpatialFeature> create(final SCSpatialFeature scSpatialFeature) {
         String layerId = scSpatialFeature.getKey().getLayerId();
-        final FeatureDao featureDao = getFeatureDao(layerId);  // layerId is the table name
-        if (featureDao == null) {
+        final FeatureDao featureDao;
+        try {
+             featureDao = getFeatureDao(layerId);  // layerId is the table name
+        }
+        catch (GeoPackageException ex) {
             return Observable.error(
                     new SCDataStoreException(
                             SCDataStoreException.ExceptionType.LAYER_NOT_FOUND,
-                            "Couldn't find a feature table named " + layerId
+                            "Couldn't find a feature table named " + layerId,
+                            ex
                     )
             );
         }
+
         final FeatureRow newRow = featureDao.newRow();
 
         // populate the new row with feature data
@@ -272,12 +281,16 @@ public class GeoPackageStore extends SCDataStore {
     @Override
     public Observable<Boolean> update(final SCSpatialFeature scSpatialFeature) {
         final String layerId = scSpatialFeature.getKey().getLayerId();
-        final FeatureDao featureDao = getFeatureDao(layerId);  // layerId is the table name
-        if (featureDao == null) {
+        final FeatureDao featureDao;
+        try {
+            featureDao = getFeatureDao(layerId);  // layerId is the table name
+        }
+        catch (GeoPackageException ex) {
             return Observable.error(
                     new SCDataStoreException(
                             SCDataStoreException.ExceptionType.LAYER_NOT_FOUND,
-                            "Couldn't find a feature table named " + layerId
+                            "Couldn't find a feature table named " + layerId,
+                            ex
                     )
             );
         }
@@ -307,12 +320,16 @@ public class GeoPackageStore extends SCDataStore {
     public Observable<Boolean> delete(final SCKeyTuple tuple) {
         final String featureId = tuple.getFeatureId();
         final String layerId = tuple.getLayerId();
-        final FeatureDao featureDao = getFeatureDao(layerId);  // layerId is the table name
-        if (featureDao == null) {
+        final FeatureDao featureDao;
+        try {
+            featureDao = getFeatureDao(layerId);  // layerId is the table name
+        }
+        catch (GeoPackageException ex) {
             return Observable.error(
                     new SCDataStoreException(
                             SCDataStoreException.ExceptionType.LAYER_NOT_FOUND,
-                            "Couldn't find a feature table named " + layerId
+                            "Couldn't find a feature table named " + layerId,
+                            ex
                     )
             );
         }
@@ -483,18 +500,12 @@ public class GeoPackageStore extends SCDataStore {
                             featureRow.setValue(key, Integer.valueOf(stringValue));
                             break;
                         }
-                        case INT: {
-                            featureRow.setValue(key, Long.valueOf(stringValue));
-                            break;
-                        }
+                        case INT:
                         case INTEGER: {
                             featureRow.setValue(key, Long.valueOf(stringValue));
                             break;
                         }
-                        case DOUBLE: {
-                            featureRow.setValue(key, Double.valueOf(stringValue));
-                            break;
-                        }
+                        case DOUBLE:
                         case REAL: {
                             featureRow.setValue(key, Double.valueOf(stringValue));
                             break;
@@ -528,20 +539,16 @@ public class GeoPackageStore extends SCDataStore {
 
     /**
      * Helper method that returns the FeatureDao instance based on the feature table name.  If the GeoPackage doesn't
-     * have a feature table with that name, then return null.
+     * have a feature table with that name it will throw a GeoPackageException.
      *
      * @param featureTableName the name of the SCSpatialFeature's layer attribute
-     * @return the instance of the FeatureDao used to interact with the feature table or null
+     * @return the instance of the FeatureDao used to interact with the feature table
+     * @throws GeoPackageException
      */
-    public FeatureDao getFeatureDao(String featureTableName) {
+    public FeatureDao getFeatureDao(String featureTableName) throws GeoPackageException {
         GeoPackageManager manager = ((GeoPackageAdapter) this.getAdapter()).getGeoPackageManager();
         GeoPackage geoPackage = manager.open(this.getAdapter().getDataStoreName());
-        try {
-            return geoPackage.getFeatureDao(featureTableName);
-        }
-        catch (GeoPackageException e) {
-            return null;
-        }
+        return geoPackage.getFeatureDao(featureTableName);
     }
 
     /**
