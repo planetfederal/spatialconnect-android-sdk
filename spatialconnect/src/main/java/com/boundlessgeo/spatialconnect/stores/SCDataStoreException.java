@@ -31,6 +31,11 @@ public class SCDataStoreException extends RuntimeException {
         this.type = type;
     }
 
+    public SCDataStoreException(ExceptionType type, String message, Exception cause) {
+        super(message, cause);
+        this.type = type;
+    }
+
     public ExceptionType getType() {
         return type;
     }

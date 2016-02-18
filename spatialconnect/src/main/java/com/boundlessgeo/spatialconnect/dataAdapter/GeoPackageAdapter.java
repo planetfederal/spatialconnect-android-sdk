@@ -63,7 +63,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
     }
 
     @Override
-    public Observable<SCDataAdapterStatus> connect() {
+      public Observable<SCDataAdapterStatus> connect() {
         final GeoPackageAdapter adapterInstance = this;
 
         return Observable.create(new Observable.OnSubscribe<SCDataAdapterStatus>() {
@@ -90,7 +90,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                      store.setStatus(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING);
 
                      downloadGeopackage(scStoreConfig, theUrl)
-                             .subscribeOn(Schedulers.newThread())
+                             .subscribeOn(Schedulers.io())
                              .observeOn(AndroidSchedulers.mainThread())
                              .subscribe(new Action1<Boolean>() {
                                @Override
