@@ -45,6 +45,7 @@ public class SCDataStoreException extends RuntimeException {
     }
 
     public enum ExceptionType {
-        LAYER_NOT_FOUND
+        LAYER_NOT_FOUND,
+        CONNECTION_ERROR
     }
 }

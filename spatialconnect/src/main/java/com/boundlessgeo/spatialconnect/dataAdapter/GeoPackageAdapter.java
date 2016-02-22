@@ -20,6 +20,7 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 
 import java.net.MalformedURLException;
@@ -101,8 +102,10 @@ public class GeoPackageAdapter extends SCDataAdapter {
                                    Log.w(LOG_TAG, "Could not connect to GeoPackage");
                                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
                                    store.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-                                   subscriber.onError(new Throwable("Failed to import GeoPackage from " + url));
-
+                                   subscriber.onError(new SCDataStoreException(
+                                           SCDataStoreException.ExceptionType.CONNECTION_ERROR,
+                                           "Failed to import " + "GeoPackage from " + url)
+                                   );
                                  } else {
                                    Log.d(LOG_TAG, "Successfully downloaded geopackage from " + url);
                                    // connect to the geopackage on the local filesystem
@@ -115,7 +118,6 @@ public class GeoPackageAdapter extends SCDataAdapter {
                                    } else {
                                      adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
                                      store.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-                                     subscriber.onError(new Throwable("geopackage was null"));
                                    }
                                  }
                                }
@@ -123,6 +125,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                                @Override
                                public void call(Throwable throwable) {
                                  //Error if Geopackage download can't be reached
+                                 Log.d(LOG_TAG, throwable.getMessage());
                                  subscriber.onError(throwable);
                                }
                              });

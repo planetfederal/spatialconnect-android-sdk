@@ -380,7 +380,7 @@ public class GeoPackageStore extends SCDataStore {
                     public void onError(Throwable e) {
                         Log.w(LOG_TAG, "Could not activate data store " + storeId);
                         storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-                        subscriber.onError(new Exception("Could not activate data store " + storeId));
+                        subscriber.onError(e);
                     }
 
                     @Override
