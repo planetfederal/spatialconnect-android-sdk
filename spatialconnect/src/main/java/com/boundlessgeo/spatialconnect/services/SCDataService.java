@@ -119,7 +119,11 @@ public class SCDataService extends SCService {
         }, new Action1<Throwable>() {
             @Override
             public void call(Throwable t) {
-                System.out.println(t.getLocalizedMessage());
+                Log.d(LOG_TAG, t.getLocalizedMessage());
+                // onError can happen if we cannot start the store b/c of some error or runtime exception
+                storeEventSubject.onNext(
+                        new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, ((SCDataStore) s).getStoreId())
+                );
             }
         }, new Action0() {
             @Override
@@ -132,7 +136,7 @@ public class SCDataService extends SCService {
     }
 
     /**
-     * Emits an event when all stores have been started and then calls the subscriber's onComplete().
+     * Closes the stream by calling  the subscriber's onComplete() when all stores have been started.
      *
      * @return an Observable that completes when all stores are started.
      */
@@ -153,7 +157,6 @@ public class SCDataService extends SCService {
                         ).subscribe(new Action1<SCStoreStatusEvent>() {
                             @Override
                             public void call(final SCStoreStatusEvent scStoreStatusEvent) {
-                                subscriber.onNext(scStoreStatusEvent);
                                 subscriber.onCompleted();
                             }
                         });
