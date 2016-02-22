@@ -17,6 +17,8 @@ package com.boundlessgeo.spatialconnect.test;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.services.SCServiceManager;
 
+import rx.observers.TestSubscriber;
+
 public class ServicesTest extends BaseTestCase {
 
     public void testDataServiceInitialization() {
@@ -41,5 +43,15 @@ public class ServicesTest extends BaseTestCase {
         assertTrue("The gpkg.1 store should be in the list of supported stores.",
                 serviceManager.getDataService().getSupportedStoreKeys().contains("gpkg.1")
         );
+    }
+
+    public void testAllStoresStartedObsCompletesWithNoErrors() {
+        SCServiceManager serviceManager = new SCServiceManager(activity, testConfigFile);
+        serviceManager.startAllServices();
+        TestSubscriber testSubscriber = new TestSubscriber();
+        serviceManager.getDataService().allStoresStartedObs().subscribe(testSubscriber);
+        testSubscriber.awaitTerminalEvent();
+        testSubscriber.assertNoErrors();
+        testSubscriber.assertCompleted();
     }
 }

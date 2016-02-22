@@ -51,14 +51,6 @@ public class GeoPackageTest extends BaseTestCase {
         serviceManager.startAllServices();
     }
 
-    public void testAllStoresStartedObsEmits1EventThenCompletes() {
-        TestSubscriber testSubscriber = new TestSubscriber();
-        serviceManager.getDataService().allStoresStartedObs().subscribe(testSubscriber);
-        testSubscriber.awaitTerminalEvent();
-        testSubscriber.assertValueCount(1);
-        testSubscriber.assertCompleted();
-    }
-
     public void testThatDataServiceStartedGeoPackageStore() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
