@@ -17,6 +17,8 @@ package com.boundlessgeo.spatialconnect.test;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.services.SCServiceManager;
 
+import java.util.concurrent.TimeUnit;
+
 import rx.observers.TestSubscriber;
 
 public class ServicesTest extends BaseTestCase {
@@ -49,8 +51,10 @@ public class ServicesTest extends BaseTestCase {
         SCServiceManager serviceManager = new SCServiceManager(activity, testConfigFile);
         serviceManager.startAllServices();
         TestSubscriber testSubscriber = new TestSubscriber();
-        serviceManager.getDataService().allStoresStartedObs().subscribe(testSubscriber);
+        // timeout if all stores don't start in 1 minute
+        serviceManager.getDataService().allStoresStartedObs().timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
+        testSubscriber.assertNoValues();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();
     }
