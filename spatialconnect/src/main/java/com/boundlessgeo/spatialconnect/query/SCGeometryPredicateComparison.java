@@ -18,5 +18,6 @@ package com.boundlessgeo.spatialconnect.query;
 public enum SCGeometryPredicateComparison
 {
     SCPREDICATE_OPERATOR_WITHIN,
+    SCPREDICATE_OPERATOR_CONTAINS,
     SCPREDICATE_OPERATOR_NOTWITHIN
 }
