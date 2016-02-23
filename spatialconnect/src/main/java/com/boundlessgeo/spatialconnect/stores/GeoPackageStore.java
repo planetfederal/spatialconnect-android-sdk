@@ -152,7 +152,7 @@ public class GeoPackageStore extends SCDataStore {
                                 SCSpatialFeature feature = createSCSpatialFeature(featureCursor.getRow());
                                 if (feature instanceof SCGeometry &&
                                         ((SCGeometry) feature).getGeometry() != null &&
-                                        scFilter.getPredicate().isInBoundingBox((SCGeometry) feature)) {
+                                        scFilter.getPredicate().applyFilter((SCGeometry) feature)) {
                                     featuresCount++;
                                     layerCount++;
                                     subscriber.onNext(feature);

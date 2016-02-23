@@ -112,7 +112,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
               public Boolean call(SCSpatialFeature feature) {
                 if (feature instanceof SCGeometry &&
                   ((SCGeometry) feature).getGeometry() != null &&
-                  filter.getPredicate().isInBoundingBox((SCGeometry) feature)) {
+                  filter.getPredicate().applyFilter((SCGeometry) feature)) {
                   return true;
                 } else {
                   return false;

@@ -37,19 +37,19 @@ public class SCPredicate
     public boolean applyFilter(SCSpatialFeature scSpatialFeature)
     {
         boolean status = false;
-        boolean contained = false;
         if(scSpatialFeature instanceof SCGeometryCollection)
         {
             for(SCSpatialFeature scf : ((SCGeometryCollection) scSpatialFeature).getFeatures())
             {
-                if(scf instanceof SCGeometry)
-                {
-                    contained = isInBoundingBox((SCGeometry)scf);
-                    if(this.geometryComp == SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN && contained
-                            || this.geometryComp == SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_NOTWITHIN && !contained)
-                    {
-                        status = true;
-                        break;
+                if(scf instanceof SCGeometry) {
+                    if (this.geometryComp == SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN) {
+                        status = isWithinBoundingBox((SCGeometry) scf);
+                    }
+                    else if (this.geometryComp == SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_NOTWITHIN) {
+                        status = !isWithinBoundingBox((SCGeometry) scf);
+                    }
+                    else if (this.geometryComp == SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_CONTAINS) {
+                        status = isContainedInBoundingBox((SCGeometry) scf);
                     }
                 }
             }
@@ -57,7 +57,7 @@ public class SCPredicate
         return status;
     }
 
-    public boolean isInBoundingBox(SCGeometry scGeometry)
+    public boolean isContainedInBoundingBox(SCGeometry scGeometry)
     {
         Double[] bboxCoords = this.filterBbox.getBbox();
         Double[] geometryCoords = scGeometry.getBbox();
@@ -69,4 +69,15 @@ public class SCPredicate
         return false;
     }
 
+    public boolean isWithinBoundingBox(SCGeometry scGeometry)
+    {
+        Double[] bboxCoords = this.filterBbox.getBbox();
+        Double[] geometryCoords = scGeometry.getBbox();
+        if((geometryCoords[0] >= bboxCoords[0] || geometryCoords[2] <= bboxCoords[2])
+                || (geometryCoords[1] >= bboxCoords[1] || geometryCoords[3] <= bboxCoords[3]))
+        {
+            return true;
+        }
+        return false;
+    }
 }

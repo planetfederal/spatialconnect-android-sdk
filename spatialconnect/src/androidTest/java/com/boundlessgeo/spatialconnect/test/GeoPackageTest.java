@@ -73,7 +73,7 @@ public class GeoPackageTest extends BaseTestCase {
         });
     }
 
-    public void testGeoPackageQuery() {
+    public void testGeoPackageQueryWithin() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
             public void call(SCStoreStatusEvent scStoreStatusEvent) {
@@ -124,7 +124,41 @@ public class GeoPackageTest extends BaseTestCase {
         });
     }
 
-    public void testGeoPackageCreateFeature() {
+    public void testGeoPackageQueryContains() {
+        serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
+            @Override
+            public void call(SCStoreStatusEvent scStoreStatusEvent) {
+                // this is the geopackage located http://www.geopackage.org/data/haiti-vectors-split.gpkg
+                SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+
+                // bbox around part of haiti
+                SCBoundingBox bbox = new SCBoundingBox(-73.3901, 18.6261, -72.5097, 19.1627);
+                SCQueryFilter filter = new SCQueryFilter(
+                        new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_CONTAINS)
+                );
+                /** test that there are 1871 features returned.  the reference queryFeature to find this number is:
+                 SELECT(
+                 (SELECT COUNT(*) FROM point_features  WHERE ST_Within(the_geom, ST_GeomFromText('POLYGON((-73.3901 19.1627, -72.5097 19.1627, -72.5097 18.6261, -73.3901 18.6261, -73.3901 19.1627))')))+
+                 (SELECT COUNT(*) FROM polygon_features  WHERE ST_Within(the_geom, ST_GeomFromText('POLYGON((-73.3901 19.1627, -72.5097 19.1627, -72.5097 18.6261, -73.3901 18.6261, -73.3901 19.1627))')))+
+                 (SELECT COUNT(*) FROM linear_features  WHERE ST_Within(the_geom, ST_GeomFromText('POLYGON((-73.3901 19.1627, -72.5097 19.1627, -72.5097 18.6261, -73.3901 18.6261, -73.3901 19.1627))')))
+                 ) AS totalFeatures;
+                 */
+
+                assertNotNull("The store should downloaded locally", gpkgStore);
+
+                gpkgStore.query(filter).count().subscribe(new Action1<Integer>() {
+
+                    @Override
+                    public void call(Integer numberOfFeatures) {
+                        assertTrue(numberOfFeatures > 0);
+                    }
+
+                });
+            }
+        });
+    }
+
+        public void testGeoPackageCreateFeature() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
             public void call(SCStoreStatusEvent scStoreStatusEvent) {
