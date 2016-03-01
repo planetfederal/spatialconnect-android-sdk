@@ -51,8 +51,8 @@ public class ServicesTest extends BaseTestCase {
         SCServiceManager serviceManager = new SCServiceManager(activity, testConfigFile);
         serviceManager.startAllServices();
         TestSubscriber testSubscriber = new TestSubscriber();
-        // timeout if all stores don't start in 1 minute
-        serviceManager.getDataService().allStoresStartedObs().timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
+        // timeout if all stores don't start in 2 minutes
+        serviceManager.getDataService().allStoresStartedObs().timeout(2, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoValues();
         testSubscriber.assertNoErrors();
