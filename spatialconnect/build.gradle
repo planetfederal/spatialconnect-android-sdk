@@ -2,7 +2,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'maven'
 
 group 'com.boundlessgeo.spatialconnect'
-version '1.0.0'
+version '0.1.0'
 
 android {
     compileSdkVersion 'Google Inc.:Google APIs:23'
