@@ -123,7 +123,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                                }
                              }, new Action1<Throwable>() {
                                @Override
-                               public void call(Throwable throwable) {
+                               public void call(final Throwable throwable) {
                                  //Error if Geopackage download can't be reached
                                  Log.d(LOG_TAG, throwable.getMessage());
                                  subscriber.onError(throwable);

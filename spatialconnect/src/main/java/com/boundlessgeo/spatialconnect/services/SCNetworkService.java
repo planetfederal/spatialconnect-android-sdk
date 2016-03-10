@@ -15,10 +15,16 @@
 package com.boundlessgeo.spatialconnect.services;
 
 
-public class SCNetworkService extends  SCService
-{
-    public SCNetworkService()
-    {
-        //TODO implement this
+import okhttp3.OkHttpClient;
+
+public class SCNetworkService extends SCService {
+
+    private static OkHttpClient client = new OkHttpClient();
+
+    private SCNetworkService() {
+    }
+
+    public static OkHttpClient getHttpClient() {
+        return client;
     }
 }

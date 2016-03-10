@@ -30,14 +30,14 @@ public class ServicesTest extends BaseTestCase {
 
     @Test
     public void testDataServiceInitialization() {
-        SCDataService dataService = new SCDataService();
+        SCDataService dataService = SCDataService.getInstance();
         assertTrue("The data service should have 2 supported stores.", dataService.getSupportedStoreKeys().size() == 2);
     }
 
     @Test
     public void testServiceManagerSetup() {
         SCServiceManager serviceManager = new SCServiceManager(testContext);
-        assertEquals("3 default services should have been initialized (data, network, and sensor)",
+        assertEquals("3 default services should have been initialized (data, network, and config)",
                 3, serviceManager.getServices().size()
         );
         assertEquals("There should be only 2 supported data stores: geojson.1 and gpkg.1",

@@ -1,12 +1,12 @@
 /**
  * Copyright 2015-2016 Boundless, http://boundlessgeo.com
- *
+ * <p/>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p/>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p/>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -101,8 +101,7 @@ public class GeoPackageStore extends SCDataStore {
         return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
             @Override
             public void call(Subscriber<? super SCSpatialFeature> subscriber) {
-                final GeoPackageAdapter adapter =
-                  (GeoPackageAdapter) GeoPackageStore.this.getAdapter();
+                final GeoPackageAdapter adapter = (GeoPackageAdapter) GeoPackageStore.this.getAdapter();
                 final GeoPackageManager manager = adapter.getGeoPackageManager();
                 String geopackageName = adapter.getDataStoreName();
                 final GeoPackage gp = manager.open(geopackageName);
@@ -111,18 +110,19 @@ public class GeoPackageStore extends SCDataStore {
                 List<String> queryTables = new ArrayList<>();
 
                 if (featureTables.size() < 1) {
-                  subscriber.onCompleted();
+                    subscriber.onCompleted();
                 }
 
                 if (layerIds.size() != 0) {
                     for (String tName : layerIds) {
-                        for (String fName: featureTables) {
+                        for (String fName : featureTables) {
                             if (tName.equalsIgnoreCase(fName)) {
                                 queryTables.add(fName);
                             }
                         }
                     }
-                } else {
+                }
+                else {
                     queryTables.addAll(featureTables);
                 }
 
@@ -145,38 +145,40 @@ public class GeoPackageStore extends SCDataStore {
                     try {
                         featureCursor = featureDao.queryForAll();
                         int layerCount = 0;
-                        while (featureCursor != null && !featureCursor.isClosed()
-                                && featureCursor.moveToNext() && featuresCount < limit
-                                && layerCount <= perLayer) {
+                        while (featureCursor != null && !featureCursor.isClosed() && featureCursor.moveToNext()
+                                && featuresCount < limit && layerCount <= perLayer) {
                             try {
                                 SCSpatialFeature feature = createSCSpatialFeature(featureCursor.getRow());
-                                if (feature instanceof SCGeometry &&
-                                        ((SCGeometry) feature).getGeometry() != null &&
-                                        scFilter.getPredicate().applyFilter((SCGeometry) feature)) {
+                                if (feature instanceof SCGeometry && ((SCGeometry) feature).getGeometry() != null
+                                        && scFilter.getPredicate().applyFilter((SCGeometry) feature)) {
                                     featuresCount++;
                                     layerCount++;
                                     subscriber.onNext(feature);
                                 }
-                            } catch (ParseException e) {
+                            }
+                            catch (ParseException e) {
                                 Log.w(LOG_TAG, "Couldn't parse the geometry.");
                                 subscriber.onError(e);
-                            } catch (Exception e) {
+                            }
+                            catch (Exception e) {
                                 Log.e(LOG_TAG, "Unexpected exception.");
                                 subscriber.onError(e);
                             }
                         }
-                    } catch (Exception e) {
+                    }
+                    catch (Exception e) {
                         Log.e(LOG_TAG, "Couldn't send next feature");
-                    } finally {
-                      if (featureCursor != null) {
-                        featureCursor.close();
-                      }
+                    }
+                    finally {
+                        if (featureCursor != null) {
+                            featureCursor.close();
+                        }
                     }
                 }
                 subscriber.onCompleted();
             }
         }).subscribeOn(Schedulers.io())
-          .onBackpressureBuffer();  // this is needed otherwise the filter can't keep up and will
+                .onBackpressureBuffer();  // this is needed otherwise the filter can't keep up and will
         // throw MissingBackpressureException
     }
 
@@ -186,31 +188,35 @@ public class GeoPackageStore extends SCDataStore {
 
             @Override
             public void call(Subscriber<? super SCSpatialFeature> subscriber) {
-                FeatureDao featureDao = getFeatureDao(keyTuple.getLayerId()); // layerId is the the table name
-                if (featureDao == null) {
-                    subscriber.onError(
-                            new SCDataStoreException(SCDataStoreException.ExceptionType.LAYER_NOT_FOUND,
-                                    "Couldn't find a feature table named " + keyTuple.getLayerId()
-                            )
-                    );
-                }
-                else {
+                FeatureDao featureDao;
+                try {
+                    featureDao = getFeatureDao(keyTuple.getLayerId());  // layerId is the table name
                     FeatureCursor featureCursor = featureDao.queryForId(Long.parseLong(keyTuple.getFeatureId()));
                     if (featureCursor.moveToFirst()) {
                         try {
                             SCSpatialFeature feature = createSCSpatialFeature(featureCursor.getRow());
                             subscriber.onNext(feature);
-                        } catch (ParseException e) {
+                        }
+                        catch (ParseException e) {
                             Log.w(LOG_TAG, "Couldn't parse the geometry.");
                             subscriber.onError(e);
-                        } catch (Exception e) {
+                        }
+                        catch (Exception e) {
                             Log.e(LOG_TAG, "Unexpected exception.");
                             subscriber.onError(e);
-                        } finally {
+                        }
+                        finally {
                             featureCursor.close();
                             subscriber.onCompleted();
                         }
                     }
+                }
+                catch (GeoPackageException ex) {
+                    subscriber.onError(
+                            new SCDataStoreException(SCDataStoreException.ExceptionType.LAYER_NOT_FOUND,
+                                    "Couldn't find a feature table named " + keyTuple.getLayerId()
+                            )
+                    );
                 }
             }
         });
@@ -222,7 +228,7 @@ public class GeoPackageStore extends SCDataStore {
         String layerId = scSpatialFeature.getKey().getLayerId();
         final FeatureDao featureDao;
         try {
-             featureDao = getFeatureDao(layerId);  // layerId is the table name
+            featureDao = getFeatureDao(layerId);  // layerId is the table name
         }
         catch (GeoPackageException ex) {
             return Observable.error(
@@ -243,7 +249,8 @@ public class GeoPackageStore extends SCDataStore {
                 try {
                     GeoPackageGeometryData geometryData = new GeoPackageGeometryData(getStandardGeoPackageBinary(geom));
                     newRow.setGeometry(geometryData);
-                } catch (IOException e) {
+                }
+                catch (IOException e) {
                     e.printStackTrace();
                 }
             }
@@ -269,7 +276,8 @@ public class GeoPackageStore extends SCDataStore {
                     long rowId = featureDao.create(newRow);
                     FeatureRow newRow = featureDao.queryForIdRow(rowId);
                     subscriber.onNext(createSCSpatialFeature(newRow));
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     Log.e(LOG_TAG, "Could not create feature");
                     subscriber.onError(e);
                 }
@@ -303,10 +311,12 @@ public class GeoPackageStore extends SCDataStore {
                 try {
                     if (rowToUpdate != null && featureDao.update(rowToUpdate) == 1) {
                         subscriber.onNext(Boolean.TRUE);
-                    } else {
+                    }
+                    else {
                         subscriber.onNext(Boolean.FALSE);
                     }
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     Log.e(LOG_TAG, "Could not update feature with id " + scSpatialFeature.getId());
                     subscriber.onError(e);
                 }
@@ -342,12 +352,14 @@ public class GeoPackageStore extends SCDataStore {
                     Long rowId = Long.valueOf(featureId);
                     if (featureDao.deleteById(rowId) == 1) {
                         subscriber.onNext(Boolean.TRUE);
-                    } else {
+                    }
+                    else {
                         Log.w(LOG_TAG, "Expected 1 row to have been deleted for feature with id "
                                 + featureId);
                         subscriber.onNext(Boolean.FALSE);
                     }
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     Log.e(LOG_TAG, "Could not create delete with id " + featureId);
                     subscriber.onError(e);
                 }
@@ -361,7 +373,7 @@ public class GeoPackageStore extends SCDataStore {
         final String storeId = this.getStoreId();
         final GeoPackageStore storeInstance = this;
 
-      storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
+        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
 
         return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
             @Override
@@ -442,7 +454,8 @@ public class GeoPackageStore extends SCDataStore {
             scSpatialFeature = new SCGeometry(
                     new WKBReader(geometryFactory).read(geometryData.getWkbBytes())
             );
-        } else {
+        }
+        else {
             scSpatialFeature = new SCSpatialFeature();
         }
         // populate properties map with data from each column
@@ -528,7 +541,8 @@ public class GeoPackageStore extends SCDataStore {
                 try {
                     GeoPackageGeometryData geometryData = new GeoPackageGeometryData(getStandardGeoPackageBinary(geom));
                     featureRow.setGeometry(geometryData);
-                } catch (IOException e) {
+                }
+                catch (IOException e) {
                     e.printStackTrace();
                 }
             }

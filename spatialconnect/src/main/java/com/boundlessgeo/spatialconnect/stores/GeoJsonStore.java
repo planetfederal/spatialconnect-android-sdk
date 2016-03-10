@@ -1,12 +1,12 @@
 /**
  * Copyright 2015-2016 Boundless, http://boundlessgeo.com
- *
+ * <p/>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p/>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p/>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -68,7 +68,8 @@ public class GeoJsonStore extends SCDataStore {
                 try {
                     // TODO: implement functionality here
                     subscriber.onNext(true);
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     Log.e(LOG_TAG, "Could not create feature with id " + scSpatialFeature.getId());
                     subscriber.onError(e);
                 }
@@ -88,7 +89,8 @@ public class GeoJsonStore extends SCDataStore {
                 try {
                     // TODO: implement functionality here
                     subscriber.onNext(true);
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     Log.e(LOG_TAG, "Could not update feature with id " + scSpatialFeature.getId());
                     subscriber.onError(e);
                 }
@@ -108,7 +110,8 @@ public class GeoJsonStore extends SCDataStore {
                 try {
                     // TODO: implement functionality here
                     subscriber.onNext(true);
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     Log.e(LOG_TAG, "Could not create delete with id " + keyTuple.getFeatureId());
                     subscriber.onError(e);
                 }
@@ -118,15 +121,37 @@ public class GeoJsonStore extends SCDataStore {
     }
 
     public Observable start() {
-        this.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
-        this.getAdapter().connect();
-        if (this.getAdapter().getStatus().equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)) {
-            this.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-            return Observable.empty();
-        } else {
-            stop();
-            return Observable.error(new Exception("Error starting GeoJSON store"));
-        }
+        final String storeId = this.getStoreId();
+        final GeoJsonStore storeInstance = this;
+        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
+        return Observable.create(
+                new Observable.OnSubscribe<SCStoreStatusEvent>() {
+                    @Override
+                    public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
+                        // subscribe to an Observable/stream that lets us know when the adapter is connected or disconnected
+                        storeInstance.getAdapter().connect().subscribe(new Subscriber<SCDataAdapterStatus>() {
+
+                            @Override
+                            public void onCompleted() {
+                                storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                subscriber.onCompleted();
+                            }
+
+                            @Override
+                            public void onError(Throwable e) {
+                                Log.w(LOG_TAG, "Could not activate data store " + storeId);
+                                storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+                                subscriber.onError(e);
+                            }
+
+                            @Override
+                            public void onNext(SCDataAdapterStatus status) {
+                            }
+                        });
+                    }
+                }
+        );
+
     }
 
     public void stop() {
