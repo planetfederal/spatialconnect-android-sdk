@@ -37,7 +37,7 @@ before_script:
 
 script: ./gradlew build connectedCheck --stacktrace
 
-jdk: oraclejdk7
+jdk: oraclejdk8
 sudo: false
 notifications:
   email:

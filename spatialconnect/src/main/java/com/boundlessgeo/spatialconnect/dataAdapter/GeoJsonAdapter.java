@@ -1,12 +1,12 @@
 /**
  * Copyright 2015-2016 Boundless, http://boundlessgeo.com
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,7 +36,6 @@ import java.util.HashSet;
 
 import rx.Observable;
 import rx.Subscriber;
-import rx.functions.Func1;
 
 
 public class GeoJsonAdapter extends SCDataAdapter {
@@ -76,20 +75,24 @@ public class GeoJsonAdapter extends SCDataAdapter {
                             is = context.getResources().openRawResource(resourceId);
                             FileUtils.copyInputStreamToFile(is, f);
                             adapterInstance.connected();
-                        } catch (IOException e) {
+                        }
+                        catch (IOException e) {
                             Log.w(LOG_TAG, "Couldn't connect to geojson store.", e);
                             adapterInstance.disconnect();
                             e.printStackTrace();
-                        } finally {
+                        }
+                        finally {
                             if (is != null) {
                                 try {
                                     is.close();
-                                } catch (IOException e) {
+                                }
+                                catch (IOException e) {
                                     Log.e(LOG_TAG, "Couldn't close the stream.", e);
                                 }
                             }
                         }
-                    } else { // the file already exists so set the status to connected
+                    }
+                    else { // the file already exists so set the status to connected
                         adapterInstance.connected();
                     }
                 }
@@ -113,29 +116,17 @@ public class GeoJsonAdapter extends SCDataAdapter {
         );
 
         return Observable.from(collection.getFeatures())
-          .filter(
-            new Func1<SCSpatialFeature, Boolean>() {
-              @Override
-              public Boolean call(SCSpatialFeature feature) {
-                if (feature instanceof SCGeometry &&
-                  ((SCGeometry) feature).getGeometry() != null &&
-                  filter.getPredicate().applyFilter((SCGeometry) feature)) {
-                  return true;
-                } else {
-                  return false;
-                }
-              }
-            }
-          ).map(new Func1<SCSpatialFeature, SCSpatialFeature>() {
-            @Override
-            public SCSpatialFeature call(SCSpatialFeature scSpatialFeature) {
-              scSpatialFeature.setStoreId(scStoreConfig.getUniqueID());
-              scSpatialFeature.setLayerId(DEFAULTLAYER);
-              scSpatialFeature.setId(scSpatialFeature.getId());
-              return scSpatialFeature;
-            }
-          });
-
+                .filter(feature -> {
+                            return feature instanceof SCGeometry
+                                    && ((SCGeometry) feature).getGeometry() != null
+                                    && filter.getPredicate().applyFilter((SCGeometry) feature);
+                        }
+                ).map(scSpatialFeature -> {
+                    scSpatialFeature.setStoreId(scStoreConfig.getUniqueID());
+                    scSpatialFeature.setLayerId(DEFAULTLAYER);
+                    scSpatialFeature.setId(scSpatialFeature.getId());
+                    return scSpatialFeature;
+                });
     }
 
 
@@ -176,14 +167,17 @@ public class GeoJsonAdapter extends SCDataAdapter {
             while ((line = bufferedreader.readLine()) != null) {
                 stringBuilder.append(line);
             }
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             Log.e(LOG_TAG, "Couldn't read the stream.", e);
-        } finally {
+        }
+        finally {
             try {
                 if (is != null) {
                     is.close();
                 }
-            } catch (IOException e) {
+            }
+            catch (IOException e) {
                 Log.e(LOG_TAG, "Couldn't close the stream.", e);
             }
         }

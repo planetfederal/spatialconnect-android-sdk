@@ -32,8 +32,6 @@ import mil.nga.geopackage.factory.GeoPackageFactory;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
-import rx.functions.Action1;
-import rx.functions.Func0;
 import rx.schedulers.Schedulers;
 
 /**
@@ -93,41 +91,35 @@ public class GeoPackageAdapter extends SCDataAdapter {
                      downloadGeopackage(scStoreConfig, theUrl)
                              .subscribeOn(Schedulers.io())
                              .observeOn(AndroidSchedulers.mainThread())
-                             .subscribe(new Action1<Boolean>() {
-                               @Override
-                               public void call(Boolean downloaded) {
+                             .subscribe(downloaded -> {
 
-                                 if (!downloaded) {
-                                   Log.w(LOG_TAG, "Failed to import GeoPackage from " + url);
-                                   Log.w(LOG_TAG, "Could not connect to GeoPackage");
+                               if (!downloaded) {
+                                 Log.w(LOG_TAG, "Failed to import GeoPackage from " + url);
+                                 Log.w(LOG_TAG, "Could not connect to GeoPackage");
+                                 adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+                                 store.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+                                 subscriber.onError(new SCDataStoreException(
+                                         SCDataStoreException.ExceptionType.CONNECTION_ERROR,
+                                         "Failed to import " + "GeoPackage from " + url)
+                                 );
+                               } else {
+                                 Log.d(LOG_TAG, "Successfully downloaded geopackage from " + url);
+                                 // connect to the geopackage on the local filesystem
+                                 GeoPackage geoPackage = manager.open(scStoreConfig.getName());
+
+                                 if (geoPackage != null) {
+                                   adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
+                                   store.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                   subscriber.onCompleted();
+                                 } else {
                                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
                                    store.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-                                   subscriber.onError(new SCDataStoreException(
-                                           SCDataStoreException.ExceptionType.CONNECTION_ERROR,
-                                           "Failed to import " + "GeoPackage from " + url)
-                                   );
-                                 } else {
-                                   Log.d(LOG_TAG, "Successfully downloaded geopackage from " + url);
-                                   // connect to the geopackage on the local filesystem
-                                   GeoPackage geoPackage = manager.open(scStoreConfig.getName());
-
-                                   if (geoPackage != null) {
-                                     adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
-                                     store.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                                     subscriber.onCompleted();
-                                   } else {
-                                     adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
-                                     store.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-                                   }
                                  }
                                }
-                             }, new Action1<Throwable>() {
-                               @Override
-                               public void call(final Throwable throwable) {
-                                 //Error if Geopackage download can't be reached
-                                 Log.d(LOG_TAG, throwable.getMessage());
-                                 subscriber.onError(throwable);
-                               }
+                             }, throwable -> {
+                               //Error if Geopackage download can't be reached
+                               Log.d(LOG_TAG, throwable.getMessage());
+                               subscriber.onError(throwable);
                              });
                  } else {
                      Log.d(LOG_TAG, "GeoPackage " + scStoreConfig.getName() + " already downloaded.");
@@ -146,12 +138,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
 
     // neat trick learned from http://blog.danlew.net/2014/10/08/grokking-rxjava-part-4/#oldslowcode
     public Observable<Boolean> downloadGeopackage(final SCStoreConfig scStoreConfig, final URL theUrl) {
-        return Observable.defer(new Func0<Observable<Boolean>>() {
-            @Override
-            public Observable<Boolean> call() {
-                return Observable.just(manager.importGeoPackage(scStoreConfig.getName(), theUrl));
-            }
-        });
+        return Observable.defer(() -> Observable.just(manager.importGeoPackage(scStoreConfig.getName(), theUrl)));
     }
 
 

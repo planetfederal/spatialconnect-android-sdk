@@ -14,7 +14,6 @@
  */
 package com.boundlessgeo.spatialconnect.jsbridge;
 
-import android.location.Location;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
@@ -39,7 +38,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 import rx.Subscriber;
-import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 
 
@@ -85,13 +83,10 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                     sensorService.startGPSListener();
                     sensorService.getLastKnownLocation()
                             .subscribeOn(Schedulers.newThread())
-                            .subscribe(new Action1<Location>() {
-                                @Override
-                                public void call(Location location) {
-                                    bridge.callHandler("lastKnownLocation",
-                                            "{\"latitude\":\"" + location.getLatitude() + "\"," +
-                                                    "\"longitude\":\"" + location.getLongitude() + "\"}");
-                                }
+                            .subscribe(location -> {
+                                bridge.callHandler("lastKnownLocation",
+                                        "{\"latitude\":\"" + location.getLatitude() + "\"," +
+                                                "\"longitude\":\"" + location.getLongitude() + "\"}");
                             });
                     return;
                 }
