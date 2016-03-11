@@ -17,19 +17,24 @@ package com.boundlessgeo.spatialconnect.test;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.services.SCServiceManager;
 
+import org.junit.Test;
+
 import java.util.concurrent.TimeUnit;
 
 import rx.observers.TestSubscriber;
 
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
+
 public class ServicesTest extends BaseTestCase {
 
+    @Test
     public void testDataServiceInitialization() {
         SCDataService dataService = new SCDataService();
-        assertTrue("The data service should have 2 supported stores.",
-                dataService.getSupportedStoreKeys().size() == 2
-        );
+        assertTrue("The data service should have 2 supported stores.", dataService.getSupportedStoreKeys().size() == 2);
     }
 
+    @Test
     public void testServiceManagerSetup() {
         SCServiceManager serviceManager = new SCServiceManager(testContext);
         assertEquals("3 default services should have been initialized (data, network, and sensor)",
@@ -47,12 +52,13 @@ public class ServicesTest extends BaseTestCase {
         );
     }
 
+    @Test
     public void testAllStoresStartedObsCompletesWithNoErrors() {
         SCServiceManager serviceManager = new SCServiceManager(activity, testConfigFile);
         serviceManager.startAllServices();
         TestSubscriber testSubscriber = new TestSubscriber();
-        // timeout if all stores don't start in 1 minute
-        serviceManager.getDataService().allStoresStartedObs().timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
+        // timeout if all stores don't start in 2 minutes
+        serviceManager.getDataService().allStoresStartedObs().timeout(2, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoValues();
         testSubscriber.assertNoErrors();

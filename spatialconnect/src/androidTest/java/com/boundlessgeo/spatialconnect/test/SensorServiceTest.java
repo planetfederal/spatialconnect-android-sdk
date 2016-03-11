@@ -21,12 +21,17 @@ import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.services.SCServiceManager;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
 
+import org.junit.Test;
+
 import rx.observers.TestSubscriber;
+
+import static junit.framework.Assert.assertTrue;
 
 
 public class SensorServiceTest extends BaseTestCase {
 
     @Suppress // suppressing until there is an "all services started" event that we can subscribe to
+    @Test
     public void testSensorServiceStarts() {
         SCServiceManager serviceManager = new SCServiceManager(testContext);
         serviceManager.startAllServices();
@@ -36,6 +41,7 @@ public class SensorServiceTest extends BaseTestCase {
     }
 
     @Suppress // suppressing until there is an "all services started" event that we can subscribe to
+    @Test
     public void testSCSensorService() {
         SCSensorService sensorService = new SCSensorService(testContext);
         sensorService.startGPSListener();

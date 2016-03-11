@@ -23,6 +23,10 @@ import android.test.suitebuilder.annotation.Suppress;
 
 import com.boundlessgeo.spatialconnect.scutilities.LocationHelper;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -34,19 +38,16 @@ public class LocationHelperTest extends BaseTestCase {
     private static LocationManager locationManager;
     private static final String TEST_PROVIDER_NAME = LocationManager.GPS_PROVIDER;
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    @Before
+    public void setUp() throws Exception {
         // add a new mock provider
         locationManager = (LocationManager) this.testContext.getSystemService(Context.LOCATION_SERVICE);
         locationManager.addTestProvider(TEST_PROVIDER_NAME, false, false, false, false, false, true, true, Criteria.POWER_HIGH, Criteria.ACCURACY_FINE);
         locationManager.setTestProviderEnabled(TEST_PROVIDER_NAME, true);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
-        locationManager.clearTestProviderEnabled(TEST_PROVIDER_NAME);
+    @After
+    public void tearDown() throws Exception {locationManager.clearTestProviderEnabled(TEST_PROVIDER_NAME);
         locationManager.removeTestProvider(TEST_PROVIDER_NAME);
     }
 
@@ -59,6 +60,7 @@ public class LocationHelperTest extends BaseTestCase {
      * @throws IllegalAccessException
      */
     @Suppress // suppressing b/c gps testing should be tested on an actual device
+    @Test
     public void testLocationUpdates() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         TestSubscriber<Location> testSubscriber = new TestSubscriber<>();
 

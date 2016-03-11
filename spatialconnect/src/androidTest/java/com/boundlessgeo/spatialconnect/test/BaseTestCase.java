@@ -16,47 +16,46 @@ package com.boundlessgeo.spatialconnect.test;
 
 import android.app.Activity;
 import android.content.Context;
-import android.test.ActivityInstrumentationTestCase2;
+import android.support.test.rule.ActivityTestRule;
+import android.support.test.runner.AndroidJUnit4;
 
 import com.boundlessgeo.spatialconnect.SpatialConnectActivity;
+
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.runner.RunWith;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class BaseTestCase extends ActivityInstrumentationTestCase2<SpatialConnectActivity> {
+@RunWith(AndroidJUnit4.class)
+public abstract class BaseTestCase {
 
     /**
      * Activity
      */
-    protected Activity activity = null;
+    protected static Activity activity = null;
 
     /**
      * Test context
      */
-    protected Context testContext = null;
+    protected static Context testContext = null;
 
     /**
      * Test context
      */
-    protected File testConfigFile;
+    protected static File testConfigFile;
 
-    /**
-     * Constructor
-     */
-    public BaseTestCase() {
-        super(SpatialConnectActivity.class);
-    }
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    @ClassRule
+    public static ActivityTestRule<SpatialConnectActivity> rule = new ActivityTestRule<>(SpatialConnectActivity.class);
+
+    @BeforeClass
+    public static void setUpBeforeClass() throws Exception {
         // Set the activity and test context
-        activity = getActivity();
+        activity = rule.getActivity();
         testContext = activity.createPackageContext(
                 "com.boundlessgeo.spatialconnect.test",
                 Context.CONTEXT_IGNORE_SECURITY
@@ -74,11 +73,6 @@ public class BaseTestCase extends ActivityInstrumentationTestCase2<SpatialConnec
         } catch (IOException ex) {
             System.exit(0);
         }
-    }
-
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
     }
 
 }
