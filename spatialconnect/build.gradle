@@ -1,5 +1,6 @@
 apply plugin: 'com.android.library'
 apply plugin: 'maven'
+apply plugin: 'me.tatarka.retrolambda'
 
 group 'com.boundlessgeo.spatialconnect'
 version '1.0.0'
@@ -41,8 +42,8 @@ android {
         exclude 'META-INF/NOTICE.txt'
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_7
-        targetCompatibility JavaVersion.VERSION_1_7
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
     productFlavors {
     }

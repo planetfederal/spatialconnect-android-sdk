@@ -1,12 +1,12 @@
 /**
  * Copyright 2015-2016 Boundless, http://boundlessgeo.com
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,9 +35,6 @@ import java.util.Set;
 
 import rx.Observable;
 import rx.Subscriber;
-import rx.functions.Action0;
-import rx.functions.Action1;
-import rx.functions.Func1;
 import rx.observables.ConnectableObservable;
 import rx.subjects.BehaviorSubject;
 
@@ -91,53 +88,39 @@ public class SCDataService extends SCService {
         Set<String> s = stores.keySet();
         final int storesCount = s.size();
 
-        storeEventSubject.filter(new Func1<SCStoreStatusEvent, Boolean>() {
-            @Override
-            public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
-                Log.d(LOG_TAG, "This store is now running: " + scStoreStatusEvent.getStoreId());
-                return scStoreStatusEvent.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING;
-            }
-        })
-                .buffer(storesCount).take(1).subscribe(new Action1<List<SCStoreStatusEvent>>() {
-            @Override
-            public void call(List<SCStoreStatusEvent> l) {
-                // when all stores have started, send the SC_DATA_SERVICE_ALLSTORESSTARTED status
-                SCStoreStatusEvent se = new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED, null);
-                storeEventSubject.onNext(se);
-            }
+        storeEventSubject.filter(scStoreStatusEvent -> {
+            Log.d(LOG_TAG, "This store is now running: " + scStoreStatusEvent.getStoreId());
+            return scStoreStatusEvent.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING;
+        }).buffer(storesCount).take(1).subscribe(l -> {
+            // when all stores have started, send the SC_DATA_SERVICE_ALLSTORESSTARTED status
+            SCStoreStatusEvent se = new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED, null);
+            storeEventSubject.onNext(se);
         });
 
         for (String key : s) {
             Object obj = stores.get(key);
             if (obj instanceof SCDataStoreLifeCycle) {
-                this.startStore((SCDataStoreLifeCycle) stores.get(key));
+                this.startStore(stores.get(key));
             }
         }
     }
 
     private void startStore(final SCDataStoreLifeCycle s) {
         SCDataStore dataStore = (SCDataStore) s;
-        s.start().subscribe(new Action1<SCStoreStatusEvent>() {
-            @Override
-            public void call(SCStoreStatusEvent s) {
-            }
-        }, new Action1<Throwable>() {
-            @Override
-            public void call(Throwable t) {
-                Log.d(LOG_TAG, t.getLocalizedMessage());
-                // onError can happen if we cannot start the store b/c of some error or runtime exception
-                storeEventSubject.onNext(
-                        new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, ((SCDataStore) s).getStoreId())
-                );
-            }
-        }, new Action0() {
-            @Override
-            public void call() {
-                storeEventSubject.onNext(
+        s.start().subscribe(
+                statusEvent -> {
+                },
+                throwable -> {
+                    Log.d(LOG_TAG, throwable.getLocalizedMessage());
+                    // onError can happen if we cannot start the store b/c of some error or runtime exception
+                    storeEventSubject.onNext(
+                            new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, ((SCDataStore) s).getStoreId())
+                    );
+                },
+                () -> storeEventSubject.onNext(
                         new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, ((SCDataStore) s).getStoreId())
-                );
-            }
-        });
+                )
+        );
     }
 
     /**
@@ -152,18 +135,12 @@ public class SCDataService extends SCService {
                     public void call(final Subscriber<? super Void> subscriber) {
                         // filter the events
                         storeEventSubject.filter(
-                                new Func1<SCStoreStatusEvent, Boolean>() {
-                                    @Override
-                                    public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
-                                        return (scStoreStatusEvent.getStatus() ==
-                                                SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED);
-                                    }
+                                scStoreStatusEvent -> {
+                                    return (scStoreStatusEvent.getStatus()
+                                            .equals(SCDataStoreStatus.SC_DATA_SERVICE_ALLSTORESSTARTED));
                                 }
-                        ).subscribe(new Action1<SCStoreStatusEvent>() {
-                            @Override
-                            public void call(final SCStoreStatusEvent scStoreStatusEvent) {
-                                subscriber.onCompleted();
-                            }
+                        ).subscribe(scStoreStatusEvent -> {
+                            subscriber.onCompleted();
                         });
                     }
                 }
@@ -254,20 +231,17 @@ public class SCDataService extends SCService {
         Observable<SCSpatialFeature> queryresults =
                 Observable
                         .just(dao)
-                        .flatMap(new Func1<StoreQueryDAO, Observable<SCSpatialFeature>>() {
-                            @Override
-                            public Observable<SCSpatialFeature> call(StoreQueryDAO dao) {
-                                Observable<SCSpatialFeature> results;
-                                SCDataStore ds = stores.get(dao.getId());
-                                if (ds != null && ds.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING) {
-                                    SCSpatialStore sp = ds;
-                                    results = sp.query(dao.filter);
-                                }
-                                else {
-                                    results = Observable.empty();
-                                }
-                                return results;
+                        .flatMap(dao1 -> {
+                            Observable<SCSpatialFeature> results;
+                            SCDataStore ds = stores.get(dao1.getId());
+                            if (ds != null && ds.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING) {
+                                SCSpatialStore sp = ds;
+                                results = sp.query(dao1.filter);
                             }
+                            else {
+                                results = Observable.empty();
+                            }
+                            return results;
                         });
         return queryresults;
     }
@@ -276,20 +250,17 @@ public class SCDataService extends SCService {
         Observable<SCSpatialFeature> queryResults =
                 Observable
                         .just(filter)
-                        .flatMap(new Func1<SCQueryFilter, Observable<SCSpatialFeature>>() {
-                            @Override
-                            public Observable<SCSpatialFeature> call(SCQueryFilter filter) {
-                                List<SCDataStore> runningStores = getActiveStores();
+                        .flatMap(filter1 -> {
+                            List<SCDataStore> runningStores = getActiveStores();
 
-                                List<Observable<SCSpatialFeature>> queryResults = new ArrayList<>();
-                                for (SCDataStore ds : runningStores) {
-                                    SCSpatialStore sp = ds;
-                                    queryResults.add(sp.query(filter));
-                                }
-
-                                Observable<SCSpatialFeature> results = Observable.merge(queryResults);
-                                return results;
+                            List<Observable<SCSpatialFeature>> queryResults1 = new ArrayList<>();
+                            for (SCDataStore ds : runningStores) {
+                                SCSpatialStore sp = ds;
+                                queryResults1.add(sp.query(filter1));
                             }
+
+                            Observable<SCSpatialFeature> results = Observable.merge(queryResults1);
+                            return results;
                         });
         return queryResults;
     }
