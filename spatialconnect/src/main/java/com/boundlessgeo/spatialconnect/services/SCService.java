@@ -34,7 +34,7 @@ public class SCService
 
     public void stop()
     {
-        //TODO
+        this.status = SCServiceStatus.SC_SERVICE_STOPPED;
     }
 
     public void resume()

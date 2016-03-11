@@ -46,6 +46,7 @@ import rx.subjects.BehaviorSubject;
  * includes exposing methods to query across multiple SCDataStore instances.
  */
 public class SCDataService extends SCService {
+    private static final SCDataService INSTANCE = new SCDataService();
     private SCServiceStatus status;
     private Set<String> supportedStores; // the strings are store keys: type.version
     private Map<String, SCDataStore> stores;
@@ -66,7 +67,7 @@ public class SCDataService extends SCService {
      */
     public ConnectableObservable<SCStoreStatusEvent> storeEvents;
 
-    public SCDataService() {
+    private SCDataService() {
         super();
         this.supportedStores = new HashSet<>();
         this.stores = new HashMap<>();
@@ -75,6 +76,10 @@ public class SCDataService extends SCService {
         // turns the "cold" storeEventSubject observable into a "hot" ConnectableObservable
         this.storeEvents = storeEventSubject.publish();
         addDefaultStoreImpls();
+    }
+
+    public static SCDataService getInstance() {
+        return INSTANCE;
     }
 
     public void addDefaultStoreImpls() {
@@ -140,11 +145,11 @@ public class SCDataService extends SCService {
      *
      * @return an Observable that completes when all stores are started.
      */
-    public Observable<SCStoreStatusEvent> allStoresStartedObs() {
+    public Observable<Void> allStoresStartedObs() {
         return Observable.create(
-                new Observable.OnSubscribe<SCStoreStatusEvent>() {
+                new Observable.OnSubscribe<Void>() {
                     @Override
-                    public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
+                    public void call(final Subscriber<? super Void> subscriber) {
                         // filter the events
                         storeEventSubject.filter(
                                 new Func1<SCStoreStatusEvent, Boolean>() {

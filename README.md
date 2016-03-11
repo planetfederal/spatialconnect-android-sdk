@@ -8,7 +8,7 @@ Status](https://travis-ci.org/boundlessgeo/spatialconnect-android-sdk.svg?branch
 
 SpatialConnect is a collection of libraries that makes it easier for developers to write
 apps that connect to multiple spatial data stores online and offline. It leverages [Reactive Extentsions](http://reactivex.io/) for communicating with the data stores using a common API across [iOS](https://github.com/boundlessgeo/spatialconnect-ios-sdk), [Android](https://github.com/boundlessgeo/spatialconnect-android-sdk), and [Javascript](https://github.com/boundlessgeo/spatialconnect-js) runtimes.
- 
+
 This library provides native APIs for Android as well as a Javascript bridge to communicate to the native API from mobile browsers.   The SpatialConnect Android SDK is packaged in the [aar format](http://tools.android.com/tech-docs/new-build-system/aar-format) and can be imported as a dependency to your Android app.
 
 
