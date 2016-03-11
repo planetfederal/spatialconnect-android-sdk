@@ -28,12 +28,20 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 import java.util.Random;
 
 import mil.nga.geopackage.features.user.FeatureDao;
 import mil.nga.geopackage.features.user.FeatureRow;
 import rx.functions.Action1;
 import rx.observers.TestSubscriber;
+
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertNotNull;
+import static junit.framework.Assert.assertTrue;
 
 
 public class GeoPackageTest extends BaseTestCase {
@@ -42,15 +50,19 @@ public class GeoPackageTest extends BaseTestCase {
     private final static String HAITI_GPKG_ID = "a5d93796-5026-46f7-a2ff-e5dec85heh6b";
     private final static String WHITEHORSE_GPKG_ID = "ba293796-5026-46f7-a2ff-e5dec85heh6b";
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-        testContext.deleteDatabase("Haiti");
-        testContext.deleteDatabase("Whitehorse");
+    @Before
+    public void setUp() throws Exception {
         serviceManager = new SCServiceManager(activity, testConfigFile);
         serviceManager.startAllServices();
     }
 
+    @After
+    public void tearDown() throws Exception {
+        testContext.deleteDatabase("Haiti");
+        testContext.deleteDatabase("Whitehorse");
+    }
+
+    @Test
     public void testThatDataServiceStartedGeoPackageStore() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
@@ -73,6 +85,7 @@ public class GeoPackageTest extends BaseTestCase {
         });
     }
 
+    @Test
     public void testGeoPackageQueryWithin() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
@@ -124,6 +137,7 @@ public class GeoPackageTest extends BaseTestCase {
         });
     }
 
+    @Test
     public void testGeoPackageQueryContains() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
@@ -158,7 +172,8 @@ public class GeoPackageTest extends BaseTestCase {
         });
     }
 
-        public void testGeoPackageCreateFeature() {
+    @Test
+    public void testGeoPackageCreateFeature() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
             public void call(SCStoreStatusEvent scStoreStatusEvent) {
@@ -176,6 +191,7 @@ public class GeoPackageTest extends BaseTestCase {
         });
     }
 
+    @Test
     public void testGeoPackageUpdateFeature() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
@@ -200,6 +216,7 @@ public class GeoPackageTest extends BaseTestCase {
         });
     }
 
+    @Test
     public void testGeoPackageDeleteFeature() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
@@ -223,7 +240,7 @@ public class GeoPackageTest extends BaseTestCase {
         });
     }
 
-
+    @Test
     public void testGeoPackageCreateFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
@@ -240,6 +257,7 @@ public class GeoPackageTest extends BaseTestCase {
         });
     }
 
+    @Test
     public void testGeoPackageUpdateFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
@@ -256,6 +274,7 @@ public class GeoPackageTest extends BaseTestCase {
         });
     }
 
+    @Test
     public void testGeoPackageDeleteFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
@@ -272,6 +291,7 @@ public class GeoPackageTest extends BaseTestCase {
         });
     }
 
+    @Test
     public void testGeoPackageQueryByIdThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override

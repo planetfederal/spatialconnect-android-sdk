@@ -25,7 +25,14 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 import rx.functions.Action1;
+
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
 
 
 public class GeoJsonTest extends BaseTestCase {
@@ -34,18 +41,17 @@ public class GeoJsonTest extends BaseTestCase {
     private final static String GEOJSON_STORE_ID = "50402599-3ad3-439f-9c49-3c8a7579933b";
 
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    @Before
+    public void setUp() throws Exception {
         serviceManager = new SCServiceManager(activity, testConfigFile);
     }
 
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
+    @After
+    public void tearDown() throws Exception {
         testContext.deleteFile("nola_polling_places.json");
     }
 
+    @Test
     public void testThatDataServiceStartedGeoJsonStore() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
@@ -67,6 +73,7 @@ public class GeoJsonTest extends BaseTestCase {
         });
     }
 
+    @Test
     public void testSearchGeoJsonStore() {
         serviceManager.getDataService().allStoresStartedObs().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
