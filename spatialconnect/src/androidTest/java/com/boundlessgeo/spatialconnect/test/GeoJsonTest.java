@@ -114,7 +114,7 @@ public class GeoJsonTest extends BaseTestCase {
 
     private static void waitForAllStoresToStart() {
         TestSubscriber testSubscriber = new TestSubscriber();
-        serviceManager.getDataService().allStoresStartedObs().timeout(2, TimeUnit.MINUTES).subscribe(testSubscriber);
+        serviceManager.getDataService().allStoresStartedObs().timeout(3, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();
