@@ -22,6 +22,7 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.config.Stores;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
+import com.boundlessgeo.spatialconnect.scutilities.SCSqliteHelper;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
 import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
@@ -169,6 +170,8 @@ public class SCConfigService extends SCService {
                         Log.d(LOG_TAG, "Registered gpkg.1 store " + scStoreConfig.getName());
                     }
                 }
+                SCSqliteHelper helper = SCSqliteHelper.getInstance(context);
+                helper.addStore(scStoreConfig);
             }
         } catch (Exception ex) {
             //TODO: test this with a bad config file.
