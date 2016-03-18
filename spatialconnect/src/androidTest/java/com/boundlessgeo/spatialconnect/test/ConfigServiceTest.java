@@ -14,6 +14,7 @@
  */
 package com.boundlessgeo.spatialconnect.test;
 
+import com.boundlessgeo.spatialconnect.scutilities.SCSqliteHelper;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.services.SCServiceManager;
@@ -45,6 +46,13 @@ public class ConfigServiceTest extends BaseTestCase {
         SCServiceManager manager = new SCServiceManager(testContext, testConfigFile);
         assertEquals("It should only have loaded the 3 stores from the config file.",
                 3, SCDataService.getInstance().getAllStores().size());
+    }
+
+    @Test
+    public void testConfigServicePersistsConfigs() {
+        SCServiceManager manager = new SCServiceManager(testContext);
+        assertEquals("Config service should have persisted 4 stores.",
+                4, SCSqliteHelper.getInstance(testContext).getNumberOfStores());
     }
 
     // TODO: test erroneous config files
