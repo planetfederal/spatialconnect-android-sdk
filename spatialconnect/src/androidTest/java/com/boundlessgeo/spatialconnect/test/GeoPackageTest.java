@@ -168,6 +168,7 @@ public class GeoPackageTest extends BaseTestCase {
     @Test
     public void testGeoPackageCreateFeature() {
         SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        assertNotNull("The store should not be null.", gpkgStore);
         SCSpatialFeature newFeature = getTestHaitiPoint();
         // remove the id b/c we want the db to create that for us
         newFeature.setStoreId("");
@@ -270,7 +271,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     private static void waitForAllStoresToStart() {
         TestSubscriber testSubscriber = new TestSubscriber();
-        serviceManager.getDataService().allStoresStartedObs().timeout(3, TimeUnit.MINUTES).subscribe(testSubscriber);
+        serviceManager.getDataService().allStoresStartedObs().timeout(10, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();

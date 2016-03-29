@@ -46,6 +46,12 @@ android {
     }
     productFlavors {
     }
+    sourceSets {
+        main.jniLibs.srcDirs = ['libs']
+    }
+    defaultConfig {
+        multiDexEnabled true
+    }
 }
 
 repositories {

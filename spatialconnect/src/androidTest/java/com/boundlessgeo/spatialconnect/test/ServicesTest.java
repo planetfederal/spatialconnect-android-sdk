@@ -16,6 +16,7 @@ package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.services.SCServiceManager;
+import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 
 import org.junit.Test;
 
@@ -36,6 +37,9 @@ public class ServicesTest extends BaseTestCase {
 
     @Test
     public void testServiceManagerSetup() {
+        for (SCDataStore store : SCDataService.getInstance().getAllStores()) {
+            SCDataService.getInstance().unregisterStore(store);
+        }
         SCServiceManager serviceManager = new SCServiceManager(testContext);
         assertEquals("3 default services should have been initialized (data, network, and config)",
                 3, serviceManager.getServices().size()
@@ -54,12 +58,15 @@ public class ServicesTest extends BaseTestCase {
 
     @Test
     public void testAllStoresStartedObsCompletesWithNoErrors() {
-        SCServiceManager serviceManager = new SCServiceManager(activity, testConfigFile);
+        SCServiceManager serviceManager = new SCServiceManager(activity);
         serviceManager.startAllServices();
         TestSubscriber testSubscriber = new TestSubscriber();
-        // timeout if all stores don't start in 3 minutes
-        serviceManager.getDataService().allStoresStartedObs().timeout(3, TimeUnit.MINUTES).subscribe(testSubscriber);
+        // timeout if all stores don't start in 5 minutes
+        serviceManager.getDataService().allStoresStartedObs().timeout(5, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
+        if (testSubscriber.getOnErrorEvents().size() > 0) {
+            System.out.println("The error was: " + ((Throwable)testSubscriber.getOnErrorEvents().get(0)).getMessage());
+        }
         testSubscriber.assertNoValues();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();
