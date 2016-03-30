@@ -19,6 +19,7 @@ android:
     - extra-android-m2repository
     - addon-google_apis-google-23
 
+    # specify emulator to run during your tests
     - sys-img-armeabi-v7a-android-23
 
   licenses:
@@ -30,12 +31,13 @@ env:
 
 # Emulator Management: Create, Start and Wait
 before_script:
+  - android list targets
   - echo no | android create avd --force -n test -t android-19 --abi armeabi-v7a
   - emulator -avd test -no-audio -no-window &
   - android-wait-for-emulator
   - adb shell input keyevent 82 &
 
-script: ./gradlew build connectedCheck --stacktrace
+script: ./gradlew build connectedCheck
 
 jdk: oraclejdk7
 sudo: false

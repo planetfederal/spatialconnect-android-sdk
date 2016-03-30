@@ -1,0 +1,13 @@
+#define LIBGPKG_VERSION "@gpkg_VERSION_MAJOR@.@gpkg_VERSION_MINOR@.@gpkg_VERSION_PATCH@"
+
+#cmakedefine TLS_USE_THREAD
+#cmakedefine TLS_USE_DECLSPEC_THREAD
+#cmakedefine TLS_USE_PTHREAD
+
+#cmakedefine GPKG_GEOM_FUNC @GPKG_GEOM_FUNC@
+
+#cmakedefine HAVE_LOCALE_H
+#cmakedefine HAVE_XLOCALE_H
+#cmakedefine LOCALE_USE__CREATE_LOCALE
+#cmakedefine LOCALE_USE_NEWLOCALE
+#cmakedefine LOCALE_USE_SET_LOCALE

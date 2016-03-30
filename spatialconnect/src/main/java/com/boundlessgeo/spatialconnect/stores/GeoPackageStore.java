@@ -231,6 +231,7 @@ public class GeoPackageStore extends SCDataStore {
             featureDao = getFeatureDao(layerId);  // layerId is the table name
         }
         catch (GeoPackageException ex) {
+            Log.d(LOG_TAG, "Couldn't create feature b/c " + ex.getLocalizedMessage());
             return Observable.error(
                     new SCDataStoreException(
                             SCDataStoreException.ExceptionType.LAYER_NOT_FOUND,
