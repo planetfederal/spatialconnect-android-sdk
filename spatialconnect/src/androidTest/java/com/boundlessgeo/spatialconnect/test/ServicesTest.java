@@ -41,8 +41,8 @@ public class ServicesTest extends BaseTestCase {
             SCDataService.getInstance().unregisterStore(store);
         }
         SCServiceManager serviceManager = new SCServiceManager(testContext);
-        assertEquals("3 default services should have been initialized (data, network, and config)",
-                3, serviceManager.getServices().size()
+        assertEquals("4 default services should have been initialized (data, network, config, and kvpstore)",
+                4, serviceManager.getServices().size()
         );
         assertEquals("There should be only 2 supported data stores: geojson.1 and gpkg.1",
                 2,

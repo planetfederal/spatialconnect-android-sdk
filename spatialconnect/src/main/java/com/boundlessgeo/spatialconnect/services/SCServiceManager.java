@@ -28,6 +28,7 @@ import java.util.Map;
 public class SCServiceManager {
     private HashMap<String, SCService> services;
     private SCDataService dataService;
+    private SCKVPStoreService kvpStoreService;
     private SCSensorService sensorService;
     private SCConfigService configService;
     private Context context;
@@ -43,6 +44,7 @@ public class SCServiceManager {
     public SCServiceManager(Context context) {
         this.services = new HashMap<>();
         this.dataService = SCDataService.getInstance();
+        this.kvpStoreService = new SCKVPStoreService(context);
         this.sensorService = new SCSensorService(context);
         this.configService = new SCConfigService(context);
         this.context = context;
@@ -61,6 +63,7 @@ public class SCServiceManager {
     public SCServiceManager(Context context, File... configFiles) {
         this.services = new HashMap<>();
         this.dataService = SCDataService.getInstance();
+        this.kvpStoreService = new SCKVPStoreService(context);
         this.sensorService = new SCSensorService(context);
         this.configService = new SCConfigService(context);
         this.context = context;
@@ -75,6 +78,7 @@ public class SCServiceManager {
         addService(this.dataService);
         addService(this.sensorService);
         addService(this.configService);
+        addService(this.kvpStoreService);
     }
 
     public void addService(SCService service) {
@@ -122,12 +126,20 @@ public class SCServiceManager {
         return services;
     }
 
+    public SCService getServiceById(String id) {
+        return this.services.get(id);
+    }
+
     public SCDataService getDataService() {
         return dataService;
     }
 
     public SCSensorService getSensorService() {
         return sensorService;
+    }
+
+    public SCKVPStoreService getSCKVPStoreService() {
+        return kvpStoreService;
     }
 
     public Context getContext() {
