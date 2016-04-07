@@ -14,7 +14,8 @@
  */
 package com.boundlessgeo.spatialconnect.test;
 
-import com.boundlessgeo.spatialconnect.db.SCStoreConfigDAO;
+import com.boundlessgeo.spatialconnect.db.SCKVPStore;
+import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.services.SCServiceManager;
@@ -36,13 +37,15 @@ public class ConfigServiceTest extends BaseTestCase {
 
     /**
      * Since there is only 1 instance of the the SCDataService, we need to reset its list of registered stores between
-     * each test so we can test that the correct number of stores were added for each method we use to load configs.
+     * each test so we can test that the correct number of stores were added for each method we use to load configs.  We
+     * also need to remove them from the kvp store.
      */
     @Before
     public void resetStores() {
         for (SCDataStore store : SCDataService.getInstance().getAllStores()) {
             SCDataService.getInstance().unregisterStore(store);
         }
+        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
     }
 
     @Test
@@ -67,11 +70,12 @@ public class ConfigServiceTest extends BaseTestCase {
                 3, SCDataService.getInstance().getAllStores().size());
     }
 
-    @Ignore @Test
+    @Test
     public void testConfigServicePersistsConfigs() {
         manager = new SCServiceManager(testContext);
-        SCStoreConfigDAO stores = new SCStoreConfigDAO(testContext);
-        assertEquals("Config service should have persisted 4 stores.", 4, stores.getNumberOfStores());
+        SCStoreConfigRepository stores = new SCStoreConfigRepository(testContext);
+        assertEquals("Config service should have persisted 2 stores (from the remote location).",
+                2, stores.getNumberOfStores());
     }
 
     @Ignore @Test
