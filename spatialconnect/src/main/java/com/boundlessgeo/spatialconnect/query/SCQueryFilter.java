@@ -15,8 +15,6 @@
 package com.boundlessgeo.spatialconnect.query;
 
 
-import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
-
 import java.util.ArrayList;
 import java.util.List;
 

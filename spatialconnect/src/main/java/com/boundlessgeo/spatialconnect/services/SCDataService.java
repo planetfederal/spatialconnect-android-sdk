@@ -107,6 +107,7 @@ public class SCDataService extends SCService {
         }, new Action0() {
             @Override
             public void call() {
+                Log.d(LOG_TAG, "Store " + store.getName() + " is running.");
                 storeEventSubject.onNext(
                         new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, store.getStoreId())
                 );
@@ -173,7 +174,12 @@ public class SCDataService extends SCService {
 
                     @Override
                     public void onNext(SCConfigMessage scConfigMessage) {
-                        Log.d(LOG_TAG, "Received message from config service.");
+                        Log.v(LOG_TAG,
+                                String.format("Received %s message from config service for store %s.",
+                                        scConfigMessage.getType().toString(),
+                                        scConfigMessage.getStoreConfig().getName()
+                                )
+                        );
                         // get the config out of the event
                         SCStoreConfig scStoreConfig = scConfigMessage.getStoreConfig();
 
@@ -183,15 +189,12 @@ public class SCDataService extends SCService {
                             if (store == null) {
                                 // add and start new store b/c it is not registered with the data service yet
                                 addNewStore(scStoreConfig);
+                                startStore(getStoreById(scStoreConfig.getUniqueID()));
                             }
                             else {
                                 Log.d(LOG_TAG, "Store " +scConfigMessage.getStoreConfig().getName() +
                                         " is registered with data service already.");
-
                             }
-
-                            // also we need to ensure the store is started
-                            startStore(getStoreById(scStoreConfig.getUniqueID()));
                         }
                     }
                 });
@@ -200,16 +203,16 @@ public class SCDataService extends SCService {
     }
 
     private void addNewStore(SCStoreConfig scStoreConfig) {
-        Log.d(LOG_TAG, "Adding new store " + scStoreConfig.getName());
+        Log.d(LOG_TAG, "Registering new store " + scStoreConfig.getName());
         String key = scStoreConfig.getType() + "." + scStoreConfig.getVersion();
         if (isStoreSupported(key)) {
             if (key.equals("geojson.1")) {
                 registerStore(new GeoJsonStore(context, scStoreConfig));
-                Log.d(LOG_TAG, "Registered geojson.1 store " + scStoreConfig.getName());
+                Log.d(LOG_TAG, "Registered geojson.1 store " + scStoreConfig.getName() + " with SCDataService.");
             }
             else if (key.equals("gpkg.1")) {
                 registerStore(new GeoPackageStore(context, scStoreConfig));
-                Log.d(LOG_TAG, "Registered gpkg.1 store " + scStoreConfig.getName());
+                Log.d(LOG_TAG, "Registered gpkg.1 store " + scStoreConfig.getName() + " with SCDataService.");
             }
         }
         else {
@@ -217,8 +220,8 @@ public class SCDataService extends SCService {
         }
 
         // now persist the store's properties
-        SCStoreConfigRepository storeDao = new SCStoreConfigRepository(context);
-        storeDao.addStoreConfig(scStoreConfig);
+        SCStoreConfigRepository storeConfigRepository = new SCStoreConfigRepository(context);
+        storeConfigRepository.addStoreConfig(scStoreConfig);
     }
 
     public void addSupportedStoreKey(String key) {

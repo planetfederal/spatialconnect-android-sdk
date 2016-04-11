@@ -18,8 +18,8 @@ import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
 import com.boundlessgeo.spatialconnect.services.SCServiceManager;
 
+import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -28,10 +28,11 @@ import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
 
-public class ConfigServiceTest extends BaseTestCase {
+public class SCConfigServiceTest extends BaseTestCase {
 
     private SCServiceManager manager;
     private final static String HAITI_GPKG_ID = "a5d93796-5026-46f7-a2ff-e5dec85heh6b";
+    private final static String WHITEHORSE_GPKG_ID = "ba293796-5026-46f7-a2ff-e5dec85heh6b";
 
     @Before
     public void beforeTest() throws Exception {
@@ -40,24 +41,20 @@ public class ConfigServiceTest extends BaseTestCase {
         testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
     }
 
+    @After
+    public void afterTest() throws Exception {
+        testContext.deleteDatabase("Haiti");
+        testContext.deleteDatabase("Whitehorse");
+        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
+    }
 
     @Test
     public void testServiceManagerCanLoadNonDefaultConfigs() {
         manager = new SCServiceManager(testContext);
         manager.addConfig(testConfigFile);
         manager.startAllServices();
-        assertEquals("The test config file has 3 stores.",
-                3, manager.getDataService().getAllStores().size());
-    }
-
-    @Test @Ignore // ignoring until the network service is implemented
-    public void testConfigServiceLoadsConfigsThroughServiceManager() {
-        manager = new SCServiceManager(testContext);
-        manager.startAllServices();
-        manager.loadDefaultConfigs();
-        assertEquals("The remote config has 2 stores.  We're not packaging any configs on the sdcard so only the " +
-                        "remote config has stores that are loaded.",
-                2, manager.getDataService().getAllStores().size());
+        waitForStoreToStart(WHITEHORSE_GPKG_ID);
+        assertEquals("The test config file has 3 stores.", 3, manager.getDataService().getAllStores().size());
     }
 
     @Test
@@ -65,19 +62,11 @@ public class ConfigServiceTest extends BaseTestCase {
         manager = new SCServiceManager(testContext);
         manager.startAllServices();
         manager.loadDefaultConfigs();
+        // the remote config doesn't have the whitehorse gpkg so we wait for haiti
         waitForStoreToStart(HAITI_GPKG_ID);
         SCStoreConfigRepository stores = new SCStoreConfigRepository(testContext);
         assertEquals("Config service should have persisted 2 stores (from the remote location).",
                 2, stores.getNumberOfStores());
-    }
-
-    @Ignore @Test
-    public void testLibGpkgFunctionsLoaded() {
-        manager = new SCServiceManager(testContext);
-        manager.startAllServices();
-//        waitForAllStoresToStart();
-//                .executeSql("SELECT ST_AsText(the_geom) FROM point_features LIMIT 1;");
-//                .executeSql("SELECT CreateSpatialIndex('point_features', 'the_geom', 'id');");
     }
 
 
@@ -85,7 +74,7 @@ public class ConfigServiceTest extends BaseTestCase {
 
     private void waitForStoreToStart(final String storeId) {
         TestSubscriber testSubscriber = new TestSubscriber();
-        manager.getDataService().storeStarted(storeId).timeout(5, TimeUnit.MINUTES).subscribe(testSubscriber);
+        manager.getDataService().storeStarted(storeId).timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();

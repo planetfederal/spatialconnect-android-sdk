@@ -16,51 +16,64 @@
 package com.boundlessgeo.spatialconnect.db;
 
 import android.content.Context;
+import android.database.Cursor;
+import android.util.Log;
+
+import com.squareup.sqlbrite.BriteDatabase;
+import com.squareup.sqlbrite.SqlBrite;
 
 import org.sqlite.database.sqlite.SQLiteDatabase;
 import org.sqlite.database.sqlite.SQLiteOpenHelper;
 
 import java.io.File;
 
+import rx.schedulers.Schedulers;
+
 /**
- * SCSqliteHelper is used to execute SQL requests and manage sqlite databases using the custom build of sqlite
- * embedded with the spatialconnect-android-sdk.
+ * SCSqliteHelper is used to expose the custom build of SQLite embedded with the spatialconnect-android-sdk.  It
+ * provides a {@link BriteDatabase} object which can be used to provide observable sql queries.
+ *
  */
 public class SCSqliteHelper extends SQLiteOpenHelper {
 
-    private static SCSqliteHelper INSTANCE;
-    private static final String DATABASE_NAME = "spatialconnect";
     private static final int DATABASE_VERSION = 1;
-    private Context context;
+    private SqlBrite sqlBrite = SqlBrite.create(new SqlBrite.Logger() {
+        @Override
+        public void log(String message) {
+            Log.d("SQLBRITE", message);
+        }
+    });
+    private BriteDatabase db = sqlBrite.wrapDatabaseHelper(this, Schedulers.io());
 
     static {
         System.loadLibrary("sqliteX");
     }
 
-    private SCSqliteHelper(Context context) {
+    /**
+     * Creates a new instance of {@link SCSqliteHelper} used to interact with the database specified by the parameter
+     * <b>databaseName</b>.
+     *
+     * @param context
+     * @param databaseName
+     */
+    public SCSqliteHelper(Context context, String databaseName) {
         // http://stackoverflow.com/questions/26642797/android-custom-sqlite-build-cannot-open-database
-        super(context, context.getDatabasePath(DATABASE_NAME).getPath(), null, DATABASE_VERSION);
-        this.context = context;
-        File dbDirectory = context.getDatabasePath(DATABASE_NAME).getParentFile();
+        super(context, context.getDatabasePath(databaseName).getPath(), null, DATABASE_VERSION);
+        File dbDirectory = context.getDatabasePath(databaseName).getParentFile();
         if (!dbDirectory.exists()) {
             // force initialization if database directory doesn't exist
+            // TODO: consider doing this in a background thread so it doesn't block
             dbDirectory.mkdir();
-            getReadableDatabase();
+            getWritableDatabase();
         }
+        db.setLoggingEnabled(true);
     }
 
     /**
-     * Get the singleton instance of SCSqliteHelper for a given database.  Remember to pass the application context
-     * (not the Activity's context).
-     *
-     * @param context      the application context
-     * @return
+     * Returns the sqlbrite database instance.
      */
-    public static synchronized SCSqliteHelper getInstance(Context context) {
-        if (INSTANCE == null) {
-            INSTANCE = new SCSqliteHelper(context);
-        }
-        return INSTANCE;
+    public BriteDatabase db() {
+        return this.db;
     }
 
     /**
@@ -83,14 +96,7 @@ public class SCSqliteHelper extends SQLiteOpenHelper {
      */
     @Override
     public void onCreate(SQLiteDatabase db) {
-        String CREATE_STORES_TABLE = "CREATE TABLE IF NOT EXISTS stores(\n" +
-                "id INTEGER PRIMARY KEY,\n" +
-                "storeId TEXT UNIQUE,\n" +
-                "type TEXT,\n" +
-                "version TEXT,\n" +
-                "name TEXT,\n" +
-                "uri TEXT);";
-        db.execSQL(CREATE_STORES_TABLE);
+        // we aren't creating databases when using SCSqliteHelper so we don't need to implement this
     }
 
     /**
@@ -104,6 +110,26 @@ public class SCSqliteHelper extends SQLiteOpenHelper {
      */
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // TODO: implement me
+        // we aren't updating databases when using SCSqliteHelper so we don't need to implement this
+    }
+
+    public static String getString(Cursor cursor, String columnName) {
+        return cursor.getString(cursor.getColumnIndexOrThrow(columnName));
+    }
+
+    public static boolean getBoolean(Cursor cursor, String columnName) {
+        return getInt(cursor, columnName) == 1;
+    }
+
+    public static long getLong(Cursor cursor, String columnName) {
+        return cursor.getLong(cursor.getColumnIndexOrThrow(columnName));
+    }
+
+    public static int getInt(Cursor cursor, String columnName) {
+        return cursor.getInt(cursor.getColumnIndexOrThrow(columnName));
+    }
+
+    public static byte[] getBlob(Cursor cursor, String columnName) {
+        return cursor.getBlob(cursor.getColumnIndexOrThrow(columnName));
     }
 }

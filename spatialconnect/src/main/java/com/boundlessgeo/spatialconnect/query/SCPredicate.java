@@ -87,4 +87,8 @@ public class SCPredicate {
         Envelope envelope = new Envelope(bboxCoords[0], bboxCoords[2], bboxCoords[1], bboxCoords[3]);
         return scGeometry.getGeometry().within(geometryFactory.toGeometry(envelope));
     }
+
+    public SCBoundingBox getBoundingBox() {
+        return this.filterBbox;
+    }
 }

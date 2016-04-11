@@ -23,10 +23,10 @@ public class SCKeyTuple {
     private String layerId;
     private String featureId;
 
-    public SCKeyTuple(String s, String l, String f) {
-        this.storeId = s;
-        this.layerId = l;
-        this.featureId = f;
+    public SCKeyTuple(String storeId, String layerId, String featureId) {
+        this.storeId = storeId;
+        this.layerId = layerId;
+        this.featureId = featureId;
     }
 
     public SCKeyTuple(String compositeKey) throws UnsupportedEncodingException {
