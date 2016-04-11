@@ -20,10 +20,6 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 
 import org.junit.Test;
 
-import java.util.concurrent.TimeUnit;
-
-import rx.observers.TestSubscriber;
-
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
@@ -31,14 +27,14 @@ public class ServicesTest extends BaseTestCase {
 
     @Test
     public void testDataServiceInitialization() {
-        SCDataService dataService = SCDataService.getInstance();
+        SCDataService dataService = new SCDataService(testContext, null);
         assertTrue("The data service should have 2 supported stores.", dataService.getSupportedStoreKeys().size() == 2);
     }
 
     @Test
     public void testServiceManagerSetup() {
-        for (SCDataStore store : SCDataService.getInstance().getAllStores()) {
-            SCDataService.getInstance().unregisterStore(store);
+        for (SCDataStore store : new SCDataService(testContext, null).getAllStores()) {
+            new SCDataService(testContext, null).unregisterStore(store);
         }
         SCServiceManager serviceManager = new SCServiceManager(testContext);
         assertEquals("4 default services should have been initialized (data, network, config, and kvpstore)",
@@ -54,21 +50,5 @@ public class ServicesTest extends BaseTestCase {
         assertTrue("The gpkg.1 store should be in the list of supported stores.",
                 serviceManager.getDataService().getSupportedStoreKeys().contains("gpkg.1")
         );
-    }
-
-    @Test
-    public void testAllStoresStartedObsCompletesWithNoErrors() {
-        SCServiceManager serviceManager = new SCServiceManager(activity);
-        serviceManager.startAllServices();
-        TestSubscriber testSubscriber = new TestSubscriber();
-        // timeout if all stores don't start in 5 minutes
-        serviceManager.getDataService().allStoresStartedObs().timeout(5, TimeUnit.MINUTES).subscribe(testSubscriber);
-        testSubscriber.awaitTerminalEvent();
-        if (testSubscriber.getOnErrorEvents().size() > 0) {
-            System.out.println("The error was: " + ((Throwable)testSubscriber.getOnErrorEvents().get(0)).getMessage());
-        }
-        testSubscriber.assertNoValues();
-        testSubscriber.assertNoErrors();
-        testSubscriber.assertCompleted();
     }
 }

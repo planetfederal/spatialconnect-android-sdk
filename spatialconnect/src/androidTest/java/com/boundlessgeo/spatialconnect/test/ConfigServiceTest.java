@@ -16,10 +16,7 @@ package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
-import com.boundlessgeo.spatialconnect.services.SCConfigService;
-import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.services.SCServiceManager;
-import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -34,45 +31,41 @@ import static junit.framework.Assert.assertEquals;
 public class ConfigServiceTest extends BaseTestCase {
 
     private SCServiceManager manager;
+    private final static String HAITI_GPKG_ID = "a5d93796-5026-46f7-a2ff-e5dec85heh6b";
 
-    /**
-     * Since there is only 1 instance of the the SCDataService, we need to reset its list of registered stores between
-     * each test so we can test that the correct number of stores were added for each method we use to load configs.  We
-     * also need to remove them from the kvp store.
-     */
     @Before
-    public void resetStores() {
-        for (SCDataStore store : SCDataService.getInstance().getAllStores()) {
-            SCDataService.getInstance().unregisterStore(store);
-        }
+    public void beforeTest() throws Exception {
+        testContext.deleteDatabase("Haiti");
+        testContext.deleteDatabase("Whitehorse");
         testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
     }
 
-    @Test
-    public void testConfigServiceCanLoadConfigsFromExternalStorage() {
-        SCConfigService configService = new SCConfigService(testContext);
-        configService.loadConfigs(testConfigFile);
-        assertEquals("The test config file has 3 stores.", 3, SCDataService.getInstance().getAllStores().size());
-    }
 
     @Test
+    public void testServiceManagerCanLoadNonDefaultConfigs() {
+        manager = new SCServiceManager(testContext);
+        manager.addConfig(testConfigFile);
+        manager.startAllServices();
+        assertEquals("The test config file has 3 stores.",
+                3, manager.getDataService().getAllStores().size());
+    }
+
+    @Test @Ignore // ignoring until the network service is implemented
     public void testConfigServiceLoadsConfigsThroughServiceManager() {
         manager = new SCServiceManager(testContext);
+        manager.startAllServices();
+        manager.loadDefaultConfigs();
         assertEquals("The remote config has 2 stores.  We're not packaging any configs on the sdcard so only the " +
                         "remote config has stores that are loaded.",
-                2, SCDataService.getInstance().getAllStores().size());
-    }
-
-    @Test
-    public void testConfigServiceLoadsConfigsThroughServiceManagerWithOptionalConstructor() {
-        manager = new SCServiceManager(testContext, testConfigFile);
-        assertEquals("It should only have loaded the 3 stores from the config file.",
-                3, SCDataService.getInstance().getAllStores().size());
+                2, manager.getDataService().getAllStores().size());
     }
 
     @Test
     public void testConfigServicePersistsConfigs() {
         manager = new SCServiceManager(testContext);
+        manager.startAllServices();
+        manager.loadDefaultConfigs();
+        waitForStoreToStart(HAITI_GPKG_ID);
         SCStoreConfigRepository stores = new SCStoreConfigRepository(testContext);
         assertEquals("Config service should have persisted 2 stores (from the remote location).",
                 2, stores.getNumberOfStores());
@@ -87,13 +80,14 @@ public class ConfigServiceTest extends BaseTestCase {
 //                .executeSql("SELECT CreateSpatialIndex('point_features', 'the_geom', 'id');");
     }
 
-    private void waitForAllStoresToStart() {
+
+    // TODO: test erroneous config files
+
+    private void waitForStoreToStart(final String storeId) {
         TestSubscriber testSubscriber = new TestSubscriber();
-        manager.getDataService().allStoresStartedObs().timeout(3, TimeUnit.MINUTES).subscribe(testSubscriber);
+        manager.getDataService().storeStarted(storeId).timeout(5, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();
     }
-
-    // TODO: test erroneous config files
 }

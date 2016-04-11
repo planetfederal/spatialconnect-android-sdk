@@ -21,36 +21,42 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.config.Stores;
-import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
+import com.boundlessgeo.spatialconnect.messaging.MessageType;
+import com.boundlessgeo.spatialconnect.messaging.SCConfigMessage;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
-import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
-import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import rx.Observable;
+import rx.Subscriber;
 
 /**
  * The SCConfigService is responsible for managing the configuration for SpatialConnect.  This includes downloading
- * remote configuration, persisting them locally, and managing application preferences.
+ * remote configuration and sweeping the external storage for config files, if required.  As configs are loaded, the
+ * service will emit ConfigEvents to subscribers.
  */
 public class SCConfigService extends SCService {
 
     private Context context;
     private static final String CONFIGS_DIR = "configs";
     private final String LOG_TAG = SCConfigService.class.getSimpleName();
+    private ArrayList<File> localConfigFiles = new ArrayList<>();
 
-    public SCConfigService(Context context) {
+    public SCConfigService(Context context, Observable messages) {
         this.context = context;
+        this.messages = messages;
     }
 
     /**
@@ -59,6 +65,7 @@ public class SCConfigService extends SCService {
      * <p>First, we try to load the configs from external storage.  Note that this supports the "no network" use case
      * where the SDcard has data on it and the config file points to that data.</p>
      * <p>Second, we try to download any configuration files from the SpatialConnect backend service.</p>
+     * <p>Third, we try to load any additional configs that were added by the user.</p>
      */
     public void loadConfigs() {
         loadConfigsFromExternalStorage();
@@ -78,7 +85,12 @@ public class SCConfigService extends SCService {
             }
             Log.i(LOG_TAG, "Searching for config files in external storage directory " + configsDir.toString());
             File[] configFiles = SCFileUtilities.findFilesByExtension(configsDir, ".scfg");
-            registerDataStores(configFiles);
+            if (configFiles.length > 0) {
+                registerDataStores(Arrays.asList(configFiles));
+            }
+            else {
+                Log.d(LOG_TAG, "No config files found in external storage directory.");
+            }
         }
     }
 
@@ -90,6 +102,7 @@ public class SCConfigService extends SCService {
      * to get the configs from the the SpatialConnect backend service.
      */
     private void loadRemoteConfigs() {
+        Log.i(LOG_TAG, "Attempting to load remote config files.");
         OkHttpClient client = SCNetworkService.getHttpClient();
         Request request = new Request.Builder()
                 .url("https://s3.amazonaws.com/test.spacon/scconfig.scfg")
@@ -110,31 +123,93 @@ public class SCConfigService extends SCService {
             os.flush();
             os.close();
             is.close();
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
-        loadConfigs(scConfigFile);
+        loadConfigs(Arrays.asList(scConfigFile));
     }
 
+    public void loadLocalConfigs() {
+        loadConfigs(this.getLocalConfigFiles());
+    }
 
-    /**
-     * Secondary way to load configs if application developers want to store their configs within the APK itself,
-     * instead of using the external storage or the network.  Note that this method will not attempt to load the configs
-     * from the default locations.  If the developer wants to load the default configurations, they will need to
-     * explicitly call the {@link SCConfigService#loadConfigs()} in addition to this method.
-     *
-     * @param configFiles
-     */
-    public void loadConfigs(File... configFiles) {
+    // method to load the configuration from a file.  currently it only handles data store configurations.
+    private void loadConfigs(List<File> configFiles) {
         registerDataStores(configFiles);
     }
 
     /* Registers all the stores specified in each config file */
-    private void registerDataStores(File... configFiles) {
+    private void registerDataStores(List<File>  configFiles) {
         for (File file : configFiles) {
-            Log.d(LOG_TAG, "Registering stores for config " + file.getName());
-            registerStores(file);
+            Log.d(LOG_TAG, "Registering stores for config " + file.getPath());
+            final Stores stores;
+            try {
+                // parse the "stores" attribute from the scconfig file
+                stores = ObjectMappers.getMapper().readValue(file, Stores.class);
+
+                // publish an event for each new store config
+                for (SCStoreConfig storeConfig : stores.getStores()) {
+                    Log.d(LOG_TAG, "Sending ADD_STORE_CONFIG message to CONFIGSERVICE for " +
+                            storeConfig.getUniqueID() + " " + storeConfig.getName());
+                    SCServiceManager.BUS.onNext(
+                            new SCConfigMessage(
+                                    MessageType.ADD_STORE_CONFIG,
+                                    "CONFIGSERVICE",
+                                    storeConfig
+                            )
+                    );
+                }
+            }
+            catch (IOException e) {
+                // TODO: test for invalid configs
+                e.printStackTrace();
+            }
         }
+    }
+
+    /**
+     * If application developers want to store their configs within the APK itself, they can add the config using
+     * this method instead of using the external storage or the network.
+     */
+    public void addConfig(File configFile) {
+        this.localConfigFiles.add(configFile);
+    }
+
+    public ArrayList<File> getLocalConfigFiles() {
+        return localConfigFiles;
+    }
+
+    @Override
+    public void start() {
+        messages.ofType(SCConfigMessage.class).subscribe(new Subscriber<SCConfigMessage>() {
+            @Override
+            public void onCompleted() {
+
+            }
+
+            @Override
+            public void onError(Throwable e) {
+
+            }
+
+            @Override
+            public void onNext(SCConfigMessage scConfigMessage) {
+                if (scConfigMessage.getType().equals(MessageType.ADD_STORE_CONFIG)
+                        && scConfigMessage.getServiceId().equals("CONFIGSERVICE")) {
+                    Log.d(LOG_TAG, "Sending ADD_STORE_CONFIG message to DATASERVICE for store " +
+                            scConfigMessage.getStoreConfig().getName());
+                    // send a message to the data service
+                    SCServiceManager.BUS.onNext(
+                            new SCConfigMessage(
+                                    MessageType.ADD_STORE_CONFIG,
+                                    "DATASERVICE",
+                                    scConfigMessage.getStoreConfig()  // pass along the config
+                            )
+                    );
+                }
+            }
+        });
     }
 
     /* Checks if external storage is available for read and write */
@@ -144,38 +219,5 @@ public class SCConfigService extends SCService {
             return true;
         }
         return false;
-    }
-
-
-    /**
-     * Reads a config file to determine what stores are defined, then registers each supported data store with the
-     * dataService.
-     *
-     * @param f - a valid SpatialConnect config file
-     */
-    public void registerStores(File f) {
-        try {
-            final Stores stores = ObjectMappers.getMapper().readValue(f, Stores.class);
-            final List<SCStoreConfig> scStoreConfigs = stores.getStores();
-            for (SCStoreConfig scStoreConfig : scStoreConfigs) {
-                String key = scStoreConfig.getType() + "." + scStoreConfig.getVersion();
-                SCDataService dataService = SCDataService.getInstance();
-                if (dataService.isStoreSupported(key)) {
-                    if (key.equals("geojson.1")) {
-                        dataService.registerStore(new GeoJsonStore(context, scStoreConfig));
-                        Log.d(LOG_TAG, "Registered geojson.1 store " + scStoreConfig.getName());
-                    }
-                    else if (key.equals("gpkg.1")) {
-                        dataService.registerStore(new GeoPackageStore(context, scStoreConfig));
-                        Log.d(LOG_TAG, "Registered gpkg.1 store " + scStoreConfig.getName());
-                    }
-                }
-                SCStoreConfigRepository storeDao = new SCStoreConfigRepository(context);
-                storeDao.addStore(scStoreConfig);
-            }
-        } catch (Exception ex) {
-            //TODO: test this with a bad config file.
-            Log.w(LOG_TAG, "Couldn't register stores for " + f.getName(), ex);
-        }
     }
 }

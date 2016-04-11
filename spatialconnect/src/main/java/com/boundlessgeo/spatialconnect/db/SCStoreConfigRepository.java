@@ -16,18 +16,22 @@
 package com.boundlessgeo.spatialconnect.db;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 
 public class SCStoreConfigRepository {
 
     private SCKVPStore kvpStore;
+    private final String LOG_TAG = SCStoreConfigRepository.class.getSimpleName();
+
 
     public SCStoreConfigRepository(Context context) {
         kvpStore = new SCKVPStore(context);
     }
 
-    public void addStore(SCStoreConfig store) {
+    public void addStoreConfig(SCStoreConfig store) {
+        Log.d(LOG_TAG, "Adding store config to kvp.db.  Store: " + store.getName());
         String storePrefix = "stores." + store.getUniqueID() + ".";
         this.kvpStore.put(storePrefix + "id", store.getUniqueID());
         this.kvpStore.put(storePrefix + "type", store.getType());

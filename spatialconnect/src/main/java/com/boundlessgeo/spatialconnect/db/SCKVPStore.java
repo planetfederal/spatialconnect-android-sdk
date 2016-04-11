@@ -2,8 +2,10 @@ package com.boundlessgeo.spatialconnect.db;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -23,6 +25,7 @@ public class SCKVPStore extends SQLiteOpenHelper {
 
     public static final int DATABASE_VERSION = 1;
     public static final String DATABASE_NAME = "kvp.db";
+    public static final String LOG_TAG = SCKVPStore.class.getSimpleName();
 
     public SCKVPStore(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -35,12 +38,18 @@ public class SCKVPStore extends SQLiteOpenHelper {
      * @param value
      */
     public void put(String key, Object value) {
-        SQLiteDatabase db = this.getWritableDatabase();
-        db.insert(KeyValueModel.TABLE_NAME, null, new KeyValueModel.KeyValueMarshal<>()
-                .key(key)
-                .value(serialize(value))
-                .value_type(getValueType(value))
-                .asContentValues());
+        SQLiteDatabase db = getWritableDatabase();
+        try {
+            db.insertOrThrow(KeyValueModel.TABLE_NAME, null, new KeyValueModel.KeyValueMarshal<>()
+                    .key(key)
+                    .value(serialize(value))
+                    .value_type(getValueType(value))
+                    .asContentValues());
+        }
+        catch (SQLException ex) {
+            // This can happen if a unique constraint is violated
+            Log.w(LOG_TAG, "Couldn't put k/v pair " + key + " / " + value.toString() + ".\nb/c " + ex.getMessage());
+        }
     }
 
     /**
@@ -52,7 +61,7 @@ public class SCKVPStore extends SQLiteOpenHelper {
     public Map<String, Object> getValueForKey(String key) {
         HashMap<String, Object> result = new HashMap<>();
         Cursor cursor = null;
-        SQLiteDatabase db = this.getReadableDatabase();
+        SQLiteDatabase db = getReadableDatabase();
         try {
             cursor = db.rawQuery(KeyValueModel.SELECT_BY_KEY, new String[]{key});
             while (cursor.moveToNext()) {
@@ -78,7 +87,7 @@ public class SCKVPStore extends SQLiteOpenHelper {
     public Map<String, Object> getValuesForKeyPrefix(String key) {
         HashMap<String, Object> result = new HashMap<>();
         Cursor cursor = null;
-        SQLiteDatabase db = this.getReadableDatabase();
+        SQLiteDatabase db = getReadableDatabase();
         try {
             cursor = db.rawQuery(KeyValueModel.SELECT_BY_KEY_LIKE, new String[]{key + "%"});
             while (cursor.moveToNext()) {
