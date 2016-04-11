@@ -17,6 +17,7 @@ package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoJsonAdapter;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
+import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
@@ -46,14 +47,18 @@ public class GeoJsonTest extends BaseTestCase {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        serviceManager = new SCServiceManager(activity, testConfigFile);
+        serviceManager = new SCServiceManager(testContext);
+        serviceManager.addConfig(testConfigFile);
         serviceManager.startAllServices();
-        waitForAllStoresToStart();
+        waitForStoreToStart(GEOJSON_STORE_ID);
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
         testContext.deleteFile("nola_polling_places.json");
+        testContext.deleteDatabase("Haiti");
+        testContext.deleteDatabase("Whitehorse");
+        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
     }
 
     @Test
@@ -112,9 +117,9 @@ public class GeoJsonTest extends BaseTestCase {
         );
     }
 
-    private static void waitForAllStoresToStart() {
+    private static void waitForStoreToStart(final String storeId) {
         TestSubscriber testSubscriber = new TestSubscriber();
-        serviceManager.getDataService().allStoresStartedObs().timeout(3, TimeUnit.MINUTES).subscribe(testSubscriber);
+        serviceManager.getDataService().storeStarted(storeId).timeout(5, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();

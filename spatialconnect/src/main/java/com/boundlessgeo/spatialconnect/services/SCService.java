@@ -14,12 +14,19 @@
  */
 package com.boundlessgeo.spatialconnect.services;
 
+import com.boundlessgeo.spatialconnect.messaging.SCMessage;
+
 import java.util.UUID;
+
+import rx.Observable;
+import rx.functions.Func1;
 
 public class SCService
 {
     private String id;
     private SCServiceStatus status;
+    protected Observable<SCMessage> messages;
+
 
     public SCService()
     {
@@ -29,7 +36,7 @@ public class SCService
 
     public void start()
     {
-        this.status = SCServiceStatus.SC_SERVICE_RUNNING;
+        this.status = SCServiceStatus.SC_SERVICE_STARTING;
     }
 
     public void stop()
@@ -55,5 +62,20 @@ public class SCService
     public SCServiceStatus getStatus()
     {
         return status;
+    }
+
+    /**
+     * A service can connect to another service to receive messages sent by it.
+     *
+     * @param serviceId
+     * @return
+     */
+    public Observable<SCMessage> connect(final String serviceId) {
+        return this.messages.filter(new Func1<SCMessage, Boolean>() {
+            @Override
+            public Boolean call(SCMessage scMessage) {
+                return scMessage.getServiceId().equals(serviceId);
+            }
+        });
     }
 }

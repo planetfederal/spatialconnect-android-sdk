@@ -16,9 +16,14 @@ package com.boundlessgeo.spatialconnect.services;
 
 import android.content.Context;
 
+import com.boundlessgeo.spatialconnect.messaging.SCConfigMessage;
+import com.boundlessgeo.spatialconnect.messaging.SCMessage;
+
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+
+import rx.subjects.PublishSubject;
 
 /**
  * When instantiated, the SCServiceManager adds the default services and registers all stores
@@ -35,6 +40,12 @@ public class SCServiceManager {
     private final String LOG_TAG = SCServiceManager.class.getSimpleName();
 
     /**
+     * The bus is like an internal event bus for {@link SCMessage}s, its job is to receive {@link SCMessage}s from all
+     * the services and publish them to any subscribers.
+     */
+    public static final PublishSubject<SCMessage> BUS = PublishSubject.create();
+
+    /**
      * The default SCServiceManager constructor will scan through the app's config directory in its
      * <a href="http://developer.android.com/guide/topics/data/data-storage.html#filesExternal">external storage</a>
      * and register all stores defined within those config files.
@@ -43,32 +54,12 @@ public class SCServiceManager {
      */
     public SCServiceManager(Context context) {
         this.services = new HashMap<>();
-        this.dataService = SCDataService.getInstance();
+        this.dataService = new SCDataService(context, BUS.ofType(SCConfigMessage.class));
         this.kvpStoreService = new SCKVPStoreService(context);
         this.sensorService = new SCSensorService(context);
-        this.configService = new SCConfigService(context);
+        this.configService = new SCConfigService(context, BUS.ofType(SCConfigMessage.class));
         this.context = context;
         addDefaultServices();
-        configService.loadConfigs();
-    }
-
-    /**
-     * Constructor for instantiating a service manager with a config file (or group of files).  It will register all
-     * the stores defined in the config file(s) passed in.  Note that this constructor will only attempt to load the
-     * configurations passed into the method and will not attempt to load the configurations from the default locations.
-     *
-     * @param context
-     * @param configFiles
-     */
-    public SCServiceManager(Context context, File... configFiles) {
-        this.services = new HashMap<>();
-        this.dataService = SCDataService.getInstance();
-        this.kvpStoreService = new SCKVPStoreService(context);
-        this.sensorService = new SCSensorService(context);
-        this.configService = new SCConfigService(context);
-        this.context = context;
-        addDefaultServices();
-        configService.loadConfigs(configFiles);
     }
 
     /**
@@ -106,6 +97,13 @@ public class SCServiceManager {
         for (String key : this.services.keySet()) {
             this.services.get(key).start();
         }
+        if (this.configService.getLocalConfigFiles().size() > 0) {
+            this.configService.loadLocalConfigs();
+        }
+    }
+
+    public void loadDefaultConfigs() {
+        this.configService.loadConfigs();
     }
 
     public void stopAllServices() {
@@ -144,6 +142,14 @@ public class SCServiceManager {
 
     public Context getContext() {
         return context;
+    }
+
+    public void addConfig(File f) {
+        this.configService.addConfig(f);
+    }
+
+    public SCConfigService getConfigService() {
+        return configService;
     }
 }
 

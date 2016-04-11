@@ -21,6 +21,7 @@ public class SCKVPStoreTest extends BaseTestCase {
         testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
     }
 
+
     @Test
     public void testPutIntoKeyValueDB() {
         SCKVPStore SCKVPStore = new SCKVPStore(testContext);
@@ -57,7 +58,7 @@ public class SCKVPStoreTest extends BaseTestCase {
     }
 
     @Test
-         public void testStringDeserialize() {
+    public void testStringDeserialize() {
         SCKVPStore SCKVPStore = new SCKVPStore(testContext);
         SCKVPStore.put("stores.1234.type", "geojson");
         Map<String, Object> stores = SCKVPStore.getValuesForKeyPrefix("stores.1234.type");

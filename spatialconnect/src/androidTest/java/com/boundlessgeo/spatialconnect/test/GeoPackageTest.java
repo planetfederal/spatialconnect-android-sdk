@@ -15,6 +15,7 @@
 package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
+import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
@@ -51,15 +52,21 @@ public class GeoPackageTest extends BaseTestCase {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        serviceManager = new SCServiceManager(activity, testConfigFile);
+        testContext.deleteDatabase("Haiti");
+        testContext.deleteDatabase("Whitehorse");
+        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
+        serviceManager = new SCServiceManager(activity);
+        serviceManager.addConfig(testConfigFile);
         serviceManager.startAllServices();
-        waitForAllStoresToStart();
+        waitForStoreToStart(HAITI_GPKG_ID);
+        waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
         testContext.deleteDatabase("Haiti");
         testContext.deleteDatabase("Whitehorse");
+        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
     }
 
     @Test
@@ -78,13 +85,16 @@ public class GeoPackageTest extends BaseTestCase {
             }
         }
         assertTrue("A geopackage store should be running.", containsGeoPackageStore);
+        // test that store has the correct status
+        SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        assertNotNull("The store should downloaded locally", gpkgStore);
+        assertEquals("The store should be running", SCDataStoreStatus.SC_DATA_STORE_RUNNING, gpkgStore.getStatus());
     }
 
     @Test
     public void testGeoPackageQueryWithin() {
         // this is the geopackage located http://www.geopackage.org/data/haiti-vectors-split.gpkg
         SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
-        assertNotNull("The store should downloaded locally", gpkgStore);
 
         // bbox around part of haiti
         SCBoundingBox bbox = new SCBoundingBox(-73, 18, -72, 19);
@@ -168,7 +178,6 @@ public class GeoPackageTest extends BaseTestCase {
     @Test
     public void testGeoPackageCreateFeature() {
         SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
-        assertNotNull("The store should not be null.", gpkgStore);
         SCSpatialFeature newFeature = getTestHaitiPoint();
         // remove the id b/c we want the db to create that for us
         newFeature.setStoreId("");
@@ -269,9 +278,9 @@ public class GeoPackageTest extends BaseTestCase {
         );
     }
 
-    private static void waitForAllStoresToStart() {
+    private static void waitForStoreToStart(final String storeId) {
         TestSubscriber testSubscriber = new TestSubscriber();
-        serviceManager.getDataService().allStoresStartedObs().timeout(10, TimeUnit.MINUTES).subscribe(testSubscriber);
+        serviceManager.getDataService().storeStarted(storeId).timeout(5, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();
@@ -290,4 +299,3 @@ public class GeoPackageTest extends BaseTestCase {
         return scSpatialFeature;
     }
 }
-
