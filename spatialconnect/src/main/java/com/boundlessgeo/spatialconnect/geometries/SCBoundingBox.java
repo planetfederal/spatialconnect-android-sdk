@@ -87,4 +87,20 @@ public class SCBoundingBox
             Log.e(TAG, "Error in toGeoJsonFile()", ex);
         }
     }
+
+    public Double getMinX() {
+        return bbox[0];
+    }
+
+    public Double getMinY() {
+        return bbox[1];
+    }
+
+    public Double getMaxX() {
+        return bbox[2];
+    }
+
+    public Double getMaxY() {
+        return bbox[3];
+    }
 }

@@ -142,7 +142,7 @@ public class SCConfigService extends SCService {
     /* Registers all the stores specified in each config file */
     private void registerDataStores(List<File>  configFiles) {
         for (File file : configFiles) {
-            Log.d(LOG_TAG, "Registering stores for config " + file.getPath());
+            Log.d(LOG_TAG, "Registering stores for config file " + file.getPath());
             final Stores stores;
             try {
                 // parse the "stores" attribute from the scconfig file
@@ -150,8 +150,8 @@ public class SCConfigService extends SCService {
 
                 // publish an event for each new store config
                 for (SCStoreConfig storeConfig : stores.getStores()) {
-                    Log.d(LOG_TAG, "Sending ADD_STORE_CONFIG message to CONFIGSERVICE for " +
-                            storeConfig.getUniqueID() + " " + storeConfig.getName());
+                    Log.d(LOG_TAG, "Sending ADD_STORE_CONFIG message to CONFIGSERVICE for store "
+                            + storeConfig.getName());
                     SCServiceManager.BUS.onNext(
                             new SCConfigMessage(
                                     MessageType.ADD_STORE_CONFIG,

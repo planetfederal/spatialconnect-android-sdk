@@ -38,6 +38,7 @@ public class SCStoreConfigRepository {
         this.kvpStore.put(storePrefix + "version", store.getVersion());
         this.kvpStore.put(storePrefix + "name", store.getName());
         this.kvpStore.put(storePrefix + "uri", store.getUri());
+        this.kvpStore.close();
     }
 
     public int getNumberOfStores() {

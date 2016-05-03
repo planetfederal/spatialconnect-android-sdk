@@ -43,14 +43,16 @@ public class GeoJsonTest extends BaseTestCase {
 
     private static SCServiceManager serviceManager;
     private final static String GEOJSON_STORE_ID = "50402599-3ad3-439f-9c49-3c8a7579933b";
+    private final static String WHITEHORSE_GPKG_ID = "ba293796-5026-46f7-a2ff-e5dec85heh6b";
 
 
     @BeforeClass
     public static void setUp() throws Exception {
-        serviceManager = new SCServiceManager(testContext);
+        serviceManager = new SCServiceManager(activity);
         serviceManager.addConfig(testConfigFile);
         serviceManager.startAllServices();
         waitForStoreToStart(GEOJSON_STORE_ID);
+        waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
 
     @AfterClass
@@ -86,19 +88,14 @@ public class GeoJsonTest extends BaseTestCase {
                 new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
         );
         TestSubscriber testSubscriber = new TestSubscriber();
-        geoJsonStore.query(filter).count().subscribe(testSubscriber);
+        geoJsonStore.query(filter).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertCompleted();
         testSubscriber.assertNoErrors();
         assertEquals("The query should have returned 16 features.",
                 (Integer) 16,
-                (Integer) testSubscriber.getOnNextEvents().get(0)
+                (Integer) testSubscriber.getOnNextEvents().size()
         );
-        testSubscriber = new TestSubscriber();
-        geoJsonStore.query(filter).subscribe(testSubscriber);
-        testSubscriber.awaitTerminalEvent();
-        testSubscriber.assertCompleted();
-        testSubscriber.assertNoErrors();
         SCSpatialFeature feature = (SCSpatialFeature) testSubscriber.getOnNextEvents().get(0);
         assertEquals("The store id should be for the test geojson store.",
                 GEOJSON_STORE_ID,
@@ -119,7 +116,7 @@ public class GeoJsonTest extends BaseTestCase {
 
     private static void waitForStoreToStart(final String storeId) {
         TestSubscriber testSubscriber = new TestSubscriber();
-        serviceManager.getDataService().storeStarted(storeId).timeout(5, TimeUnit.MINUTES).subscribe(testSubscriber);
+        serviceManager.getDataService().storeStarted(storeId).timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();

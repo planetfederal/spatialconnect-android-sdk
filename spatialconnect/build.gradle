@@ -67,9 +67,6 @@ dependencies {
     compile 'io.reactivex:rxjava:1.1.0'
     compile 'commons-io:commons-io:2.4'
     compile 'com.squareup.okhttp3:okhttp:3.2.0'
-    compile('mil.nga.geopackage:geopackage-android:1.0.0') {
-        exclude group: 'com.google.android.gms', module: 'play-services'
-    }
     compile('io.jeo:jeo:0.6') {
         exclude group: 'com.vividsolutions'
         exclude group: 'io.jeo', module: 'proj4j'
