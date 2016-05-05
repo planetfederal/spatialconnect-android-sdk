@@ -81,12 +81,12 @@ public class GeoPackageStore extends SCDataStore {
     }
 
     @Override
-    public Observable<Boolean> update(final SCSpatialFeature scSpatialFeature) {
+    public Observable<SCSpatialFeature> update(final SCSpatialFeature scSpatialFeature) {
         return ((GeoPackageAdapter) getAdapter()).update(scSpatialFeature);
     }
 
     @Override
-    public Observable<Boolean> delete(final SCKeyTuple keyTuple) {
+    public Observable<Void> delete(final SCKeyTuple keyTuple) {
         return ((GeoPackageAdapter) getAdapter()).delete(keyTuple);
     }
 
