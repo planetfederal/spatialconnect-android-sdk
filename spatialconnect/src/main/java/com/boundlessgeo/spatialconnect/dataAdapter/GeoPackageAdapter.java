@@ -346,7 +346,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
      * @param scSpatialFeature the feature to update
      * @return an observable of the update feature
      */
-    public Observable update(final SCSpatialFeature scSpatialFeature) {
+    public Observable<SCSpatialFeature> update(final SCSpatialFeature scSpatialFeature) {
         final String tableName = scSpatialFeature.getKey().getLayerId();
         final SCGpkgFeatureSource featureSource = getFeatureSourceByName(tableName);
         if (featureSource == null) {
@@ -388,7 +388,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
      * @param keyTuple the {@link SCKeyTuple} of the feature to delete
      * @return onCompleted if delete is successful, onError if not
      */
-    public Observable delete(final SCKeyTuple keyTuple) {
+    public Observable<Void> delete(final SCKeyTuple keyTuple) {
         final String tableName = keyTuple.getLayerId();
         final SCGpkgFeatureSource featureSource = getFeatureSourceByName(tableName);
         if (featureSource == null) {
@@ -400,9 +400,9 @@ public class GeoPackageAdapter extends SCDataAdapter {
             );
         }
         else {
-            return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
+            return Observable.create(new Observable.OnSubscribe<Void>() {
                 @Override
-                public void call(Subscriber<? super SCSpatialFeature> subscriber) {
+                public void call(Subscriber<? super Void> subscriber) {
                     try {
                         gpkg.executeAndTrigger(tableName,
                                 String.format("DELETE FROM %s WHERE %s = %s",
