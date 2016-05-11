@@ -12,12 +12,17 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and limitations under the License
  */
-package com.boundlessgeo.spatialconnect.services;
+package com.boundlessgeo.spatialconnect;
 
 import android.content.Context;
 
 import com.boundlessgeo.spatialconnect.messaging.SCConfigMessage;
 import com.boundlessgeo.spatialconnect.messaging.SCMessage;
+import com.boundlessgeo.spatialconnect.services.SCConfigService;
+import com.boundlessgeo.spatialconnect.services.SCDataService;
+import com.boundlessgeo.spatialconnect.services.SCKVPStoreService;
+import com.boundlessgeo.spatialconnect.services.SCSensorService;
+import com.boundlessgeo.spatialconnect.services.SCService;
 
 import java.io.File;
 import java.util.HashMap;
@@ -26,18 +31,18 @@ import java.util.Map;
 import rx.subjects.PublishSubject;
 
 /**
- * When instantiated, the SCServiceManager adds the default services and registers all stores
- * defined in the config file.  The SCServiceManager is also used to manage the services (starting,
+ * When instantiated, SpatialConnect adds the default services and registers all stores
+ * defined in the config file.  SpatialConnect is also used to manage the services (starting,
  * stopping, creating, deleting, etc).
  */
-public class SCServiceManager {
+public class SpatialConnect {
     private HashMap<String, SCService> services;
     private SCDataService dataService;
     private SCKVPStoreService kvpStoreService;
     private SCSensorService sensorService;
     private SCConfigService configService;
     private Context context;
-    private final String LOG_TAG = SCServiceManager.class.getSimpleName();
+    private final String LOG_TAG = SpatialConnect.class.getSimpleName();
 
     /**
      * The bus is like an internal event bus for {@link SCMessage}s, its job is to receive {@link SCMessage}s from all
@@ -46,13 +51,13 @@ public class SCServiceManager {
     public static final PublishSubject<SCMessage> BUS = PublishSubject.create();
 
     /**
-     * The default SCServiceManager constructor will scan through the app's config directory in its
+     * The default SpatialConnect constructor will scan through the app's config directory in its
      * <a href="http://developer.android.com/guide/topics/data/data-storage.html#filesExternal">external storage</a>
      * and register all stores defined within those config files.
      *
      * @param context
      */
-    public SCServiceManager(Context context) {
+    public SpatialConnect(Context context) {
         this.services = new HashMap<>();
         this.dataService = new SCDataService(context, BUS.ofType(SCConfigMessage.class));
         this.kvpStoreService = new SCKVPStoreService(context);
@@ -63,9 +68,9 @@ public class SCServiceManager {
     }
 
     /**
-     * Adds all the default services to the services hash map maintained by the SCServiceManager.
+     * Adds all the default services to the services hash map maintained by the SpatialConnect.
      */
-    public void addDefaultServices() {
+    private void addDefaultServices() {
         addService(this.dataService);
         addService(this.sensorService);
         addService(this.configService);

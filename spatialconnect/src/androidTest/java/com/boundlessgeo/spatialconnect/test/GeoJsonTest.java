@@ -23,7 +23,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.services.SCServiceManager;
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 
@@ -41,16 +41,16 @@ import static junit.framework.Assert.assertTrue;
 
 public class GeoJsonTest extends BaseTestCase {
 
-    private static SCServiceManager serviceManager;
+    private static SpatialConnect sc;
     private final static String GEOJSON_STORE_ID = "50402599-3ad3-439f-9c49-3c8a7579933b";
     private final static String WHITEHORSE_GPKG_ID = "ba293796-5026-46f7-a2ff-e5dec85heh6b";
 
 
     @BeforeClass
     public static void setUp() throws Exception {
-        serviceManager = new SCServiceManager(activity);
-        serviceManager.addConfig(testConfigFile);
-        serviceManager.startAllServices();
+        sc = new SpatialConnect(activity);
+        sc.addConfig(testConfigFile);
+        sc.startAllServices();
         waitForStoreToStart(GEOJSON_STORE_ID);
         waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
@@ -66,7 +66,7 @@ public class GeoJsonTest extends BaseTestCase {
     @Test
     public void testThatDataServiceStartedGeoJsonStore() {
         boolean containsGeoJsonStore = false;
-        for (SCDataStore store : serviceManager.getDataService().getActiveStores()) {
+        for (SCDataStore store : sc.getDataService().getActiveStores()) {
             assertTrue("The store should be running.",
                     store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)
             );
@@ -82,7 +82,7 @@ public class GeoJsonTest extends BaseTestCase {
 
     @Test
     public void testSearchGeoJsonStore() {
-        SCDataStore geoJsonStore = serviceManager.getDataService().getStoreById(GEOJSON_STORE_ID);
+        SCDataStore geoJsonStore = sc.getDataService().getStoreById(GEOJSON_STORE_ID);
         SCBoundingBox bbox = new SCBoundingBox(-90.114326, 29.921762, -90.063558, 29.938573);
         SCQueryFilter filter = new SCQueryFilter(
                 new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
@@ -116,7 +116,7 @@ public class GeoJsonTest extends BaseTestCase {
 
     private static void waitForStoreToStart(final String storeId) {
         TestSubscriber testSubscriber = new TestSubscriber();
-        serviceManager.getDataService().storeStarted(storeId).timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
+        sc.getDataService().storeStarted(storeId).timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();

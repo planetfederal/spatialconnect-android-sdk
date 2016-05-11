@@ -18,7 +18,7 @@ import android.location.Location;
 import android.test.suitebuilder.annotation.Suppress;
 
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
-import com.boundlessgeo.spatialconnect.services.SCServiceManager;
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
 
 import org.junit.Test;
@@ -33,10 +33,10 @@ public class SensorServiceTest extends BaseTestCase {
     @Suppress // suppressing until there is an "all services started" event that we can subscribe to
     @Test
     public void testSensorServiceStarts() {
-        SCServiceManager serviceManager = new SCServiceManager(testContext);
-        serviceManager.startAllServices();
+        SpatialConnect sc = new SpatialConnect(testContext);
+        sc.startAllServices();
         assertTrue("The sensor service should have started",
-                serviceManager.getSensorService().getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING)
+                sc.getSensorService().getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING)
         );
     }
 

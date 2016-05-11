@@ -17,6 +17,7 @@ package com.boundlessgeo.spatialconnect.services;
 import android.content.Context;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -161,7 +162,7 @@ public class SCDataService extends SCService {
         super.start();
 
         // subscribe to config service events (from the config service)
-        new SCServiceManager(context).getConfigService().connect("DATASERVICE").ofType(SCConfigMessage.class)
+        new SpatialConnect(context).getConfigService().connect("DATASERVICE").ofType(SCConfigMessage.class)
                 .subscribe(new Subscriber<SCConfigMessage>() {
 
                     @Override
