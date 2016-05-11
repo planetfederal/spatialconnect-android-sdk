@@ -25,7 +25,7 @@ import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
-import com.boundlessgeo.spatialconnect.services.SCServiceManager;
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -51,10 +51,10 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
 
     private final String LOG_TAG = SCJavascriptBridgeHandler.class.getSimpleName();
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private SCServiceManager manager;
+    private SpatialConnect manager;
     private WebViewJavascriptBridge bridge;
 
-    public SCJavascriptBridgeHandler(SCServiceManager manager) {
+    public SCJavascriptBridgeHandler(SpatialConnect manager) {
         this.manager = manager;
     }
 

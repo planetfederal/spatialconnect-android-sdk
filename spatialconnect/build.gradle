@@ -49,8 +49,8 @@ android {
     sourceSets {
         main.jniLibs.srcDirs = ['libs']
     }
-    defaultConfig {
-        multiDexEnabled true
+    dexOptions {
+        javaMaxHeapSize "2g"
     }
 }
 

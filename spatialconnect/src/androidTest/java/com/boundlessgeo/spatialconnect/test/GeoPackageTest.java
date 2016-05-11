@@ -22,7 +22,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.services.SCServiceManager;
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
@@ -47,15 +47,16 @@ import static junit.framework.Assert.assertTrue;
 
 public class GeoPackageTest extends BaseTestCase {
 
-    private static SCServiceManager serviceManager;
+    private static SpatialConnect sc;
     private final static String HAITI_GPKG_ID = "a5d93796-5026-46f7-a2ff-e5dec85heh6b";
+    private final static String WHITEHORSE_GPKG_ID = "ba293796-5026-46f7-a2ff-e5dec85heh6b";
 
     @BeforeClass
     public static void setUp() throws Exception {
-        serviceManager = new SCServiceManager(activity);
-        serviceManager.addConfig(testConfigFile);
-        serviceManager.startAllServices();
-        waitForStoreToStart(HAITI_GPKG_ID);
+        sc = new SpatialConnect(activity);
+        sc.addConfig(testConfigFile);
+        sc.startAllServices();
+        waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
 
     @AfterClass
@@ -68,7 +69,7 @@ public class GeoPackageTest extends BaseTestCase {
     @Test
     public void testThatDataServiceStartedGeoPackageStore() {
         boolean containsGeoPackageStore = false;
-        for (SCDataStore store : serviceManager.getDataService().getActiveStores()) {
+        for (SCDataStore store : sc.getDataService().getActiveStores()) {
             assertTrue("The store should be running.",
                     store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)
             );
@@ -82,7 +83,7 @@ public class GeoPackageTest extends BaseTestCase {
         }
         assertTrue("A geopackage store should be running.", containsGeoPackageStore);
         // test that store has the correct status
-        SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         assertNotNull("The store should downloaded locally", gpkgStore);
         assertEquals("The store should be running", SCDataStoreStatus.SC_DATA_STORE_RUNNING, gpkgStore.getStatus());
     }
@@ -90,7 +91,7 @@ public class GeoPackageTest extends BaseTestCase {
     @Test
     public void testGeoPackageQueryWithin() {
         // this is the geopackage located http://www.geopackage.org/data/haiti-vectors-split.gpkg
-        SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
 
         // bbox around part of haiti
         SCBoundingBox bbox = new SCBoundingBox(-73, 18, -72, 19);
@@ -128,7 +129,7 @@ public class GeoPackageTest extends BaseTestCase {
     @Test
     public void testGeoPackageQueryContains() {
         // this is the geopackage located http://www.geopackage.org/data/haiti-vectors-split.gpkg
-        SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
 
         // bbox around part of haiti
         SCBoundingBox bbox = new SCBoundingBox(-73, 18, -72, 19);
@@ -163,7 +164,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageQueryById() {
-        SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         SCKeyTuple featureKey = new SCKeyTuple(HAITI_GPKG_ID, "point_features", "1");
         TestSubscriber testSubscriber = new TestSubscriber();
         gpkgStore.queryById(featureKey).timeout(10, TimeUnit.SECONDS).subscribe(testSubscriber);
@@ -181,7 +182,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageCreateFeature() {
-        SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         SCSpatialFeature newFeature = getTestHaitiPoint();
         // remove the feature id b/c we want the db to create that for us
         newFeature.setId("");
@@ -205,7 +206,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageUpdateFeature() {
-        final SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        final SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         final SCSpatialFeature pointToUpdate = getTestHaitiPoint();
         TestSubscriber testSubscriber = new TestSubscriber();
         gpkgStore.update(pointToUpdate).subscribe(testSubscriber);
@@ -225,7 +226,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageDeleteFeature() {
-        final SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        final SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         final SCSpatialFeature pointToDelete = getTestHaitiPoint();
         TestSubscriber testSubscriber = new TestSubscriber();
         gpkgStore.delete(pointToDelete.getKey()).subscribe(testSubscriber);
@@ -242,7 +243,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageCreateFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
-        SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         TestSubscriber testSubscriber = new TestSubscriber();
         SCSpatialFeature feature = getTestHaitiPoint();
         feature.setLayerId("invalid_table_name");
@@ -256,7 +257,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageUpdateFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
-        SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         TestSubscriber testSubscriber = new TestSubscriber();
         SCSpatialFeature feature = getTestHaitiPoint();
         feature.setLayerId("invalid_table_name");
@@ -271,7 +272,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageDeleteFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
-        SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         TestSubscriber testSubscriber = new TestSubscriber();
         SCSpatialFeature feature = getTestHaitiPoint();
         feature.setLayerId("invalid_table_name");
@@ -285,7 +286,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageQueryByIdThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
-        SCDataStore gpkgStore = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         TestSubscriber testSubscriber = new TestSubscriber();
         SCSpatialFeature feature = getTestHaitiPoint();
         feature.setLayerId("invalid_table_name");
@@ -299,7 +300,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     private static void waitForStoreToStart(final String storeId) {
         TestSubscriber testSubscriber = new TestSubscriber();
-        serviceManager.getDataService().storeStarted(storeId).timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
+        sc.getDataService().storeStarted(storeId).timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();

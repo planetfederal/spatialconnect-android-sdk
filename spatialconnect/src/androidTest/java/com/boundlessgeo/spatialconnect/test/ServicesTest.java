@@ -15,7 +15,7 @@
 package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.services.SCDataService;
-import com.boundlessgeo.spatialconnect.services.SCServiceManager;
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 
 import org.junit.Test;
@@ -32,23 +32,23 @@ public class ServicesTest extends BaseTestCase {
     }
 
     @Test
-    public void testServiceManagerSetup() {
+    public void testSpatialConnectSetup() {
         for (SCDataStore store : new SCDataService(testContext, null).getAllStores()) {
             new SCDataService(testContext, null).unregisterStore(store);
         }
-        SCServiceManager serviceManager = new SCServiceManager(testContext);
+        SpatialConnect sc = new SpatialConnect(testContext);
         assertEquals("4 default services should have been initialized (data, network, config, and kvpstore)",
-                4, serviceManager.getServices().size()
+                4, sc.getServices().size()
         );
         assertEquals("There should be only 2 supported data stores: geojson.1 and gpkg.1",
                 2,
-                serviceManager.getDataService().getSupportedStoreKeys().size()
+                sc.getDataService().getSupportedStoreKeys().size()
         );
         assertTrue("The geojson.1 store should be in the list of supported stores.",
-                serviceManager.getDataService().getSupportedStoreKeys().contains("geojson.1")
+                sc.getDataService().getSupportedStoreKeys().contains("geojson.1")
         );
         assertTrue("The gpkg.1 store should be in the list of supported stores.",
-                serviceManager.getDataService().getSupportedStoreKeys().contains("gpkg.1")
+                sc.getDataService().getSupportedStoreKeys().contains("gpkg.1")
         );
     }
 }

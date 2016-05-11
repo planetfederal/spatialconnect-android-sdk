@@ -19,6 +19,7 @@ import android.content.Context;
 import android.os.Environment;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.config.Stores;
 import com.boundlessgeo.spatialconnect.messaging.MessageType;
@@ -152,7 +153,7 @@ public class SCConfigService extends SCService {
                 for (SCStoreConfig storeConfig : stores.getStores()) {
                     Log.d(LOG_TAG, "Sending ADD_STORE_CONFIG message to CONFIGSERVICE for store "
                             + storeConfig.getName());
-                    SCServiceManager.BUS.onNext(
+                    SpatialConnect.BUS.onNext(
                             new SCConfigMessage(
                                     MessageType.ADD_STORE_CONFIG,
                                     "CONFIGSERVICE",
@@ -200,7 +201,7 @@ public class SCConfigService extends SCService {
                     Log.d(LOG_TAG, "Sending ADD_STORE_CONFIG message to DATASERVICE for store " +
                             scConfigMessage.getStoreConfig().getName());
                     // send a message to the data service
-                    SCServiceManager.BUS.onNext(
+                    SpatialConnect.BUS.onNext(
                             new SCConfigMessage(
                                     MessageType.ADD_STORE_CONFIG,
                                     "DATASERVICE",

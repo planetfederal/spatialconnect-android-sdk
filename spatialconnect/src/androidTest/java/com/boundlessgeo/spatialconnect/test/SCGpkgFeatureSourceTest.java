@@ -6,7 +6,7 @@ import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
 import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
-import com.boundlessgeo.spatialconnect.services.SCServiceManager;
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.squareup.sqlbrite.BriteDatabase;
 
@@ -23,15 +23,18 @@ import static junit.framework.Assert.assertEquals;
 
 public class SCGpkgFeatureSourceTest extends BaseTestCase {
 
-    private static SCServiceManager serviceManager;
+    private static SpatialConnect sc;
     private final static String HAITI_GPKG_ID = "a5d93796-5026-46f7-a2ff-e5dec85heh6b";
     private final static String WHITEHORSE_GPKG_ID = "ba293796-5026-46f7-a2ff-e5dec85heh6b";
 
     @BeforeClass
     public static void setUp() throws Exception {
-        serviceManager = new SCServiceManager(activity);
-        serviceManager.addConfig(testConfigFile);
-        serviceManager.startAllServices();
+        testContext.deleteDatabase("Haiti");
+        testContext.deleteDatabase("Whitehorse");
+        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
+        sc = new SpatialConnect(activity);
+        sc.addConfig(testConfigFile);
+        sc.startAllServices();
         waitForStoreToStart(HAITI_GPKG_ID);
         waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
@@ -45,17 +48,17 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
 
     @Test
     public void testGetGeoPackageContents() {
-        SCDataStore haiti = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore haiti = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         int contentsSize = ((GeoPackageAdapter) haiti.getAdapter()).getGeoPackageContents().size();
         assertEquals("The Haiti gpkg should only have 3 rows in the gpkg_contents table.", 3, contentsSize);
-        SCDataStore whitehorse = serviceManager.getDataService().getStoreById(WHITEHORSE_GPKG_ID);
+        SCDataStore whitehorse = sc.getDataService().getStoreById(WHITEHORSE_GPKG_ID);
         contentsSize = ((GeoPackageAdapter) whitehorse.getAdapter()).getGeoPackageContents().size();
         assertEquals("The Whitehorese gpkg should only have 1 row in the gpkg_contents table.", 1, contentsSize);
     }
 
     @Test
     public void testGetFeatureSources() {
-        SCDataStore store = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore store = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         int featureSourcesSize = ((GeoPackageAdapter) store.getAdapter()).getFeatureSources().size();
         assertEquals("The Haiti gpkg should only have 3 feature tables.", 3, featureSourcesSize);
     }
@@ -63,7 +66,7 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
     @Test
     public void testRtreeIndexIsCreated() {
         BriteDatabase db = new SCSqliteHelper(testContext, "Haiti").db();
-        SCDataStore store = serviceManager.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore store = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         Cursor cursor = null;
         for (SCGpkgFeatureSource source : ((GeoPackageAdapter) store.getAdapter()).getFeatureSources()) {
             try {
@@ -84,7 +87,7 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
 
     private static void waitForStoreToStart(final String storeId) {
         TestSubscriber testSubscriber = new TestSubscriber();
-        serviceManager.getDataService().storeStarted(storeId).timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
+        sc.getDataService().storeStarted(storeId).timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();
