@@ -4,6 +4,9 @@ apply plugin: 'maven'
 group 'com.boundlessgeo.spatialconnect'
 version '1.0.0'
 
+def isCi = "true".equals(System.getenv("CI"))
+def preDexEnabled = "true".equals(System.getProperty("pre-dex", "true"))
+
 android {
     compileSdkVersion 'Google Inc.:Google APIs:23'
     buildToolsVersion '23.0.1'
@@ -13,7 +16,8 @@ android {
         versionCode 1
         versionName "1.0"
         multiDexEnabled = true
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        // http://developer.android.com/tools/building/multidex.html#testing
+        testInstrumentationRunner "com.boundlessgeo.spatialconnect.test.MultiDexAndroidJUnitRunner"
     }
     lintOptions {
         abortOnError false
@@ -50,7 +54,8 @@ android {
         main.jniLibs.srcDirs = ['libs']
     }
     dexOptions {
-        javaMaxHeapSize "2g"
+        // Skip pre-dexing when running on Travis CI or when disabled via -Dpre-dex=false.
+        preDexLibraries = preDexEnabled && !isCi
     }
 }
 
@@ -62,11 +67,13 @@ repositories {
 dependencies {
     compile 'com.android.support:appcompat-v7:23.0.1'
     compile 'com.google.android.gms:play-services-maps:7.8.0'
+    compile 'com.android.support:multidex:1.0.1'
     compile 'com.bedatadriven:jackson-datatype-jts:1.0'
     compile 'io.reactivex:rxandroid:1.1.0'
     compile 'io.reactivex:rxjava:1.1.0'
     compile 'commons-io:commons-io:2.4'
     compile 'com.squareup.okhttp3:okhttp:3.2.0'
+    compile "com.facebook.react:react-native:+"
     compile('io.jeo:jeo:0.6') {
         exclude group: 'com.vividsolutions'
         exclude group: 'io.jeo', module: 'proj4j'

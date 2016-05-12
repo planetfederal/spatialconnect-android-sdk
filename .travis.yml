@@ -20,7 +20,7 @@ android:
     - addon-google_apis-google-23
 
     # specify emulator to run during your tests
-    - sys-img-armeabi-v7a-android-23
+    - sys-img-armeabi-v7a-android-19
 
   licenses:
     - 'android-sdk-license-.+'
