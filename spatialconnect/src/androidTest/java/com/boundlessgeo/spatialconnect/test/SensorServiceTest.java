@@ -33,7 +33,8 @@ public class SensorServiceTest extends BaseTestCase {
     @Suppress // suppressing until there is an "all services started" event that we can subscribe to
     @Test
     public void testSensorServiceStarts() {
-        SpatialConnect sc = new SpatialConnect(testContext);
+        SpatialConnect sc = SpatialConnect.getInstance();
+        sc.initialize(activity);
         sc.startAllServices();
         assertTrue("The sensor service should have started",
                 sc.getSensorService().getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING)

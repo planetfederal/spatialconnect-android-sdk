@@ -58,8 +58,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
     public SCBridge(ReactApplicationContext reactContext) {
         super(reactContext);
-        // TODO: this should be a singleton with a getInstance() method or injected with dagger
-        this.sc = new SpatialConnect(reactContext.getApplicationContext());
+        this.sc = SpatialConnect.getInstance();
+        this.sc.initialize(reactContext.getApplicationContext());
         this.reactContext = reactContext;
     }
 
@@ -122,9 +122,6 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (command.equals(BridgeCommand.START_ALL_SERVICES)) {
                 handleStartAllServices();
             }
-            if (command.equals(BridgeCommand.LOAD_DEFAULT_CONFIGS)) {
-                handleLoadDefaultConfigs();
-            }
             if (command.equals(BridgeCommand.SENSORSERVICE_GPS)) {
                 handleSensorServiceGps(message);
             }
@@ -157,14 +154,6 @@ public class SCBridge extends ReactContextBaseJavaModule {
     private void handleStartAllServices() {
         Log.d(LOG_TAG, "Handling START_ALL_SERVICES message");
         sc.startAllServices();
-    }
-
-    /**
-     * Handles the {@link BridgeCommand#LOAD_DEFAULT_CONFIGS} command.
-     */
-    private void handleLoadDefaultConfigs() {
-        Log.d(LOG_TAG, "Handling LOAD_DEFAULT_CONFIGS message");
-        sc.loadDefaultConfigs();
     }
 
     /**

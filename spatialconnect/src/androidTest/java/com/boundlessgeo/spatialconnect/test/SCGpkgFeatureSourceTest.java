@@ -32,7 +32,8 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
         testContext.deleteDatabase("Haiti");
         testContext.deleteDatabase("Whitehorse");
         testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
-        sc = new SpatialConnect(activity);
+        sc = SpatialConnect.getInstance();
+        sc.initialize(activity);
         sc.addConfig(testConfigFile);
         sc.startAllServices();
         waitForStoreToStart(HAITI_GPKG_ID);

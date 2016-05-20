@@ -17,13 +17,11 @@ package com.boundlessgeo.spatialconnect.services;
 import android.content.Context;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
-import com.boundlessgeo.spatialconnect.messaging.MessageType;
-import com.boundlessgeo.spatialconnect.messaging.SCConfigMessage;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.stores.DefaultStore;
 import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
@@ -51,11 +49,10 @@ import rx.subjects.BehaviorSubject;
  * includes exposing methods to query across multiple SCDataStore instances.
  */
 public class SCDataService extends SCService {
-    private SCServiceStatus status;
+
+    private static final String LOG_TAG = SCDataService.class.getSimpleName();
     private Set<String> supportedStores; // the strings are store keys: type.version
     private Map<String, SCDataStore> stores;
-    private boolean storesStarted;
-    private final String LOG_TAG = "SCDataService";
     private Context context;
 
     /**
@@ -72,7 +69,7 @@ public class SCDataService extends SCService {
      */
     public ConnectableObservable<SCStoreStatusEvent> storeEvents;
 
-    public SCDataService(Context context, Observable messages) {
+    public SCDataService(Context context) {
         super();
         this.supportedStores = new HashSet<>();
         this.stores = new HashMap<>();
@@ -82,12 +79,26 @@ public class SCDataService extends SCService {
         this.storeEvents = storeEventSubject.publish();
         addDefaultStoreImpls();
         this.context = context;
-        this.messages = messages;
+        initializeDefaultStore();
+    }
+
+    private void initializeDefaultStore() {
+        Log.d(LOG_TAG, "Creating default store");
+        SCStoreConfig defaultStoreConfig = new SCStoreConfig();
+        defaultStoreConfig.setName(DefaultStore.NAME);
+        defaultStoreConfig.setUniqueID(DefaultStore.NAME);
+        defaultStoreConfig.setUri("file://" + DefaultStore.NAME);
+        defaultStoreConfig.setType("gpkg");
+        defaultStoreConfig.setVersion("1");
+        addNewStore(defaultStoreConfig);
     }
 
     public void addDefaultStoreImpls() {
         this.supportedStores.add(GeoJsonStore.versionKey());
         this.supportedStores.add(GeoPackageStore.versionKey());
+        this.supportedStores.add(GeoJsonStore.versionKey() + ".0"); // so 1.0 and 1 are the same version
+        this.supportedStores.add(GeoPackageStore.versionKey() + ".0");  // so 1.0 and 1 are the same version
+
     }
 
     public void startStore(final SCDataStore store) {
@@ -159,67 +170,36 @@ public class SCDataService extends SCService {
      * Calling start on the {@link SCDataService} will start all registered {@link SCDataStore}s.
      */
     public void start() {
+        Log.d(LOG_TAG, "Starting SCDataService. Starting all registered data stores.");
         super.start();
-
-        // subscribe to config service events (from the config service)
-        new SpatialConnect(context).getConfigService().connect("DATASERVICE").ofType(SCConfigMessage.class)
-                .subscribe(new Subscriber<SCConfigMessage>() {
-
-                    @Override
-                    public void onCompleted() {
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                    }
-
-                    @Override
-                    public void onNext(SCConfigMessage scConfigMessage) {
-                        Log.v(LOG_TAG,
-                                String.format("Received %s message from config service for store %s.",
-                                        scConfigMessage.getType().toString(),
-                                        scConfigMessage.getStoreConfig().getName()
-                                )
-                        );
-                        // get the config out of the event
-                        SCStoreConfig scStoreConfig = scConfigMessage.getStoreConfig();
-
-                        if (scConfigMessage.getType().equals(MessageType.ADD_STORE_CONFIG)) {
-                            // determine if the we already have a reference to the store specified by the config
-                            SCDataStore store = getStoreById(scStoreConfig.getUniqueID());
-                            if (store == null) {
-                                // add and start new store b/c it is not registered with the data service yet
-                                addNewStore(scStoreConfig);
-                                startStore(getStoreById(scStoreConfig.getUniqueID()));
-                            }
-                            else {
-                                Log.d(LOG_TAG, "Store " +scConfigMessage.getStoreConfig().getName() +
-                                        " is registered with data service already.");
-                            }
-                        }
-                    }
-                });
-
-        this.storesStarted = true;
+        for (SCDataStore store : getAllStores()) {
+            startStore(store);
+        }
+        this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
     }
 
-    private void addNewStore(SCStoreConfig scStoreConfig) {
+    public void addNewStore(SCStoreConfig scStoreConfig) {
         Log.d(LOG_TAG, "Registering new store " + scStoreConfig.getName());
         String key = scStoreConfig.getType() + "." + scStoreConfig.getVersion();
         if (isStoreSupported(key)) {
-            if (key.equals("geojson.1")) {
+            if (key.startsWith("geojson")) {
                 registerStore(new GeoJsonStore(context, scStoreConfig));
-                Log.d(LOG_TAG, "Registered geojson.1 store " + scStoreConfig.getName() + " with SCDataService.");
+                Log.d(LOG_TAG, "Registered geojson store " + scStoreConfig.getName() + " with SCDataService.");
             }
-            else if (key.equals("gpkg.1")) {
-                registerStore(new GeoPackageStore(context, scStoreConfig));
-                Log.d(LOG_TAG, "Registered gpkg.1 store " + scStoreConfig.getName() + " with SCDataService.");
+            else if (key.startsWith("gpkg")) {
+                if (scStoreConfig.getName().equals(DefaultStore.NAME)) {
+                    registerStore(new DefaultStore(context, scStoreConfig));
+                    Log.d(LOG_TAG, "Registered default store with SCDataService.");
+                }
+                else {
+                    registerStore(new GeoPackageStore(context, scStoreConfig));
+                    Log.d(LOG_TAG, "Registered gpkg store " + scStoreConfig.getName() + " with SCDataService.");
+                }
             }
         }
         else {
-            Log.w(LOG_TAG, "Cannot register new store b/c it's unsupported.");
+            Log.w(LOG_TAG, "Cannot register new store b/c it's unsupported. The unsupported store key was " + key);
         }
-
         // now persist the store's properties
         SCStoreConfigRepository storeConfigRepository = new SCStoreConfigRepository(context);
         storeConfigRepository.addStoreConfig(scStoreConfig);
@@ -236,10 +216,20 @@ public class SCDataService extends SCService {
 
     public void registerStore(SCDataStore store) {
         this.stores.put(store.getStoreId(), store);
+        // if data service is started/running when a new store is added, then we want to start the store
+        if (getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING)) {
+            Log.d(LOG_TAG, "Starting store " + store.getName());
+            startStore(store);
+        }
     }
 
     public void unregisterStore(SCDataStore store) {
         this.stores.remove(store.getStoreId());
+        // if data service is started, and a store is unregister, then we want to stop the store
+        if (getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING)) {
+            Log.d(LOG_TAG, "Stopping store " + store.getName());
+            store.stop();
+        }
     }
 
     public List<String> getSupportedStoreKeys() {
@@ -337,6 +327,15 @@ public class SCDataService extends SCService {
                             }
                         });
         return queryResults;
+    }
+
+    public DefaultStore getDefaultStore() {
+        for (SCDataStore store : stores.values()){
+            if (store.getName().equals("DEFAULT_STORE")) {
+                return (DefaultStore) store;
+            }
+        }
+        return null;
     }
 
     class StoreQueryDAO {

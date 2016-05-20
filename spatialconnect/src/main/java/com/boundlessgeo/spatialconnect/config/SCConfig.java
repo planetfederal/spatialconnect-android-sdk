@@ -15,18 +15,42 @@
 package com.boundlessgeo.spatialconnect.config;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 
-public class Stores
-{
+public class SCConfig {
+
+    @JsonProperty("stores")
     private List<SCStoreConfig> stores;
+    @JsonProperty("forms")
+    private List<SCFormConfig> forms;
+    private String remote;
 
-    public Stores() {}
+    public SCConfig() {
+    }
 
-    public List<SCStoreConfig> getStores() { return stores; }
+    public List<SCStoreConfig> getStoreConfigs() {
+        return stores;
+    }
 
-    public void setStores(List<SCStoreConfig> configs)
-    {
+    public void setStoreConfigs(List<SCStoreConfig> configs) {
         this.stores = configs;
+    }
+
+    public List<SCFormConfig> getFormConfigs() {
+        return forms;
+    }
+
+    public void setFormConfigs(List<SCFormConfig> forms) {
+        this.forms = forms;
+    }
+
+    public String getRemote() {
+        return remote;
+    }
+
+    public void setRemote(String remote) {
+        this.remote = remote;
     }
 }

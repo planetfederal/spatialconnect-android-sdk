@@ -27,21 +27,23 @@ public class ServicesTest extends BaseTestCase {
 
     @Test
     public void testDataServiceInitialization() {
-        SCDataService dataService = new SCDataService(testContext, null);
-        assertTrue("The data service should have 2 supported stores.", dataService.getSupportedStoreKeys().size() == 2);
+        SCDataService dataService = new SCDataService(testContext);
+        assertEquals("The data service should have 4 supported stores.",
+                4, dataService.getSupportedStoreKeys().size());
     }
 
     @Test
     public void testSpatialConnectSetup() {
-        for (SCDataStore store : new SCDataService(testContext, null).getAllStores()) {
-            new SCDataService(testContext, null).unregisterStore(store);
+        for (SCDataStore store : new SCDataService(testContext).getAllStores()) {
+            new SCDataService(testContext).unregisterStore(store);
         }
-        SpatialConnect sc = new SpatialConnect(testContext);
-        assertEquals("4 default services should have been initialized (data, network, config, and kvpstore)",
-                4, sc.getServices().size()
+        SpatialConnect sc = SpatialConnect.getInstance();
+        sc.initialize(activity);
+        assertEquals("5 default services should have been initialized (data, network, config, sensor, and kvpstore)",
+                5, sc.getServices().size()
         );
-        assertEquals("There should be only 2 supported data stores: geojson.1 and gpkg.1",
-                2,
+        assertEquals("There should be only 4 supported data stores: geojson.1, gpkg.1 and geojson.1.0, gpkg.1.0",
+                4,
                 sc.getDataService().getSupportedStoreKeys().size()
         );
         assertTrue("The geojson.1 store should be in the list of supported stores.",

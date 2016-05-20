@@ -50,7 +50,8 @@ public class SCConfigServiceTest extends BaseTestCase {
 
     @Test @Ignore
     public void testSpatialConnectCanLoadNonDefaultConfigs() {
-        SpatialConnect sc = new SpatialConnect(testContext);
+        SpatialConnect sc = SpatialConnect.getInstance();
+        sc.initialize(activity);
         sc.addConfig(testConfigFile);
         sc.startAllServices();
         waitForStoreToStart(WHITEHORSE_GPKG_ID, sc);
@@ -59,9 +60,9 @@ public class SCConfigServiceTest extends BaseTestCase {
 
     @Test @Ignore
     public void testConfigServicePersistsConfigs() {
-        SpatialConnect sc = new SpatialConnect(testContext);
+        SpatialConnect sc = SpatialConnect.getInstance();
+        sc.initialize(activity);
         sc.startAllServices();
-        sc.loadDefaultConfigs();
         // the remote config doesn't have the whitehorse gpkg so we wait for haiti
         waitForStoreToStart(HAITI_GPKG_ID, sc);
         SCStoreConfigRepository stores = new SCStoreConfigRepository(testContext);

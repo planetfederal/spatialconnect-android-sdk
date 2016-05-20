@@ -15,13 +15,57 @@
 package com.boundlessgeo.spatialconnect.services;
 
 
+import android.content.Context;
+import android.util.Log;
+
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.UUID;
+
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 public class SCNetworkService extends SCService {
 
+    private static final String LOG_TAG = SCNetworkService.class.getSimpleName();
+    private static Context context;
     private static OkHttpClient client = new OkHttpClient();
 
-    private SCNetworkService() {
+    public SCNetworkService(Context context) {
+        this.context = context;
+    }
+
+    public File getFileBlocking(final String theUrl) {
+        Log.d(LOG_TAG, "Fetching remote config from " + theUrl);
+        Request request = new Request.Builder()
+                .url(theUrl)
+                .build();
+
+        Response response;
+        File scConfigFile = null;
+        try {
+            response = client.newCall(request).execute();
+            BufferedInputStream is = new BufferedInputStream(response.body().byteStream());
+            scConfigFile = File.createTempFile(UUID.randomUUID().toString(), null, context.getCacheDir());
+            OutputStream os = new FileOutputStream(scConfigFile);
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+            os.flush();
+            os.close();
+            is.close();
+        }
+        catch (IOException e) {
+            Log.e(LOG_TAG, "Could not download file");
+            e.printStackTrace();
+        }
+        return scConfigFile;
     }
 
     public static OkHttpClient getHttpClient() {

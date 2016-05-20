@@ -48,7 +48,8 @@ public class GeoJsonTest extends BaseTestCase {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        sc = new SpatialConnect(activity);
+        sc = SpatialConnect.getInstance();
+        sc.initialize(activity);
         sc.addConfig(testConfigFile);
         sc.startAllServices();
         waitForStoreToStart(GEOJSON_STORE_ID);

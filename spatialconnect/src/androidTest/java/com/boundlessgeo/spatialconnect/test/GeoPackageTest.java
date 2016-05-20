@@ -14,6 +14,7 @@
  */
 package com.boundlessgeo.spatialconnect.test;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
@@ -22,7 +23,6 @@ import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
@@ -53,7 +53,8 @@ public class GeoPackageTest extends BaseTestCase {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        sc = new SpatialConnect(activity);
+        sc = SpatialConnect.getInstance();
+        sc.initialize(activity);
         sc.addConfig(testConfigFile);
         sc.startAllServices();
         waitForStoreToStart(WHITEHORSE_GPKG_ID);
@@ -64,6 +65,7 @@ public class GeoPackageTest extends BaseTestCase {
         testContext.deleteDatabase("Haiti");
         testContext.deleteDatabase("Whitehorse");
         testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
+        testContext.deleteDatabase("DEFAULT_STORE");
     }
 
     @Test
@@ -300,12 +302,11 @@ public class GeoPackageTest extends BaseTestCase {
 
     private static void waitForStoreToStart(final String storeId) {
         TestSubscriber testSubscriber = new TestSubscriber();
-        sc.getDataService().storeStarted(storeId).timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
+        sc.getDataService().storeStarted(storeId).timeout(3, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();
     }
-
 
     // helper method to return a sample SCSpatialFeature to use in CRUD to/from a GeoPackage.
     private SCSpatialFeature getTestHaitiPoint() {

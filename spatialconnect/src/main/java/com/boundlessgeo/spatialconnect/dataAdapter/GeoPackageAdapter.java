@@ -20,6 +20,8 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.config.SCFormConfig;
+import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.db.GeoPackageContents;
@@ -34,6 +36,7 @@ import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
+import com.squareup.sqlbrite.BriteDatabase;
 import com.squareup.sqlbrite.SqlBrite;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.io.ParseException;
@@ -100,57 +103,140 @@ public class GeoPackageAdapter extends SCDataAdapter {
             @Override
             public void call(final Subscriber<? super SCDataAdapterStatus> subscriber) {
 
+                Log.d(LOG_TAG, "Connecting to " + context.getDatabasePath(scStoreConfig.getName()).getPath());
                 adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTING);
 
-                URL theUrl = null;
-                try {
-                    // TODO: we need to determine if the store's URI is local to the filesystem (packaged
-                    // with the app or on an SD card and try loading from there)
-                    theUrl = new URL(scStoreConfig.getUri());
-                }
-                catch (MalformedURLException e) {
-                    Log.e(LOG_TAG, "URL was malformed. Check the syntax: " + theUrl);
-                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
-                    subscriber.onError(e);
-                }
-
-                // download geopackage and store it locally if it's not present
                 if (context.getDatabasePath(scStoreConfig.getName()).exists()) {
                     Log.d(LOG_TAG, "GeoPackage " + scStoreConfig.getName() + " already exists.  Not downloading.");
                     // create new GeoPackage for the file that's already on disk
                     gpkg = new GeoPackage(context, scStoreConfig.getName());
+                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
                     subscriber.onCompleted();
                 }
                 else {
-                    downloadGeoPackage(theUrl)
-                            .subscribeOn(Schedulers.io())
-                            .subscribe(new Action1<Response>() {
-                                @Override
-                                public void call(Response response) {
-                                    if (!response.isSuccessful()) {
-                                        subscriber.onError(new IOException("Unexpected code " + response));
-                                    }
-                                    try {
-                                        // save the file to the databases directory
-                                        saveFileToFilesystem(response.body().byteStream());
-                                        // create new GeoPackage now that we've saved the file
-                                        gpkg = new GeoPackage(context, scStoreConfig.getName());
-                                        adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
-                                        subscriber.onCompleted();
-                                    }
-                                    catch (IOException e) {
-                                        subscriber.onError(e);
-                                    }
-                                    finally {
-                                        response.body().close();
-                                    }
-                                }
-                            });
+                    // download geopackage and store it locally
+                    URL theUrl = null;
+                    if (scStoreConfig.getUri().startsWith("http")) {
+                        try {
+                            theUrl = new URL(scStoreConfig.getUri());
+                            downloadGeoPackage(theUrl)
+                                    .subscribeOn(Schedulers.io())
+                                    .subscribe(new Action1<Response>() {
+                                        @Override
+                                        public void call(Response response) {
+                                            if (!response.isSuccessful()) {
+                                                subscriber.onError(new IOException("Unexpected code " + response));
+                                            }
+                                            try {
+                                                // save the file to the databases directory
+                                                saveFileToFilesystem(response.body().byteStream());
+                                                // create new GeoPackage now that we've saved the file
+                                                gpkg = new GeoPackage(context, scStoreConfig.getName());
+                                                adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
+                                                subscriber.onCompleted();
+                                            }
+                                            catch (IOException e) {
+                                                subscriber.onError(e);
+                                            }
+                                            finally {
+                                                response.body().close();
+                                            }
+                                        }
+                                    });
+                        }
+                        catch (MalformedURLException e) {
+                            Log.e(LOG_TAG, "URL was malformed. Check the syntax: " + theUrl);
+                            adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+                            subscriber.onError(e);
+                        }
+                    }
+                    else if  (scStoreConfig.getUri().startsWith("file")) {
+                        gpkg = new GeoPackage(context, scStoreConfig.getName());
+                        adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
+                        subscriber.onCompleted();
+                    }
                 }
             }
         });
     }
 
+    /**
+     * Creates a new table for the form specified in the formConfig.
+     *
+     * @param formConfig
+     */
+    public void addFormLayer(SCFormConfig formConfig) {
+        Log.d(LOG_TAG, "Creating a table for form " + formConfig.getName());
+        final String tableName = formConfig.getName().replace(" ", "_").toLowerCase();
+        Cursor cursor = null;
+        BriteDatabase.Transaction tx = gpkg.newTransaction();
+        try {
+            // first create the table for this form
+            cursor = gpkg.query(createFormTableSQL(formConfig));
+            cursor.moveToFirst(); // force query to execute
+            // then add it to gpkg_contents and any other tables (gpkg_metadata, ,etc)
+            cursor = gpkg.query(addToGpkgContentsSQL(tableName));
+            cursor.moveToFirst(); // force query to execute
+            // add a geometry column to the table b/c we want to store where the form was submitted (if needed).
+            // also, note that this function will add the geometry to gpkg_geometry_columns, which has a foreign key
+            // constraint on the table name, which requires the table to exist in gpkg_contents
+            cursor = gpkg.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
+            cursor.moveToFirst(); // force query to execute
+            tx.markSuccessful();
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
+            Log.w(LOG_TAG, "Could not create table b/c " + ex.getMessage());
+        }
+        finally {
+            tx.end();
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    /**
+     * Deletes a form table.
+     *
+     * @param tableName - the name of the table/layer to remove from the DEFAULT_STORE
+     */
+    public void deleteFormLayer(String tableName) {
+        BriteDatabase.Transaction tx = gpkg.newTransaction();
+        // first remove from gpkg_geometry_columns
+        gpkg.removeFromGpkgGeometryColumns(tableName);
+        // then remove it from geopackage contents
+        gpkg.removeFromGpkgContents(tableName);
+        // lastly, remove the table itself so there are no FK constraint violations
+        gpkg.query("DROP TABLE " + tableName);
+        tx.markSuccessful();
+        tx.end();
+    }
+
+    private String createFormTableSQL(SCFormConfig formConfig){
+        final String tableName = formConfig.getName().replace(" ", "_").toLowerCase();
+        StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName);
+        sb.append(" (id INTEGER PRIMARY KEY AUTOINCREMENT, ");
+        boolean isFirst = true;
+        for (SCFormField field : formConfig.getFields()) {
+            if (!isFirst) {
+                sb.append(", ");
+            }
+            sb.append(field.getName().toLowerCase());
+            sb.append(" ").append(field.getColumnType());
+            isFirst = false;
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
+    private String addToGpkgContentsSQL(String tableName) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("INSERT OR REPLACE INTO gpkg_contents ")
+                .append("(table_name,data_type,identifier,description,min_x,min_y,max_x,max_y,srs_id) ")
+                .append(String.format("VALUES ('%s','features','%s','form',0,0,0,0,4326)", tableName, tableName));
+        return sb.toString();
+    }
 
     /**
      * Query {@link SCDataStore}s for {@link SCSpatialFeature}s using a
@@ -414,7 +500,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                         subscriber.onCompleted();
                     }
                     catch (SQLException ex) {
-                        subscriber.onError(new Throwable("Could not update the feature.", ex));
+                        subscriber.onError(new Throwable("Could not delete the feature.", ex));
                     }
                 }
             });
