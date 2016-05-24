@@ -115,18 +115,28 @@ public class SCGpkgFeatureSource {
      *
      * @return a CSV string of all column values used in the INSERT statement
      */
-    public String getColumnValuesForInsert(SCSpatialFeature feature) {
+    public String getColumnValuesForInsert(final SCSpatialFeature feature) {
         StringBuilder sb = new StringBuilder();
         List<String> columnNames = new ArrayList<>(columns.keySet());
         Collections.sort(columnNames, ALPHABETICAL_ORDER);
+        boolean firstIteration = true;
         for (String columnName : columnNames) {
             if (feature.getProperties().get(columnName) != null) {
+                if (!firstIteration) {
+                    sb.append(",");
+                }
                 sb.append(DatabaseUtils.sqlEscapeString(String.valueOf(feature.getProperties().get(columnName))));
-                sb.append(",");
+                firstIteration = false;
             }
         }
         if (feature instanceof SCGeometry && ((SCGeometry)feature).getGeometry() != null) {
-            sb.append("ST_GeomFromText('").append(((SCGeometry)feature).getGeometry().toString()).append("')");
+            sb.append(",")
+                    .append("ST_GeomFromText('")
+                    .append(((SCGeometry)feature).getGeometry().toString())
+                    .append("')");
+        }
+        else {
+            sb.append(",").append("NULL");
         }
         return sb.toString();
     }

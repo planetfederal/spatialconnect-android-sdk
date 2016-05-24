@@ -18,7 +18,6 @@ package com.boundlessgeo.spatialconnect.jsbridge;
 public enum BridgeCommand {
 
     START_ALL_SERVICES(1),
-    LOAD_DEFAULT_CONFIGS(2),
     DATASERVICE_ACTIVESTORESLIST(100),
     DATASERVICE_ACTIVESTOREBYID(101),
     DATASERVICE_SPATIALQUERY(110),

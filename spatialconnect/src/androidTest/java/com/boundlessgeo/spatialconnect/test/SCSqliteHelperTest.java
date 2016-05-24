@@ -25,7 +25,8 @@ public class SCSqliteHelperTest extends BaseTestCase {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        sc = new SpatialConnect(activity);
+        sc = SpatialConnect.getInstance();
+        sc.initialize(activity);
         sc.addConfig(testConfigFile);
         sc.startAllServices();
         waitForStoreToStart(HAITI_GPKG_ID);

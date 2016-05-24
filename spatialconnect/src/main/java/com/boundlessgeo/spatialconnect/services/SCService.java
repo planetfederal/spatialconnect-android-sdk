@@ -14,68 +14,42 @@
  */
 package com.boundlessgeo.spatialconnect.services;
 
-import com.boundlessgeo.spatialconnect.messaging.SCMessage;
-
 import java.util.UUID;
 
-import rx.Observable;
-import rx.functions.Func1;
-
-public class SCService
-{
+public class SCService {
     private String id;
     private SCServiceStatus status;
-    protected Observable<SCMessage> messages;
 
-
-    public SCService()
-    {
+    public SCService() {
         this.id = UUID.randomUUID().toString();
         this.status = SCServiceStatus.SC_SERVICE_STOPPED;
     }
 
-    public void start()
-    {
+    public void start() {
         this.status = SCServiceStatus.SC_SERVICE_STARTING;
     }
 
-    public void stop()
-    {
+    public void stop() {
         this.status = SCServiceStatus.SC_SERVICE_STOPPED;
     }
 
-    public void resume()
-    {
+    public void resume() {
         this.status = SCServiceStatus.SC_SERVICE_RUNNING;
     }
 
-    public void pause()
-    {
+    public void pause() {
         this.status = SCServiceStatus.SC_SERVICE_PAUSED;
     }
 
-    public String getId()
-    {
+    public String getId() {
         return id;
     }
 
-    public SCServiceStatus getStatus()
-    {
+    public SCServiceStatus getStatus() {
         return status;
     }
 
-    /**
-     * A service can connect to another service to receive messages sent by it.
-     *
-     * @param serviceId
-     * @return
-     */
-    public Observable<SCMessage> connect(final String serviceId) {
-        return this.messages.filter(new Func1<SCMessage, Boolean>() {
-            @Override
-            public Boolean call(SCMessage scMessage) {
-                return scMessage.getServiceId().equals(serviceId);
-            }
-        });
+    public void setStatus(SCServiceStatus status) {
+        this.status = status;
     }
 }

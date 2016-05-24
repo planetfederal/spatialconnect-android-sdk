@@ -52,21 +52,46 @@ public class GeoPackage {
         this.name = name;
         this.context = context;
         db = new SCSqliteHelper(context, name).db();
-        if (validateGeoPackageSchema()) {
+        if (initializeSpatialMetadata() && validateGeoPackageSchema()) {
             initializeFeatureSources();
+        }
+    }
+
+    private boolean initializeSpatialMetadata() {
+        Log.d(LOG_TAG, "Initializing GeoPackage schema.");
+        Cursor cursor = null;
+        try {
+            cursor = db.query("SELECT InitSpatialMetadata()");
+            cursor.moveToFirst();
+            return true;
+        }
+        catch (SQLException ex) {
+            Log.w(LOG_TAG, String.format("GeoPackage %s could not be initialized.", name));
+            return false;
+        }
+        finally {
+            if (cursor != null) {
+                cursor.close();
+            }
         }
     }
 
     private boolean validateGeoPackageSchema() {
         Log.d(LOG_TAG, "Validating GeoPackage schema against the spec.");
+        Cursor cursor = null;
         try {
-            Cursor cursor = db.query("SELECT CheckSpatialMetadata()");
+            cursor = db.query("SELECT CheckSpatialMetadata()");
             cursor.moveToFirst();
             return true;
         }
         catch (SQLException ex) {
             Log.w(LOG_TAG, String.format("GeoPackage %s was not valid.", name));
             return false;
+        }
+        finally {
+            if (cursor != null) {
+                cursor.close();
+            }
         }
     }
 
@@ -98,8 +123,9 @@ public class GeoPackage {
     // executes the CreateSpatialIndex function for a given table
     private void createSpatialIndex(String tableName, String geomColumnName, String pkName) {
         Log.d(LOG_TAG, "Creating index for table " + tableName);
+        Cursor cursor = null;
         try {
-            Cursor cursor = db.query(
+             cursor = db.query(
                     String.format("SELECT CreateSpatialIndex('%s', '%s', '%s')", tableName, geomColumnName, pkName)
             );
             cursor.moveToFirst(); // force query to execute
@@ -107,6 +133,11 @@ public class GeoPackage {
         catch (SQLException ex) {
             ex.printStackTrace();
             Log.w(LOG_TAG, "Could not create index b/c " + ex.getMessage());
+        }
+        finally {
+            if (cursor != null) {
+                cursor.close();
+            }
         }
     }
 
@@ -257,6 +288,17 @@ public class GeoPackage {
         return db.query(sql, args);
     }
 
+
+    public BriteDatabase.Transaction newTransaction() {
+         return db.newTransaction();
+    }
+
+    public void removeFromGpkgContents(String tableName) {
+        db.delete("gpkg_contents", "table_name=?", new String[] { tableName });
+    }
+    public void removeFromGpkgGeometryColumns(String tableName) {
+        db.delete("gpkg_geometry_columns", "table_name=?", new String[] { tableName });
+    }
 
     public String getName() {
         return name;

@@ -1,4 +1,5 @@
 {
+  "remote": "https://gist.githubusercontent.com/marcusthebrown/66039906504c5939ea4ebda3a04f2851/raw/c3da9d593e7fba7168ca78ec45baa77e32935ccb/sc-config.json",
   "stores":[
     {
       "type": "geojson",
