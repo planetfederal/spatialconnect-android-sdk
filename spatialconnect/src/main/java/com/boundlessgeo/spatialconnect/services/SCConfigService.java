@@ -55,12 +55,16 @@ public class SCConfigService extends SCService {
     /**
      * Loads all config files and registers the stores for each config.
      * <p/>
-     * <p>First, we try to load the configs from external storage.  Note that this supports the "no network" use case
+     * <p>First, we try to load the default config from internal storage, then we try to load other configs from the
+     * external storage folder.  Note that both internal and external storage supports the "no network" use case
      * where the SDcard has data on it and the config file points to that data.  Next, we try to download any
      * configuration files from the SpatialConnect backend service defined in the {@code remote} attribute of a
      * config.  Then we load any configs that were added with {@link SCConfigService#addConfig(File)}.</p>
      */
     public void loadConfigs() {
+        if (getDefaultConfig() != null) {
+            loadConfigs(Arrays.asList(getDefaultConfig()));
+        }
         loadConfigs(getConfigFilesFromExternalStorage());
         loadConfigs(this.getLocalConfigFiles());
     }
@@ -89,21 +93,38 @@ public class SCConfigService extends SCService {
     }
 
     /**
+     * Loads the default configuration file from the app's internal files directory.  Note that the configs.scfg file
+     * must be copied to the internal files directory by the application using this sdk.
+     */
+    private File getDefaultConfig() {
+        Log.d(LOG_TAG, "Getting default config from "+ context.getFilesDir() + "/config.scfg");
+        File[] configFiles = SCFileUtilities.findFilesByExtension(context.getFilesDir(), "config.scfg");
+        if (configFiles.length > 0) {
+            return configFiles[0];
+        }
+        else {
+            Log.w(LOG_TAG, "No default config file found in internal storage directory.");
+        }
+        return null;
+    }
+
+    /**
      * Loads the config from the API specified in theUrl
      * @param theUrl api endpoint for config
      */
     private void loadRemoteConfig(String theUrl) {
-        if (theUrl != null) {
-            Log.i(LOG_TAG, "Attempting to load remote config.");
-            loadConfigs(Arrays.asList(networkService.getFileBlocking(theUrl)));
-        }
+        Log.i(LOG_TAG, "Attempting to load remote config.");
+        loadConfigs(Arrays.asList(networkService.getFileBlocking(theUrl)));
     }
 
     // method to load the configuration from a file.
     private void loadConfigs(List<File> configFiles) {
         registerDataStores(configFiles);
         registerForms(configFiles);
-        loadRemoteConfig(getRemoteConfigUrl(configFiles));
+        String remoteUrl = getRemoteConfigUrl(configFiles);
+        if (remoteUrl != null) {
+            loadRemoteConfig(remoteUrl);
+        }
     }
 
     /**
@@ -144,7 +165,9 @@ public class SCConfigService extends SCService {
                     for (SCFormConfig formConfig : scConfig.getFormConfigs()) {
                         Log.d(LOG_TAG, "Creating table for form " + formConfig.getName());
                         DefaultStore store = dataService.getDefaultStore();
-                        store.addFormLayer(formConfig);
+                        if (store != null) {
+                            store.addFormLayer(formConfig);
+                        }
                     }
                 }
                 else {
@@ -166,8 +189,10 @@ public class SCConfigService extends SCService {
             try {
                 // parse the "stores" attribute from the scconfig file
                 scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
-                for (SCStoreConfig storeConfig : scConfig.getStoreConfigs()) {
-                    dataService.addNewStore(storeConfig);
+                if (scConfig.getStoreConfigs() != null) {
+                    for (SCStoreConfig storeConfig : scConfig.getStoreConfigs()) {
+                        dataService.addNewStore(storeConfig);
+                    }
                 }
             }
             catch (IOException e) {

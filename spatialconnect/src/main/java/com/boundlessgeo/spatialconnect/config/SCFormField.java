@@ -1,15 +1,24 @@
 package com.boundlessgeo.spatialconnect.config;
 
+
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class SCFormField {
 
     /**
      * Unique id of the form.
      */
     private String id;
+
+    /**
+     * Unique id of the form.
+     */
+    @JsonProperty("form_id")
+    private String formId;
 
     /**
      * Name for the field that can be used as a column name.
@@ -19,7 +28,7 @@ public class SCFormField {
     /**
      * A label used for the display name of this field.
      */
-    private String name;
+    private String label;
 
     /**
      * Boolean indicating if the field is required.
@@ -30,7 +39,7 @@ public class SCFormField {
     /**
      * An integer representing where the field should appear in the form.
      */
-    private Integer order;
+    private Integer position;
 
     /**
      * The type of this field.
@@ -54,36 +63,38 @@ public class SCFormField {
     private Object maximum;
 
     /**
-     * An exlusive minimum value for this field.
+     * A boolean indicating if minimum is the exclusive minimum value for this field.
      * @see <a href="https://github.com/json-schema/json-schema/wiki/Minimum-and-exclusiveminimum">
      *     https://github.com/json-schema/json-schema/wiki/Minimum-and-exclusiveminimum</a>
      */
     @JsonProperty("exclusive_minimum")
-    private Object exclusiveMinimum;
+    private Boolean exclusiveMinimum;
 
     /**
-     * An exclusive maximum value for this field.
+     * A boolean indicating if maximum is the exclusive maximum value for this field.
      * @see <a href="https://github.com/json-schema/json-schema/wiki/Minimum-and-exclusiveminimum">
      *     https://github.com/json-schema/json-schema/wiki/Minimum-and-exclusiveminimum</a>
      */
     @JsonProperty("exclusive_maximum")
-    private Object exclusiveMaximum;
+    private Boolean exclusiveMaximum;
 
     /**
      * Boolean indicating if the field must be an integer.  The field must already be of type {@code numeric}
      */
     @JsonProperty("is_integer")
-    private Boolean isInteger;
+    private Boolean isInteger = false;
 
     /**
      * An minimum length for this field.
      */
-    private Object minimumLength;
+    @JsonProperty("minimum_length")
+    private Integer minimumLength;
 
     /**
      * An maximum length for this field.
      */
-    private Object maximumLength;
+    @JsonProperty("maximum_length")
+    private Integer maximumLength;
 
     /**
      * A regex pattern that the field must match.
@@ -93,7 +104,7 @@ public class SCFormField {
     /**
      * A list of all possible valid values for this field.
      */
-    private List<Object> options;
+    private List<String> options;
 
     public String getId() {
         return id;
@@ -111,12 +122,12 @@ public class SCFormField {
         this.key = key;
     }
 
-    public String getName() {
-        return name;
+    public String getLabel() {
+        return label;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setLabel(String label) {
+        this.label = label;
     }
 
     public Boolean isRequired() {
@@ -127,12 +138,12 @@ public class SCFormField {
         this.isRequired = isRequired;
     }
 
-    public Integer getOrder() {
-        return order;
+    public Integer getPosition() {
+        return position;
     }
 
-    public void setOrder(Integer order) {
-        this.order = order;
+    public void setPosition(Integer position) {
+        this.position = position;
     }
 
     public String getType() {
@@ -167,22 +178,6 @@ public class SCFormField {
         this.maximum = maximum;
     }
 
-    public Object getExclusiveMinimum() {
-        return exclusiveMinimum;
-    }
-
-    public void setExclusiveMinimum(Object exclusiveMinimum) {
-        this.exclusiveMinimum = exclusiveMinimum;
-    }
-
-    public Object getExclusiveMaximum() {
-        return exclusiveMaximum;
-    }
-
-    public void setExclusiveMaximum(Object exclusiveMaximum) {
-        this.exclusiveMaximum = exclusiveMaximum;
-    }
-
     public Boolean isInteger() {
         return isInteger;
     }
@@ -191,19 +186,19 @@ public class SCFormField {
         this.isInteger = isInteger;
     }
 
-    public Object getMinimumLength() {
+    public Integer getMinimumLength() {
         return minimumLength;
     }
 
-    public void setMinimumLength(Object minimumLength) {
+    public void setMinimumLength(Integer minimumLength) {
         this.minimumLength = minimumLength;
     }
 
-    public Object getMaximumLength() {
+    public Integer getMaximumLength() {
         return maximumLength;
     }
 
-    public void setMaximumLength(Object maximumLength) {
+    public void setMaximumLength(Integer maximumLength) {
         this.maximumLength = maximumLength;
     }
 
@@ -215,11 +210,35 @@ public class SCFormField {
         this.pattern = pattern;
     }
 
-    public List<Object> getOptions() {
+    public Boolean isExclusiveMinimum() {
+        return exclusiveMinimum;
+    }
+
+    public void setExclusiveMinimum(Boolean exclusiveMinimum) {
+        this.exclusiveMinimum = exclusiveMinimum;
+    }
+
+    public Boolean isExclusiveMaximum() {
+        return exclusiveMaximum;
+    }
+
+    public void setExclusiveMaximum(Boolean exclusiveMaximum) {
+        this.exclusiveMaximum = exclusiveMaximum;
+    }
+
+    public String getFormId() {
+        return formId;
+    }
+
+    public void setFormId(String formId) {
+        this.formId = formId;
+    }
+
+    public List<String> getOptions() {
         return options;
     }
 
-    public void setOptions(List<Object> options) {
+    public void setOptions(List<String> options) {
         this.options = options;
     }
 

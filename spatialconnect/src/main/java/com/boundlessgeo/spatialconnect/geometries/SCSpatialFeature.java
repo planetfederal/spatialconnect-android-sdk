@@ -15,8 +15,10 @@
 package com.boundlessgeo.spatialconnect.geometries;
 
 
+import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -100,5 +102,15 @@ public class SCSpatialFeature
 
     public SCKeyTuple getKey() {
         return new SCKeyTuple(this.storeId, this.layerId, this.id);
+    }
+
+    public String toJson() {
+        try {
+            return ObjectMappers.getMapper().writeValueAsString(this);
+        }
+        catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

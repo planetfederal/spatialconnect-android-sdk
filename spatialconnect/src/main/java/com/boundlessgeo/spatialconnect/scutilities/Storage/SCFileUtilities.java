@@ -26,7 +26,7 @@ import java.io.*;
  * Utility class for reading and writing to the filesystem.
  */
 public class SCFileUtilities {
-    private final static String TAG = SCFileUtilities.class.getSimpleName();
+    private final static String LOG_TAG = SCFileUtilities.class.getSimpleName();
     private static final File[] NO_FILES = {};
 
     public SCFileUtilities() {
@@ -92,7 +92,7 @@ public class SCFileUtilities {
             }
             inputReader.close();
         } catch (IOException ex) {
-            Log.e(TAG, "Error in readTextFromFileSystem()", ex);
+            Log.e(LOG_TAG, "Error in readTextFromFileSystem()", ex);
         }
         return sb.toString();
     }
@@ -109,7 +109,7 @@ public class SCFileUtilities {
             }
             inputReader.close();
         } catch (IOException ex) {
-            Log.e(TAG, "Error in readTextFromInternalStorage()", ex);
+            Log.e(LOG_TAG, "Error in readTextFromInternalStorage()", ex);
         }
         return sb.toString();
     }
@@ -132,7 +132,7 @@ public class SCFileUtilities {
                 }
                 inputReader.close();
             } catch (IOException ex) {
-                Log.e(TAG, "Error in readTextFromExternalStorage()", ex);
+                Log.e(LOG_TAG, "Error in readTextFromExternalStorage()", ex);
             }
 
         }
@@ -145,7 +145,7 @@ public class SCFileUtilities {
             fos.write(contents.getBytes());
             fos.close();
         } catch (Exception ex) {
-            Log.e(TAG, "Error in writeToInternalStorage()", ex);
+            Log.e(LOG_TAG, "Error in writeToInternalStorage()", ex);
         }
     }
 
@@ -156,7 +156,7 @@ public class SCFileUtilities {
             fos.write(contents.getBytes());
             fos.close();
         } catch (IOException ex) {
-            Log.e(TAG, "Error in writeToExternalStorage()", ex);
+            Log.e(LOG_TAG, "Error in writeToExternalStorage()", ex);
         }
     }
 
@@ -167,7 +167,7 @@ public class SCFileUtilities {
                 return true;
             }
         } catch (Exception ex) {
-            Log.e(TAG, "Error in isExternalStorageReadOnly", ex);
+            Log.e(LOG_TAG, "Error in isExternalStorageReadOnly", ex);
         }
         return false;
     }
@@ -179,7 +179,7 @@ public class SCFileUtilities {
                 return true;
             }
         } catch (Exception ex) {
-            Log.e(TAG, "Error in isExternalStorageAvailable", ex);
+            Log.e(LOG_TAG, "Error in isExternalStorageAvailable", ex);
         }
         return false;
     }
@@ -198,7 +198,7 @@ public class SCFileUtilities {
                 return matchingFiles;
             }
         } catch (Exception ex) {
-            Log.e(TAG, "Error in findFilesByExtension", ex);
+            Log.e(LOG_TAG, "Error in findFilesByExtension", ex);
         }
         return NO_FILES;
     }

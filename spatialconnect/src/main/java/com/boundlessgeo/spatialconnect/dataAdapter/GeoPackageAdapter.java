@@ -20,6 +20,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
@@ -32,6 +33,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.services.SCNetworkService;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
@@ -89,7 +91,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
 
 
-    public GeoPackageAdapter(Context context, SCStoreConfig scStoreConfig, GeoPackageStore store) {
+    public GeoPackageAdapter(Context context, SCStoreConfig scStoreConfig) {
         super(NAME, TYPE, VERSION);
         this.context = context;
         this.scStoreConfig = scStoreConfig;
@@ -98,6 +100,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
     @Override
     public Observable<SCDataAdapterStatus> connect() {
         final GeoPackageAdapter adapterInstance = this;
+        Log.d(LOG_TAG, "Connecting adapter for store " + scStoreConfig.getName());
 
         return Observable.create(new Observable.OnSubscribe<SCDataAdapterStatus>() {
             @Override
@@ -150,7 +153,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                             subscriber.onError(e);
                         }
                     }
-                    else if  (scStoreConfig.getUri().startsWith("file")) {
+                    else if (scStoreConfig.getUri().startsWith("file")) {
                         gpkg = new GeoPackage(context, scStoreConfig.getName());
                         adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
                         subscriber.onCompleted();
@@ -166,34 +169,54 @@ public class GeoPackageAdapter extends SCDataAdapter {
      * @param formConfig
      */
     public void addFormLayer(SCFormConfig formConfig) {
-        Log.d(LOG_TAG, "Creating a table for form " + formConfig.getName());
-        final String tableName = formConfig.getName().replace(" ", "_").toLowerCase();
-        Cursor cursor = null;
-        BriteDatabase.Transaction tx = gpkg.newTransaction();
-        try {
-            // first create the table for this form
-            cursor = gpkg.query(createFormTableSQL(formConfig));
-            cursor.moveToFirst(); // force query to execute
-            // then add it to gpkg_contents and any other tables (gpkg_metadata, ,etc)
-            cursor = gpkg.query(addToGpkgContentsSQL(tableName));
-            cursor.moveToFirst(); // force query to execute
-            // add a geometry column to the table b/c we want to store where the form was submitted (if needed).
-            // also, note that this function will add the geometry to gpkg_geometry_columns, which has a foreign key
-            // constraint on the table name, which requires the table to exist in gpkg_contents
-            cursor = gpkg.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
-            cursor.moveToFirst(); // force query to execute
-            tx.markSuccessful();
-        }
-        catch (Exception ex) {
-            ex.printStackTrace();
-            Log.w(LOG_TAG, "Could not create table b/c " + ex.getMessage());
-        }
-        finally {
-            tx.end();
-            if (cursor != null) {
-                cursor.close();
+        if (!formLayerExists(formConfig)) {
+            Log.d(LOG_TAG, "Creating a table for form " + formConfig.getName());
+            final String tableName = formConfig.getLayerName();
+            Cursor cursor = null;
+            BriteDatabase.Transaction tx = gpkg.newTransaction();
+            try {
+                // first create the table for this form
+                cursor = gpkg.query(createFormTableSQL(formConfig));
+                cursor.moveToFirst(); // force query to execute
+                // then add it to gpkg_contents and any other tables (gpkg_metadata, ,etc)
+                cursor = gpkg.query(addToGpkgContentsSQL(tableName));
+                cursor.moveToFirst(); // force query to execute
+                // add a geometry column to the table b/c we want to store where the form was submitted (if needed).
+                // also, note that this function will add the geometry to gpkg_geometry_columns, which has a foreign key
+                // constraint on the table name, which requires the table to exist in gpkg_contents
+                cursor = gpkg.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
+                cursor.moveToFirst(); // force query to execute
+                tx.markSuccessful();
+            }
+            catch (Exception ex) {
+                ex.printStackTrace();
+                Log.w(LOG_TAG, "Could not create table b/c " + ex.getMessage());
+            }
+            finally {
+                tx.end();
+                if (cursor != null) {
+                    cursor.close();
+                }
             }
         }
+    }
+
+    private boolean formLayerExists(SCFormConfig formConfig) {
+        boolean formLayerExists = false;
+        String formTableName = formConfig.getLayerName();
+        Cursor cursor = gpkg.query(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",
+                new String[]{formTableName}
+        );
+        try {
+            if (cursor.moveToFirst()) {
+                formLayerExists = cursor.getInt(0) > 0;
+            }
+        }
+        finally {
+            cursor.close();
+        }
+        return formLayerExists;
     }
 
     /**
@@ -214,7 +237,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
     }
 
     private String createFormTableSQL(SCFormConfig formConfig){
-        final String tableName = formConfig.getName().replace(" ", "_").toLowerCase();
+        final String tableName = formConfig.getLayerName();
         StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName);
         sb.append(" (id INTEGER PRIMARY KEY AUTOINCREMENT, ");
         boolean isFirst = true;
@@ -222,7 +245,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
             if (!isFirst) {
                 sb.append(", ");
             }
-            sb.append(field.getName().toLowerCase());
+            sb.append(field.getKey().replace(" ", "_").toLowerCase());
             sb.append(" ").append(field.getColumnType());
             isFirst = false;
         }
@@ -414,6 +437,8 @@ public class GeoPackageAdapter extends SCDataAdapter {
                             cursor.moveToFirst();  // force query to execute
                             final Integer pk = cursor.getInt(0);
                             scSpatialFeature.setId(String.valueOf(pk));
+                            // queue feature to be posted to backend
+                            postCreatedFeature(scSpatialFeature);
                             subscriber.onNext(scSpatialFeature);
                             subscriber.onCompleted();
                         }
@@ -423,6 +448,26 @@ public class GeoPackageAdapter extends SCDataAdapter {
                     }
                 }
             });
+        }
+    }
+
+    private void postCreatedFeature(SCSpatialFeature feature) {
+        String formId = "";
+        for(SCFormConfig config : SpatialConnect.getInstance().getDataService().getDefaultStore().getFormConfigs()) {
+            if (config.getLayerName().equals(feature.getKey().getLayerId())) {
+                formId = config.getId();
+            }
+        }
+        final String theUrl = SCNetworkService.API_URL + "form/" + formId + "/submit";
+        Log.d(LOG_TAG, "Posting created feature to " + theUrl);
+        SCNetworkService networkService = SpatialConnect.getInstance().getNetworkService();
+        String response = null;
+        try {
+            response = networkService.post(theUrl, feature.toJson());
+            Log.d(LOG_TAG, "create new feature response " + response);
+        }
+        catch (IOException e) {
+            Log.w(LOG_TAG, "could not create new feature on backend");
         }
     }
 
