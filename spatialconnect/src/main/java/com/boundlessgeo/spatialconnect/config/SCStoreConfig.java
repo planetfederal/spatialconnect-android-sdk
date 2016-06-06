@@ -25,6 +25,7 @@ public class SCStoreConfig
     /**
      * The store's type.  geopackage, geojson, WMS, etc
      */
+    @JsonProperty("store_type")
     private String type;
 
     /**

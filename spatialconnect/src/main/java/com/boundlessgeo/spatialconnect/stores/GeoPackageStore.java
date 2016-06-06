@@ -55,7 +55,7 @@ public class GeoPackageStore extends SCDataStore {
         this.setVersion(VERSION);
         this.getKey();
         // setup the adapter for this store
-        GeoPackageAdapter adapter = new GeoPackageAdapter(context, scStoreConfig, this);
+        GeoPackageAdapter adapter = new GeoPackageAdapter(context, scStoreConfig);
         this.setAdapter(adapter);
     }
 
@@ -95,6 +95,7 @@ public class GeoPackageStore extends SCDataStore {
         final String storeId = this.getStoreId();
         final GeoPackageStore storeInstance = this;
 
+        Log.d(LOG_TAG, "Starting store " + this.getName());
         storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
 
         return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {

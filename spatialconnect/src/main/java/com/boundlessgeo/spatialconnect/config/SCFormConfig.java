@@ -48,5 +48,30 @@ public class SCFormConfig {
         this.fields = fields;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        SCFormConfig that = (SCFormConfig) o;
+
+        return !(id != null ? !id.equals(that.id) : that.id != null);
+
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
+    }
+
+    @JsonProperty("layer_name")
+    public String getLayerName() {
+        return name.replace(" ", "_").toLowerCase();
+    }
+
+    @JsonProperty("display_name")
+    public String getDisplayName() {
+        return name;
+    }
 }
 

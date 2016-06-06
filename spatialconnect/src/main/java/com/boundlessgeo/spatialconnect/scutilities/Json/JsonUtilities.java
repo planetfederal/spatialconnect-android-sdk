@@ -16,6 +16,7 @@ package com.boundlessgeo.spatialconnect.scutilities.Json;
 
 
 import android.util.Log;
+
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -90,10 +91,11 @@ public class JsonUtilities
         }
     }
 
+
     public SCSpatialFeature getSpatialFeatureFromJson(String json)
     {
         SCGeometryFactory factory = new SCGeometryFactory();
-        SCGeometry scGeometry = null;
+        SCSpatialFeature feature = new SCSpatialFeature();
 
         String id = null;
         String created = null;
@@ -124,6 +126,38 @@ public class JsonUtilities
             }
 
             JsonNode geometryNode = node.get("geometry");
+
+            if (geometryNode != null) {
+                SCGeometry scGeometry;
+                String type = geometryNode.get("type").asText();
+                String geomJson = geometryNode.toString();
+
+                switch (type.toLowerCase(Locale.US))
+                {
+                    case "point":
+                        scGeometry = factory.getPointFromGeoJson(geomJson);
+                        break;
+                    case "linestring":
+                        scGeometry = factory.getLineStringFromGeoJson(geomJson);
+                        break;
+                    case "polygon":
+                        scGeometry = factory.getPolygonFromGeoJson(geomJson);
+                        break;
+                    case "multipoint":
+                        scGeometry = factory.getMultiPointFromGeoJson(geomJson);
+                        break;
+                    case "multilinestring":
+                        scGeometry = factory.getMultiLineStringFromGeoJson(geomJson);
+                        break;
+                    case "multipolygon":
+                        scGeometry = factory.getMultiPolygonFromGeoJson(geomJson);
+                        break;
+                    default:
+                        return null;
+                }
+                feature = scGeometry;
+            }
+
             JavaType javaType = mapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class);
 
             JsonNode propertiesNode = node.get("properties");
@@ -131,49 +165,33 @@ public class JsonUtilities
             {
                 properties = mapper.readValue(propertiesNode.traverse(), javaType);
             }
-            String type = geometryNode.get("type").asText();
-            String geomJson = geometryNode.toString();
-
-            switch (type.toLowerCase(Locale.US))
-            {
-                case "point":
-                    scGeometry = factory.getPointFromGeoJson(geomJson);
-                    break;
-                case "linestring":
-                    scGeometry = factory.getLineStringFromGeoJson(geomJson);
-                    break;
-                case "polygon":
-                    scGeometry = factory.getPolygonFromGeoJson(geomJson);
-                    break;
-                case "multipoint":
-                    scGeometry = factory.getMultiPointFromGeoJson(geomJson);
-                    break;
-                case "multilinestring":
-                    scGeometry = factory.getMultiLineStringFromGeoJson(geomJson);
-                    break;
-                case "multipolygon":
-                    scGeometry = factory.getMultiPolygonFromGeoJson(geomJson);
-                    break;
-                default:
-                    return null;
-            }
 
             if(id != null)
             {
-                scGeometry.setId(id);
+                feature.setId(id);
             }
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             if(created != null)
             {
-                scGeometry.setCreated(formatter.parse(created));
+                feature.setCreated(formatter.parse(created));
             }
             if(modified != null)
             {
-                scGeometry.setModified(formatter.parse(modified));
+                feature.setModified(formatter.parse(modified));
             }
             if(properties != null)
             {
-                scGeometry.setProperties(properties);
+                feature.setProperties(properties);
+            }
+            JsonNode layerIdNode = node.get("layerId");
+            if(layerIdNode != null)
+            {
+                feature.setLayerId(layerIdNode.asText());
+            }
+            JsonNode storeIdNode = node.get("storeId");
+            if(storeIdNode != null)
+            {
+                feature.setStoreId(storeIdNode.asText());
             }
         }
         catch (Exception ex)
@@ -182,6 +200,6 @@ public class JsonUtilities
             ex.printStackTrace();
         }
 
-        return scGeometry;
+        return feature;
     }
 }

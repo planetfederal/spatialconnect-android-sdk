@@ -19,6 +19,8 @@ import android.support.annotation.Nullable;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
+import com.boundlessgeo.spatialconnect.config.SCFormConfig;
+import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
@@ -27,6 +29,7 @@ import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
+import com.boundlessgeo.spatialconnect.stores.DefaultStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.facebook.react.bridge.Arguments;
@@ -36,11 +39,19 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.ReadableMapKeySetIterator;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableNativeArray;
+import com.facebook.react.bridge.WritableNativeMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.UnsupportedEncodingException;
+import java.util.Iterator;
 import java.util.List;
 
 import rx.Subscriber;
@@ -144,6 +155,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (command.equals(BridgeCommand.DATASERVICE_CREATEFEATURE)) {
                 handleCreateFeature(message);
             }
+            if (command.equals(BridgeCommand.DATASERVICE_FORMSLIST)) {
+                handleFormsList();
+            }
         }
     }
 
@@ -197,6 +211,21 @@ public class SCBridge extends ReactContextBaseJavaModule {
         }
         eventPayload.putArray("stores", storesArray);
         sendEvent("storesList", eventPayload);
+    }
+
+    /**
+     * Handles the {@link BridgeCommand#DATASERVICE_FORMSLIST} command.
+     */
+    private void handleFormsList() {
+        Log.d(LOG_TAG, "Handling DATASERVICE_FORMSLIST message");
+        List<SCFormConfig> formConfigs = sc.getDataService().getDefaultStore().getFormConfigs();
+        WritableMap eventPayload = Arguments.createMap();
+        WritableArray formsArray = Arguments.createArray();
+        for (SCFormConfig config : formConfigs) {
+            formsArray.pushMap(getFormMap(config));
+        }
+        eventPayload.putArray("forms", formsArray);
+        sendEvent("formsList", eventPayload);
     }
 
     /**
@@ -334,6 +363,10 @@ public class SCBridge extends ReactContextBaseJavaModule {
         Log.d(LOG_TAG, "Handling CREATEFEATURE message :" + message.toString());
         try {
             SCSpatialFeature newFeature = getNewFeature(message.getMap("payload"));
+            // if no store was specified, use the default store
+            if(newFeature.getKey().getStoreId() == null || newFeature.getKey().getStoreId().isEmpty()) {
+                newFeature.setStoreId(DefaultStore.NAME);
+            }
             sc.getDataService().getStoreById(newFeature.getKey().getStoreId())
                     .create(newFeature)
                     .subscribeOn(Schedulers.io())
@@ -354,9 +387,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
                                 public void onNext(SCSpatialFeature feature) {
                                     try {
                                         // base64 encode id and set it before sending across wire
-                                        String encodedId = ((SCGeometry) feature).getKey().encodedCompositeKey();
+                                        String encodedId = feature.getKey().encodedCompositeKey();
                                         feature.setId(encodedId);
-                                        sendEvent("createFeature", ((SCGeometry) feature).toJson());
+                                        sendEvent("createFeature", feature.toJson());
                                     } catch (UnsupportedEncodingException e) {
                                         e.printStackTrace();
                                     }
@@ -376,11 +409,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
      * @throws UnsupportedEncodingException
      */
     private SCSpatialFeature getNewFeature(ReadableMap message) throws UnsupportedEncodingException {
-        String featureString = message.getString("feature");
-        SCSpatialFeature feature = new SCGeometryFactory().getSpatialFeatureFromFeatureJson(featureString);
-        feature.setStoreId(message.getString("storeId"));
-        feature.setLayerId(message.getString("layerId"));
-        return feature;
+        String featureString = convertMapToJson(message.getMap("feature")).toString();
+        Log.d(LOG_TAG, "new feature: " + featureString);
+        return new SCGeometryFactory().getSpatialFeatureFromFeatureJson(featureString);
     }
 
     /**
@@ -424,5 +455,167 @@ public class SCBridge extends ReactContextBaseJavaModule {
         params.putInt("version", store.getVersion());
         params.putString("key", store.getKey());
         return params;
+    }
+
+    // creates a WriteableMap of the SCFormConfig attributes
+    private WritableMap getFormMap(SCFormConfig formConfig) {
+        WritableMap params = Arguments.createMap();
+        params.putString("id", formConfig.getId());
+        params.putString("name", formConfig.getName());
+        params.putString("display_name", formConfig.getDisplayName());
+        params.putString("layer_name", formConfig.getLayerName());
+        WritableArray fields = Arguments.createArray();
+        // for each field, create a WriteableMap with all the SCFormField params
+        for (SCFormField field: formConfig.getFields()) {
+            WritableMap fieldMap = Arguments.createMap();
+            fieldMap.putString("id", field.getId());
+            fieldMap.putString("key", field.getKey());
+            fieldMap.putString("label", field.getLabel());
+            if (field.isRequired() != null) {
+                fieldMap.putBoolean("is_required", field.isRequired());
+            }
+            if (field.getPosition() != null) {
+                fieldMap.putInt("order", field.getPosition());
+            }
+            fieldMap.putString("type", field.getType());
+            fieldMap.putString("initial_value", String.valueOf(field.getInitialValue()));
+            if (field.getMaximum() != null) {
+                fieldMap.putDouble("minimum", Double.valueOf(String.valueOf(field.getMinimum())));
+            }
+            if (field.getMaximum() != null) {
+                fieldMap.putDouble("maximum", Double.valueOf(String.valueOf(field.getMaximum())));
+            }
+            if (field.isExclusiveMaximum() != null) {
+                fieldMap.putBoolean("exclusive_maximum", field.isExclusiveMaximum());
+            }
+            if (field.isExclusiveMinimum() != null) {
+                fieldMap.putBoolean("exclusive_minimum", field.isExclusiveMinimum());
+            }
+            if (field.isInteger() != null) {
+                fieldMap.putBoolean("is_integer", field.isInteger());
+            }
+            if (field.getMaximumLength() != null) {
+                fieldMap.putInt("maximum_length", field.getMaximumLength());
+            }
+            if (field.getMinimumLength() != null) {
+                fieldMap.putInt("minimum_length", field.getMinimumLength());
+            }
+            fieldMap.putString("pattern", field.getPattern());
+            fields.pushMap(fieldMap);
+        }
+        params.putArray("fields", fields);
+        return params;
+    }
+
+    private static WritableMap convertJsonToMap(JSONObject jsonObject) throws JSONException {
+        WritableMap map = new WritableNativeMap();
+
+        Iterator<String> iterator = jsonObject.keys();
+        while (iterator.hasNext()) {
+            String key = iterator.next();
+            Object value = jsonObject.get(key);
+            if (value instanceof JSONObject) {
+                map.putMap(key, convertJsonToMap((JSONObject) value));
+            } else if (value instanceof JSONArray) {
+                map.putArray(key, convertJsonToArray((JSONArray) value));
+            } else if (value instanceof  Boolean) {
+                map.putBoolean(key, (Boolean) value);
+            } else if (value instanceof  Integer) {
+                map.putInt(key, (Integer) value);
+            } else if (value instanceof  Double) {
+                map.putDouble(key, (Double) value);
+            } else if (value instanceof String)  {
+                map.putString(key, (String) value);
+            } else {
+                map.putString(key, value.toString());
+            }
+        }
+        return map;
+    }
+
+    private static WritableArray convertJsonToArray(JSONArray jsonArray) throws JSONException {
+        WritableArray array = new WritableNativeArray();
+
+        for (int i = 0; i < jsonArray.length(); i++) {
+            Object value = jsonArray.get(i);
+            if (value instanceof JSONObject) {
+                array.pushMap(convertJsonToMap((JSONObject) value));
+            } else if (value instanceof  JSONArray) {
+                array.pushArray(convertJsonToArray((JSONArray) value));
+            } else if (value instanceof  Boolean) {
+                array.pushBoolean((Boolean) value);
+            } else if (value instanceof  Integer) {
+                array.pushInt((Integer) value);
+            } else if (value instanceof  Double) {
+                array.pushDouble((Double) value);
+            } else if (value instanceof String)  {
+                array.pushString((String) value);
+            } else {
+                array.pushString(value.toString());
+            }
+        }
+        return array;
+    }
+
+    private static JSONObject convertMapToJson(ReadableMap readableMap) {
+        JSONObject object = new JSONObject();
+        ReadableMapKeySetIterator iterator = readableMap.keySetIterator();
+        try {
+
+            while (iterator.hasNextKey()) {
+                String key = iterator.nextKey();
+                switch (readableMap.getType(key)) {
+                    case Null:
+                        object.put(key, JSONObject.NULL);
+                        break;
+                    case Boolean:
+                        object.put(key, readableMap.getBoolean(key));
+                        break;
+                    case Number:
+                        object.put(key, readableMap.getDouble(key));
+                        break;
+                    case String:
+                        object.put(key, readableMap.getString(key));
+                        break;
+                    case Map:
+                        object.put(key, convertMapToJson(readableMap.getMap(key)));
+                        break;
+                    case Array:
+                        object.put(key, convertArrayToJson(readableMap.getArray(key)));
+                        break;
+                }
+            }
+        }
+        catch (JSONException e) {
+            Log.e(LOG_TAG, "Could not convert to json");
+            e.printStackTrace();
+        }
+        return object;
+    }
+
+    private static JSONArray convertArrayToJson(ReadableArray readableArray) throws JSONException {
+        JSONArray array = new JSONArray();
+        for (int i = 0; i < readableArray.size(); i++) {
+            switch (readableArray.getType(i)) {
+                case Null:
+                    break;
+                case Boolean:
+                    array.put(readableArray.getBoolean(i));
+                    break;
+                case Number:
+                    array.put(readableArray.getDouble(i));
+                    break;
+                case String:
+                    array.put(readableArray.getString(i));
+                    break;
+                case Map:
+                    array.put(convertMapToJson(readableArray.getMap(i)));
+                    break;
+                case Array:
+                    array.put(convertArrayToJson(readableArray.getArray(i)));
+                    break;
+            }
+        }
+        return array;
     }
 }

@@ -90,7 +90,26 @@ public class SCDataService extends SCService {
         defaultStoreConfig.setUri("file://" + DefaultStore.NAME);
         defaultStoreConfig.setType("gpkg");
         defaultStoreConfig.setVersion("1");
-        addNewStore(defaultStoreConfig);
+        DefaultStore defaultStore = new DefaultStore(context, defaultStoreConfig);
+        this.stores.put(defaultStore.getStoreId(), defaultStore);
+        // block until store is started
+        defaultStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
+            @Override
+            public void onCompleted() {
+                Log.d(LOG_TAG, "Registered default store with SCDataService.");
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                Log.e(LOG_TAG, "Couldn't start default store", e);
+                System.exit(0);
+            }
+
+            @Override
+            public void onNext(SCStoreStatusEvent event) {
+                Log.w(LOG_TAG, "Shouldn't return onNext");
+            }
+        });
     }
 
     public void addDefaultStoreImpls() {
@@ -102,29 +121,31 @@ public class SCDataService extends SCService {
     }
 
     public void startStore(final SCDataStore store) {
-        Log.d(LOG_TAG, "Starting store " + store.getName() + " " + store.getStoreId());
-        store.start().subscribe(new Action1<SCStoreStatusEvent>() {
-            @Override
-            public void call(SCStoreStatusEvent s) {
-            }
-        }, new Action1<Throwable>() {
-            @Override
-            public void call(Throwable t) {
-                Log.d(LOG_TAG, t.getLocalizedMessage());
-                // onError can happen if we cannot start the store b/c of some error or runtime exception
-                storeEventSubject.onNext(
-                        new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, store.getStoreId())
-                );
-            }
-        }, new Action0() {
-            @Override
-            public void call() {
-                Log.d(LOG_TAG, "Store " + store.getName() + " is running.");
-                storeEventSubject.onNext(
-                        new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, store.getStoreId())
-                );
-            }
-        });
+        if (!store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+            Log.d(LOG_TAG, "Starting store " + store.getName() + " " + store.getStoreId());
+            store.start().subscribe(new Action1<SCStoreStatusEvent>() {
+                @Override
+                public void call(SCStoreStatusEvent s) {
+                }
+            }, new Action1<Throwable>() {
+                @Override
+                public void call(Throwable t) {
+                    Log.d(LOG_TAG, t.getLocalizedMessage());
+                    // onError can happen if we cannot start the store b/c of some error or runtime exception
+                    storeEventSubject.onNext(
+                            new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, store.getStoreId())
+                    );
+                }
+            }, new Action0() {
+                @Override
+                public void call() {
+                    Log.d(LOG_TAG, "Store " + store.getName() + " is running.");
+                    storeEventSubject.onNext(
+                            new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, store.getStoreId())
+                    );
+                }
+            });
+        }
     }
 
     /**
@@ -136,6 +157,7 @@ public class SCDataService extends SCService {
         // if the data service already has a running instance of the store, then it's started
         for (SCDataStore store : getActiveStores()) {
             if (storeId.equals(store.getStoreId())) {
+                Log.d(LOG_TAG, "Store " + store.getName() + " was already started");
                 return Observable.empty();
             }
         }
@@ -187,14 +209,8 @@ public class SCDataService extends SCService {
                 Log.d(LOG_TAG, "Registered geojson store " + scStoreConfig.getName() + " with SCDataService.");
             }
             else if (key.startsWith("gpkg")) {
-                if (scStoreConfig.getName().equals(DefaultStore.NAME)) {
-                    registerStore(new DefaultStore(context, scStoreConfig));
-                    Log.d(LOG_TAG, "Registered default store with SCDataService.");
-                }
-                else {
-                    registerStore(new GeoPackageStore(context, scStoreConfig));
-                    Log.d(LOG_TAG, "Registered gpkg store " + scStoreConfig.getName() + " with SCDataService.");
-                }
+                registerStore(new GeoPackageStore(context, scStoreConfig));
+                Log.d(LOG_TAG, "Registered gpkg store " + scStoreConfig.getName() + " with SCDataService.");
             }
         }
         else {
@@ -331,10 +347,11 @@ public class SCDataService extends SCService {
 
     public DefaultStore getDefaultStore() {
         for (SCDataStore store : stores.values()){
-            if (store.getName().equals("DEFAULT_STORE")) {
+            if (store.getName().equals(DefaultStore.NAME)) {
                 return (DefaultStore) store;
             }
         }
+        Log.w(LOG_TAG, "Default store was not found!");
         return null;
     }
 

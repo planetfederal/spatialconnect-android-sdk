@@ -1,8 +1,8 @@
 {
-  "remote": "https://gist.githubusercontent.com/marcusthebrown/66039906504c5939ea4ebda3a04f2851/raw/c3da9d593e7fba7168ca78ec45baa77e32935ccb/sc-config.json",
+  "remote": "https://gist.githubusercontent.com/marcusthebrown/66039906504c5939ea4ebda3a04f2851/raw/22cba1b170c50c06514ef4536200125a058298cf/sc-config.json",
   "stores":[
     {
-      "type": "geojson",
+      "store_type": "geojson",
       "version": "1",
       "uri": "nola_polling_places.json",
       "isMainBundle":true,
@@ -10,14 +10,14 @@
       "name":"Simple"
     },
     {
-      "type":"gpkg",
+      "store_type":"gpkg",
       "version":"1",
       "name":"Haiti",
       "uri":"https://s3.amazonaws.com/test.spacon/haiti4mobile.gpkg",
       "id":"a5d93796-5026-46f7-a2ff-e5dec85heh6b"
     },
     {
-      "type":"gpkg",
+      "store_type":"gpkg",
       "version":"1",
       "name":"Whitehorse",
       "uri":"https://s3.amazonaws.com/test.spacon/whitehorse.gpkg",

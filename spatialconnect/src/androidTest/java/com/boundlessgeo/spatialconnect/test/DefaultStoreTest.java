@@ -48,8 +48,8 @@ public class DefaultStoreTest extends BaseTestCase {
                 defaultStore.getAdapter().getStatus(),
                 SCDataAdapterStatus.DATA_ADAPTER_CONNECTED
         );
-        assertEquals("The default store should have 1 form table.",
-                1, ((GeoPackageAdapter)defaultStore.getAdapter()).getGeoPackageContents().size());
+        assertEquals("The default store should have 2 form tables.",
+                2, ((GeoPackageAdapter)defaultStore.getAdapter()).getGeoPackageContents().size());
     }
 
     @Test @Ignore
@@ -65,12 +65,11 @@ public class DefaultStoreTest extends BaseTestCase {
         DefaultStore defaultStore = (DefaultStore) sc.getDataService().getDefaultStore();
         SCSpatialFeature formSubmissionFeature = new SCSpatialFeature();
         // create a feature representing a form submission
-        formSubmissionFeature.setLayerId("a_form_name");
+        formSubmissionFeature.setLayerId("baseball_team");
         formSubmissionFeature.setStoreId("DEFAULT_STORE");
-        formSubmissionFeature.setId("123");
         HashMap properties = new HashMap<String, Object>();
-        properties.put("name", "MJ");
-        properties.put("age", Integer.valueOf(42));
+        properties.put("team", "St. Louis Cardinals");
+        properties.put("why", "Because they are awesome!");
         formSubmissionFeature.setProperties(properties);
         TestSubscriber testSubscriber = new TestSubscriber();
         defaultStore.create(formSubmissionFeature).subscribe(testSubscriber);

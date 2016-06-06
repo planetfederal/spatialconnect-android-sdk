@@ -129,14 +129,16 @@ public class SCGpkgFeatureSource {
                 firstIteration = false;
             }
         }
+        if (sb.toString().length() > 0) {
+            sb.append(",");
+        }
         if (feature instanceof SCGeometry && ((SCGeometry)feature).getGeometry() != null) {
-            sb.append(",")
-                    .append("ST_GeomFromText('")
+            sb.append("ST_GeomFromText('")
                     .append(((SCGeometry)feature).getGeometry().toString())
                     .append("')");
         }
         else {
-            sb.append(",").append("NULL");
+            sb.append("NULL");
         }
         return sb.toString();
     }

@@ -15,6 +15,7 @@
 package com.boundlessgeo.spatialconnect.test;
 
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoJsonAdapter;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.db.SCKVPStore;
@@ -23,7 +24,6 @@ import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 
@@ -43,8 +43,6 @@ public class GeoJsonTest extends BaseTestCase {
 
     private static SpatialConnect sc;
     private final static String GEOJSON_STORE_ID = "50402599-3ad3-439f-9c49-3c8a7579933b";
-    private final static String WHITEHORSE_GPKG_ID = "ba293796-5026-46f7-a2ff-e5dec85heh6b";
-
 
     @BeforeClass
     public static void setUp() throws Exception {
@@ -53,7 +51,6 @@ public class GeoJsonTest extends BaseTestCase {
         sc.addConfig(testConfigFile);
         sc.startAllServices();
         waitForStoreToStart(GEOJSON_STORE_ID);
-        waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
 
     @AfterClass
@@ -73,9 +70,11 @@ public class GeoJsonTest extends BaseTestCase {
             );
             if (store.getType().equals("geojson")) {
                 containsGeoJsonStore = true;
-                assertTrue("The store's adapter should be connected",
-                        store.getAdapter().getStatus().equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)
-                );
+                if (store.getStoreId().equals(GEOJSON_STORE_ID)) {
+                    assertTrue("The store's adapter should be connected",
+                            store.getAdapter().getStatus().equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)
+                    );
+                }
             }
         }
         assertTrue("A geojson store should be running.", containsGeoJsonStore);
