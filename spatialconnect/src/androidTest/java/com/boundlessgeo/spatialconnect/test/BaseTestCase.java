@@ -54,7 +54,8 @@ public abstract class BaseTestCase {
     protected final static String WHITEHORSE_GPKG_ID = "fad33ae1-f529-4c79-affc-befc37c104ae";
     protected final static String GEOJSON_STORE_ID = "50402599-3ad3-439f-9c49-3c8a7579933b";
 
-
+    public BaseTestCase() {
+    }
 
     @ClassRule
     public static ActivityTestRule<SpatialConnectActivity> rule = new ActivityTestRule<>(SpatialConnectActivity.class);

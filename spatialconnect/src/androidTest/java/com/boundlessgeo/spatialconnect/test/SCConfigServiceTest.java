@@ -67,7 +67,7 @@ public class SCConfigServiceTest extends BaseTestCase {
 
     private void waitForStoreToStart(final String storeId, SpatialConnect sc) {
         TestSubscriber testSubscriber = new TestSubscriber();
-        sc.getDataService().storeStarted(storeId).timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
+        sc.getDataService().storeStarted(storeId).timeout(5, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();
