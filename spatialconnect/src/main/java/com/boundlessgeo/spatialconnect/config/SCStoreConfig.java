@@ -15,11 +15,13 @@
 package com.boundlessgeo.spatialconnect.config;
 
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Represents a JSON object describing a SCSpatialStore.
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class SCStoreConfig
 {
     /**
