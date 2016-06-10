@@ -39,7 +39,7 @@ public class SCNetworkService extends SCService {
     private static Context context;
     private static OkHttpClient client = new OkHttpClient();
     // TODO: this should be set as an environment variable or as part of the build
-    public static final String API_URL = "http://192.168.99.100:8085/";
+    public static final String API_URL = "http://efc.boundlessgeo.com:8085/";
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
     // TODO: we should persist this in the app storage so it doesn't change every time we run the app
     public String clientId = UUID.randomUUID().toString();

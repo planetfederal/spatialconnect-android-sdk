@@ -2,11 +2,10 @@ package com.boundlessgeo.spatialconnect.test;
 
 import android.database.Cursor;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
-import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.squareup.sqlbrite.BriteDatabase;
 
@@ -24,27 +23,19 @@ import static junit.framework.Assert.assertEquals;
 public class SCGpkgFeatureSourceTest extends BaseTestCase {
 
     private static SpatialConnect sc;
-    private final static String HAITI_GPKG_ID = "a5d93796-5026-46f7-a2ff-e5dec85heh6b";
-    private final static String WHITEHORSE_GPKG_ID = "ba293796-5026-46f7-a2ff-e5dec85heh6b";
 
     @BeforeClass
     public static void setUp() throws Exception {
-        testContext.deleteDatabase("Haiti");
-        testContext.deleteDatabase("Whitehorse");
-        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
         sc.addConfig(testConfigFile);
         sc.startAllServices();
-        waitForStoreToStart(HAITI_GPKG_ID);
         waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
-        testContext.deleteDatabase("Haiti");
-        testContext.deleteDatabase("Whitehorse");
-        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
+        deleteDatabases();
     }
 
     @Test
@@ -66,7 +57,7 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
 
     @Test
     public void testRtreeIndexIsCreated() {
-        BriteDatabase db = new SCSqliteHelper(testContext, "Haiti").db();
+        BriteDatabase db = new SCSqliteHelper(testContext, "gpkg1").db();
         SCDataStore store = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         Cursor cursor = null;
         for (SCGpkgFeatureSource source : ((GeoPackageAdapter) store.getAdapter()).getFeatureSources()) {
@@ -88,7 +79,7 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
 
     private static void waitForStoreToStart(final String storeId) {
         TestSubscriber testSubscriber = new TestSubscriber();
-        sc.getDataService().storeStarted(storeId).timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
+        sc.getDataService().storeStarted(storeId).timeout(5, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();

@@ -20,6 +20,8 @@ import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
 
 import com.boundlessgeo.spatialconnect.SpatialConnectActivity;
+import com.boundlessgeo.spatialconnect.db.SCKVPStore;
+import com.boundlessgeo.spatialconnect.stores.DefaultStore;
 
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -48,6 +50,12 @@ public abstract class BaseTestCase {
      */
     protected static File testConfigFile;
 
+    protected final static String HAITI_GPKG_ID = "f6dcc750-1349-46b9-a324-0223764d46d1";
+    protected final static String WHITEHORSE_GPKG_ID = "fad33ae1-f529-4c79-affc-befc37c104ae";
+    protected final static String GEOJSON_STORE_ID = "50402599-3ad3-439f-9c49-3c8a7579933b";
+
+    public BaseTestCase() {
+    }
 
     @ClassRule
     public static ActivityTestRule<SpatialConnectActivity> rule = new ActivityTestRule<>(SpatialConnectActivity.class);
@@ -74,5 +82,12 @@ public abstract class BaseTestCase {
             System.exit(0);
         }
     }
+
+   protected static void deleteDatabases() {
+       testContext.deleteDatabase("gpkg1");
+       testContext.deleteDatabase("gpkg2");
+       testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
+       testContext.deleteDatabase(DefaultStore.NAME);
+   }
 
 }

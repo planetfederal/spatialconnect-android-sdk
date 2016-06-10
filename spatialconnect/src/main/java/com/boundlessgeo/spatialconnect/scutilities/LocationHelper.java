@@ -41,8 +41,8 @@ import rx.subjects.PublishSubject;
  * location.  It can enable/disable GPS listening, can get the users location using the GPS provider, and also handles
  * the process of asking the user for permission to use the GPS to obtain their current location.
  *
- * For android 6.0 (API 23) you need to explicitly get permission to use GPS location at runtime.  See
- * <a href="http://developer.android..com/training/permissions/requesting.html"> the docs </a> for more info.
+ * For Android 6.0 (API 23) you need to explicitly get permission to use GPS location at runtime.  See
+ * <a href="http://developer.android.com/training/permissions/requesting.html"> the docs </a> for more info.
  *
  *
  * http://developer.android.com/training/location/retrieve-current.html

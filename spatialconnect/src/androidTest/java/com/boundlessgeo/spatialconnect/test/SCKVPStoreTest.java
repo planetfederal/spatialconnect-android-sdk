@@ -21,7 +21,6 @@ public class SCKVPStoreTest extends BaseTestCase {
         testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
     }
 
-
     @Test
     public void testPutIntoKeyValueDB() {
         SCKVPStore SCKVPStore = new SCKVPStore(testContext);

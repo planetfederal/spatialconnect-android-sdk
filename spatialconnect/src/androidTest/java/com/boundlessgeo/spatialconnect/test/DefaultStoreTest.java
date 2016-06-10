@@ -3,7 +3,6 @@ package com.boundlessgeo.spatialconnect.test;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
-import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.stores.DefaultStore;
 
@@ -30,15 +29,12 @@ public class DefaultStoreTest extends BaseTestCase {
         sc.initialize(activity);
         sc.addConfig(testConfigFile);
         sc.startAllServices();
-        waitForStoreToStart("DEFAULT_STORE");
+        waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
-        testContext.deleteDatabase("Haiti");
-        testContext.deleteDatabase("Whitehorse");
-        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
-        testContext.deleteDatabase("DEFAULT_STORE");
+        deleteDatabases();
     }
 
     @Test
@@ -82,7 +78,7 @@ public class DefaultStoreTest extends BaseTestCase {
 
     private static void waitForStoreToStart(final String storeId) {
         TestSubscriber testSubscriber = new TestSubscriber();
-        sc.getDataService().storeStarted(storeId).timeout(1, TimeUnit.MINUTES).subscribe(testSubscriber);
+        sc.getDataService().storeStarted(storeId).timeout(5, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();
