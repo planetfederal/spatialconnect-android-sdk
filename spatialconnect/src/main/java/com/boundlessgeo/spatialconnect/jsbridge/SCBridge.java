@@ -477,8 +477,12 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (field.getPosition() != null) {
                 fieldMap.putInt("order", field.getPosition());
             }
-            fieldMap.putString("type", field.getType());
-            fieldMap.putString("initial_value", String.valueOf(field.getInitialValue()));
+            if (field.getType() != null) {
+                fieldMap.putString("type", field.getType());
+            }
+            if (field.getInitialValue() != null) {
+                fieldMap.putString("initial_value", String.valueOf(field.getInitialValue()));
+            }
             if (field.getMaximum() != null) {
                 fieldMap.putDouble("minimum", Double.valueOf(String.valueOf(field.getMinimum())));
             }
@@ -500,7 +504,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (field.getMinimumLength() != null) {
                 fieldMap.putInt("minimum_length", field.getMinimumLength());
             }
-            fieldMap.putString("pattern", field.getPattern());
+            if (field.getPattern() != null) {
+                fieldMap.putString("pattern", field.getPattern());
+            }
             fields.pushMap(fieldMap);
         }
         params.putArray("fields", fields);
