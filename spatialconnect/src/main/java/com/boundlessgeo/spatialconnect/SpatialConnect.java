@@ -36,7 +36,6 @@ import java.util.Map;
 public class SpatialConnect {
 
     private final String LOG_TAG = SpatialConnect.class.getSimpleName();
-    private static SpatialConnect INSTANCE;
     private HashMap<String, SCService> services;
     private SCDataService dataService;
     private SCKVPStoreService kvpStoreService;

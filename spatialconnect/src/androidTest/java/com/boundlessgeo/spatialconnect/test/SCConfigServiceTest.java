@@ -15,7 +15,6 @@
 package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
 
 import org.junit.After;
@@ -31,21 +30,14 @@ import static junit.framework.Assert.assertEquals;
 
 public class SCConfigServiceTest extends BaseTestCase {
 
-    private final static String HAITI_GPKG_ID = "a5d93796-5026-46f7-a2ff-e5dec85heh6b";
-    private final static String WHITEHORSE_GPKG_ID = "ba293796-5026-46f7-a2ff-e5dec85heh6b";
-
     @Before
     public void beforeTest() throws Exception {
-        testContext.deleteDatabase("Haiti");
-        testContext.deleteDatabase("Whitehorse");
-        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
+        deleteDatabases();
     }
 
     @After
     public void afterTest() throws Exception {
-        testContext.deleteDatabase("Haiti");
-        testContext.deleteDatabase("Whitehorse");
-        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
+        deleteDatabases();
     }
 
     @Test @Ignore

@@ -18,7 +18,6 @@ package com.boundlessgeo.spatialconnect.test;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoJsonAdapter;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
-import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
@@ -42,7 +41,6 @@ import static junit.framework.Assert.assertTrue;
 public class GeoJsonTest extends BaseTestCase {
 
     private static SpatialConnect sc;
-    private final static String GEOJSON_STORE_ID = "50402599-3ad3-439f-9c49-3c8a7579933b";
 
     @BeforeClass
     public static void setUp() throws Exception {
@@ -50,15 +48,13 @@ public class GeoJsonTest extends BaseTestCase {
         sc.initialize(activity);
         sc.addConfig(testConfigFile);
         sc.startAllServices();
-        waitForStoreToStart(GEOJSON_STORE_ID);
+        waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
         testContext.deleteFile("nola_polling_places.json");
-        testContext.deleteDatabase("Haiti");
-        testContext.deleteDatabase("Whitehorse");
-        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
+        deleteDatabases();
     }
 
     @Test

@@ -1,5 +1,5 @@
 {
-  "remote": "https://gist.githubusercontent.com/marcusthebrown/66039906504c5939ea4ebda3a04f2851/raw/22cba1b170c50c06514ef4536200125a058298cf/sc-config.json",
+  "remote": "http://efc.boundlessgeo.com:8085/config",
   "stores":[
     {
       "store_type": "geojson",
@@ -8,20 +8,6 @@
       "isMainBundle":true,
       "id":"50402599-3ad3-439f-9c49-3c8a7579933b",
       "name":"Simple"
-    },
-    {
-      "store_type":"gpkg",
-      "version":"1",
-      "name":"Haiti",
-      "uri":"https://s3.amazonaws.com/test.spacon/haiti4mobile.gpkg",
-      "id":"a5d93796-5026-46f7-a2ff-e5dec85heh6b"
-    },
-    {
-      "store_type":"gpkg",
-      "version":"1",
-      "name":"Whitehorse",
-      "uri":"https://s3.amazonaws.com/test.spacon/whitehorse.gpkg",
-      "id":"ba293796-5026-46f7-a2ff-e5dec85heh6b"
     }
   ]
 }

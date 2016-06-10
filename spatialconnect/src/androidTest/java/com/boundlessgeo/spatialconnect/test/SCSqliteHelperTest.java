@@ -20,7 +20,6 @@ import static junit.framework.Assert.assertTrue;
 public class SCSqliteHelperTest extends BaseTestCase {
 
     private static SpatialConnect sc;
-    private final static String HAITI_GPKG_ID = "a5d93796-5026-46f7-a2ff-e5dec85heh6b";
     private static BriteDatabase haiti;
 
     @BeforeClass
@@ -30,13 +29,13 @@ public class SCSqliteHelperTest extends BaseTestCase {
         sc.addConfig(testConfigFile);
         sc.startAllServices();
         waitForStoreToStart(HAITI_GPKG_ID);
-        haiti = new SCSqliteHelper(testContext, "Haiti").db();
+        haiti = new SCSqliteHelper(testContext, "gpkg1").db();
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
         haiti.close();
-        testContext.deleteDatabase("Haiti");
+        testContext.deleteDatabase("gpkg1");
     }
 
     private static void waitForStoreToStart(final String storeId) {
