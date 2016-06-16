@@ -123,7 +123,8 @@ public class SCConfigService extends SCService {
         registerForms(configFiles);
         String remoteUrl = getRemoteConfigUrl(configFiles);
         if (remoteUrl != null) {
-            loadRemoteConfig(remoteUrl);
+            String configPath = remoteUrl.endsWith("/") ? "config" : "/config";
+            loadRemoteConfig(remoteUrl + configPath);
         }
     }
 
