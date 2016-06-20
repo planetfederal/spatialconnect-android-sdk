@@ -33,6 +33,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.services.SCConfigService;
 import com.boundlessgeo.spatialconnect.services.SCNetworkService;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
@@ -458,7 +459,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                 formId = config.getId();
             }
         }
-        final String theUrl = SCNetworkService.API_URL + "form/" + formId + "/submit";
+        final String theUrl = SCConfigService.API_URL + "forms/" + formId + "/submit";
         Log.d(LOG_TAG, "Posting created feature to " + theUrl);
         SCNetworkService networkService = SpatialConnect.getInstance().getNetworkService();
         String response = null;

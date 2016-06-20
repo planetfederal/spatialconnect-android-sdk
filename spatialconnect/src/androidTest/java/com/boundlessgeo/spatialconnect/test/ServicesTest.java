@@ -27,14 +27,17 @@ public class ServicesTest extends BaseTestCase {
 
     @Test
     public void testDataServiceInitialization() {
-        SCDataService dataService = new SCDataService(testContext);
+        SpatialConnect.getInstance().initialize(testContext);
+        SCDataService dataService = SpatialConnect.getInstance().getDataService();
         assertEquals("The data service should have 4 supported stores.",
                 4, dataService.getSupportedStoreKeys().size());
     }
 
     @Test
     public void testSpatialConnectSetup() {
-        for (SCDataStore store : new SCDataService(testContext).getAllStores()) {
+        SpatialConnect.getInstance().initialize(testContext);
+        SCDataService dataService = SpatialConnect.getInstance().getDataService();
+        for (SCDataStore store : dataService.getAllStores()) {
             new SCDataService(testContext).unregisterStore(store);
         }
         SpatialConnect sc = SpatialConnect.getInstance();
