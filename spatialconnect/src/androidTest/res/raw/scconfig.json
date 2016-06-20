@@ -1,5 +1,5 @@
 {
-  "remote": "http://efc.boundlessgeo.com:8085/",
+  "remote": "http://efc.boundlessgeo.com/api",
   "stores":[
     {
       "store_type": "geojson",

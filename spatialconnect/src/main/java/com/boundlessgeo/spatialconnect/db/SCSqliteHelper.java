@@ -46,6 +46,7 @@ public class SCSqliteHelper extends SQLiteOpenHelper {
     private BriteDatabase db = sqlBrite.wrapDatabaseHelper(this, Schedulers.io());
 
     static {
+        System.loadLibrary("gpkg");
         System.loadLibrary("sqliteX");
     }
 
