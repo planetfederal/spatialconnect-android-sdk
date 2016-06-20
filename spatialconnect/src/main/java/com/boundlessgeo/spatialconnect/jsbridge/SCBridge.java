@@ -187,8 +187,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
                         @Override
                         public void call(Location location) {
                             WritableMap params = Arguments.createMap();
-                            params.putString("latitude", String.valueOf(location.getLatitude()));
-                            params.putString("longitude", String.valueOf(location.getLongitude()));
+                            params.putString("lat", String.valueOf(location.getLatitude()));
+                            params.putString("lon", String.valueOf(location.getLongitude()));
                             sendEvent("lastKnownLocation", params);
                         }
                     });

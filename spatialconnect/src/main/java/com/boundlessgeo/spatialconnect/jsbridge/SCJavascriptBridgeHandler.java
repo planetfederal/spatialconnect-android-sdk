@@ -89,8 +89,8 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                                 @Override
                                 public void call(Location location) {
                                     bridge.callHandler("lastKnownLocation",
-                                            "{\"latitude\":\"" + location.getLatitude() + "\"," +
-                                                    "\"longitude\":\"" + location.getLongitude() + "\"}");
+                                            "{\"lat\":\"" + location.getLatitude() + "\"," +
+                                                    "\"lon\":\"" + location.getLongitude() + "\"}");
                                 }
                             });
                     return;
