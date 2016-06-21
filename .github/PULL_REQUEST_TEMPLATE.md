@@ -1,7 +1,7 @@
 ## Status
 **READY/IN DEVELOPMENT/HOLD**
 
-## JIRA TICKET
+## JIRA Ticket
 The ticket id
 
 ## Description
