@@ -2,17 +2,23 @@ apply plugin: 'com.android.library'
 apply plugin: 'maven'
 
 group 'com.boundlessgeo.spatialconnect'
-version '0.1.0'
+
+version '0.3.0'
+
+def isCi = "true".equals(System.getenv("CI"))
+def preDexEnabled = "true".equals(System.getProperty("pre-dex", "true"))
 
 android {
-    compileSdkVersion 'Google Inc.:Google APIs:23'
-    buildToolsVersion '23.0.1'
+    compileSdkVersion 23
+    buildToolsVersion '23.0.2'
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 21
         versionCode 1
         versionName "1.0"
         multiDexEnabled = true
+        // http://developer.android.com/tools/building/multidex.html#testing
+        testInstrumentationRunner "com.boundlessgeo.spatialconnect.test.MultiDexAndroidJUnitRunner"
     }
     lintOptions {
         abortOnError false
@@ -45,28 +51,36 @@ android {
     }
     productFlavors {
     }
+    sourceSets {
+        main.jniLibs.srcDirs = ['libs']
+    }
+    dexOptions {
+        // Skip pre-dexing when running on Travis CI or when disabled via -Dpre-dex=false.
+        preDexLibraries = preDexEnabled && !isCi
+    }
 }
 
 repositories {
     mavenCentral()
-    maven { url 'https://dl.bintray.com/marcusthebrown/marc-maven-repo' } // contains the jackson-datatype-jts dependency
 }
 
 dependencies {
     compile 'com.android.support:appcompat-v7:23.0.1'
     compile 'com.google.android.gms:play-services-maps:7.8.0'
-    compile 'com.bedatadriven:jackson-datatype-jts:1.0'
+    compile 'com.android.support:multidex:1.0.0'
+    compile "com.bedatadriven:jackson-datatype-jts:2.2"
     compile 'io.reactivex:rxandroid:1.1.0'
     compile 'io.reactivex:rxjava:1.1.0'
     compile 'commons-io:commons-io:2.4'
-    compile('mil.nga.geopackage:geopackage-android:1.0.0') {
-        exclude group: 'com.google.android.gms', module: 'play-services'
-    }
+    compile 'com.squareup.okhttp3:okhttp:3.2.0'
+    compile 'com.facebook.react:react-native:+'
     compile('io.jeo:jeo:0.6') {
         exclude group: 'com.vividsolutions'
         exclude group: 'io.jeo', module: 'proj4j'
     }
-    // Unit testing dependencies
-    testCompile 'junit:junit:4.12'
-    testCompile 'org.mockito:mockito-core:1.10.19'
+    // testing dependencies
+    androidTestCompile 'junit:junit:4.12'
+    androidTestCompile 'com.android.support.test:runner:0.4.1'
+    androidTestCompile 'com.android.support.test:rules:0.4.1'
 }
+

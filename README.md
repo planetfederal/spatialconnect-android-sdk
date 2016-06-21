@@ -1,6 +1,9 @@
 # spatialconnect-android-sdk
 SpatialConnect library for Android
 
+# Current Version
+0.3.0
+
 [![Build
 Status](https://travis-ci.org/boundlessgeo/spatialconnect-android-sdk.svg?branch=develop)](https://travis-ci.org/boundlessgeo/spatialconnect-android-sdk)
 
@@ -8,18 +11,18 @@ Status](https://travis-ci.org/boundlessgeo/spatialconnect-android-sdk.svg?branch
 
 SpatialConnect is a collection of libraries that makes it easier for developers to write
 apps that connect to multiple spatial data stores online and offline. It leverages [Reactive Extentsions](http://reactivex.io/) for communicating with the data stores using a common API across [iOS](https://github.com/boundlessgeo/spatialconnect-ios-sdk), [Android](https://github.com/boundlessgeo/spatialconnect-android-sdk), and [Javascript](https://github.com/boundlessgeo/spatialconnect-js) runtimes.
- 
+
 This library provides native APIs for Android as well as a Javascript bridge to communicate to the native API from mobile browsers.   The SpatialConnect Android SDK is packaged in the [aar format](http://tools.android.com/tech-docs/new-build-system/aar-format) and can be imported as a dependency to your Android app.
 
 
 ## Core Concepts
-All services and data stores in SpatialConnect provide an API that returns an [Observable](http://reactivex.io/documentation/observable.html) that emits data or events for subscribers to consume. 
+All services and data stores in SpatialConnect provide an API that returns an [Observable](http://reactivex.io/documentation/observable.html) that emits data or events for subscribers to consume.
 
 
-### Services and the ServiceManager
-SpatialConnect consists of a collection of services which each handle specific functionality.  For instance, the `SCDataService` handles reads and writes to data stores while the `SCSensorService` handles subscribing to and reciving GPS updates.  All services are managed by the `SCServiceManager` which is responsible for loading a configuration file that will initialize the services and data stores.  
+### Services and SpatialConnect
+SpatialConnect consists of a collection of services which each handle specific functionality.  For instance, the `SCDataService` handles reads and writes to data stores while the `SCSensorService` handles subscribing to and reciving GPS updates.  All services are managed by the `SpatialConnect` object, which is responsible for loading a configuration file that will initialize the services and data stores.
 
-Currently there are 3 services, the `SCDataService`, the `SCNetworkService`, and the `SCSensorService`.  The `SCServiceManager` is responsible for managing the service lifecycle (registering them, starting/stopping them, etc).  When you create an instance of the `SCServiceManager`, it will enable all the services and read the configuration file to determine what to do next.  If data stores are defined, it will attempt to register each store with the `SCDataService`.
+Currently there are 3 services, the `SCDataService`, the `SCNetworkService`, and the `SCSensorService`.  The `SpatialConnect` object is responsible for managing the service lifecycle (registering them, starting/stopping them, etc).  When you create an instance of `SpatialConnect`, it will enable all the services and read the configuration file to determine what to do next.  If data stores are defined, it will attempt to register each store with the `SCDataService`.
 
 ### Data Stores and the DataService
 The `SCDataService` is responsible for interacting with the data stores.  All data stores must implement the `SCSpatialStore` interface which provides methods to interact with the data store.  Here's what it looks like:
@@ -30,9 +33,9 @@ The `SCDataService` is responsible for interacting with the data stores.  All da
 	Observable create(SCSpatialFeature scSpatialFeature);
 	Observable update(SCSpatialFeature scSpatialFeature);
 	Observable delete(SCKeyTuple keyTuple);
-```  
+```
 
-Implementations exist for GeoJSON and GeoPackage data stores but to 
+Implementations exist for GeoJSON and GeoPackage data stores but to
 create a new data store developers need to create a class that implements this interface and update a configuration file to let SpatialConnect know
 that the store exists.
 
@@ -72,7 +75,7 @@ Here's an example config file:
 }
 ```
 
-The data store needs an adapter to connect to the underlying data source (a GeoJson file, a GeoPackage database, a CSV file, etc), therefore you must also create a class that extends `SCDataAdapter`.  The adapter will manage connecting and disconecting to the data source as well as the actual I/O to the data source.  The adapter will use the uri defined in the config to connect to the data source.  If the uri is remote, then it will download from the location and store it locally (at least for a geopackage).  
+The data store needs an adapter to connect to the underlying data source (a GeoJson file, a GeoPackage database, a CSV file, etc), therefore you must also create a class that extends `SCDataAdapter`.  The adapter will manage connecting and disconecting to the data source as well as the actual I/O to the data source.  The adapter will use the uri defined in the config to connect to the data source.  If the uri is remote, then it will download from the location and store it locally (at least for a geopackage).
 
 
 
@@ -84,15 +87,15 @@ Let's see how this works with an example.  Let's say you want to query for all f
 
 ```java
 SCBoundingBox bbox = new SCBoundingBox(
-    sw.longitude, 
-    sw.latitude, 
-    ne.longitude, 
+    sw.longitude,
+    sw.latitude,
+    ne.longitude,
     ne.latitude
 );
 
 SCQueryFilter filter = new SCQueryFilter(
         new SCPredicate(
-        	bbox, 
+        	bbox,
         	SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN
         )
 );
@@ -101,9 +104,8 @@ SCQueryFilter filter = new SCQueryFilter(
 Now to query across all stores for features in that bounding box, we can use the data service like this:
 
 ```
-SpatialConnectService sc = SpatialConnectService.getInstance();
-SCServiceManager manager = sc.getServiceManager(getActivity());
-SCDataService ds = manager.getDataService();
+SpatialConnect sc = new SpatialConnect(getActivity());
+SCDataService ds = sc.getDataService();
 // query all stores in the bounding box and add them to the map
 ds.queryAllStores(filter)
             .subscribe(
@@ -130,10 +132,10 @@ In addition to using `SCPredicate`s to query, you can also use the `SCKeyTuple` 
 
 ```
 SCKeyTuple keyTuple = new SCKeyTuple(storeId, layerId, featureId);
-manager.getDataService()
+sc.getDataService()
         .getStoreById(storeId)
         .queryById(keyTuple)
-        .subscribe(mySubscriber);	
+        .subscribe(mySubscriber);
 ```
 
 
@@ -172,7 +174,7 @@ To build and install the apk in your local maven repo
 ```
 ### Testing
 
-To run the tests and generate a coverage report run 
+To run the tests and generate a coverage report run
 
 ```
 ./gradlew connectedCheck

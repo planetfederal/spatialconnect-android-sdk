@@ -1,26 +1,17 @@
-/*
+/**
+ * Copyright 2015-2016 Boundless, http://boundlessgeo.com
  *
- *  * ****************************************************************************
- *  *  Licensed to the Apache Software Foundation (ASF) under one
- *  *  or more contributor license agreements.  See the NOTICE file
- *  *  distributed with this work for additional information
- *  *  regarding copyright ownership.  The ASF licenses this file
- *  *  to you under the Apache License, Version 2.0 (the
- *  *  "License"); you may not use this file except in compliance
- *  *  with the License.  You may obtain a copy of the License at
- *  *
- *  *    http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  *  Unless required by applicable law or agreed to in writing,
- *  *  software distributed under the License is distributed on an
- *  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  *  KIND, either express or implied.  See the License for the
- *  *  specific language governing permissions and limitations
- *  *  under the License.
- *  * ****************************************************************************
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the License
  */
-
 package com.boundlessgeo.spatialconnect.scutilities.Storage;
 
 import android.content.Context;
@@ -35,7 +26,7 @@ import java.io.*;
  * Utility class for reading and writing to the filesystem.
  */
 public class SCFileUtilities {
-    private final static String TAG = SCFileUtilities.class.getSimpleName();
+    private final static String LOG_TAG = SCFileUtilities.class.getSimpleName();
     private static final File[] NO_FILES = {};
 
     public SCFileUtilities() {
@@ -101,7 +92,7 @@ public class SCFileUtilities {
             }
             inputReader.close();
         } catch (IOException ex) {
-            Log.e(TAG, "Error in readTextFromFileSystem()", ex);
+            Log.e(LOG_TAG, "Error in readTextFromFileSystem()", ex);
         }
         return sb.toString();
     }
@@ -118,7 +109,7 @@ public class SCFileUtilities {
             }
             inputReader.close();
         } catch (IOException ex) {
-            Log.e(TAG, "Error in readTextFromInternalStorage()", ex);
+            Log.e(LOG_TAG, "Error in readTextFromInternalStorage()", ex);
         }
         return sb.toString();
     }
@@ -141,7 +132,7 @@ public class SCFileUtilities {
                 }
                 inputReader.close();
             } catch (IOException ex) {
-                Log.e(TAG, "Error in readTextFromExternalStorage()", ex);
+                Log.e(LOG_TAG, "Error in readTextFromExternalStorage()", ex);
             }
 
         }
@@ -154,7 +145,7 @@ public class SCFileUtilities {
             fos.write(contents.getBytes());
             fos.close();
         } catch (Exception ex) {
-            Log.e(TAG, "Error in writeToInternalStorage()", ex);
+            Log.e(LOG_TAG, "Error in writeToInternalStorage()", ex);
         }
     }
 
@@ -165,7 +156,7 @@ public class SCFileUtilities {
             fos.write(contents.getBytes());
             fos.close();
         } catch (IOException ex) {
-            Log.e(TAG, "Error in writeToExternalStorage()", ex);
+            Log.e(LOG_TAG, "Error in writeToExternalStorage()", ex);
         }
     }
 
@@ -176,7 +167,7 @@ public class SCFileUtilities {
                 return true;
             }
         } catch (Exception ex) {
-            Log.e(TAG, "Error in isExternalStorageReadOnly", ex);
+            Log.e(LOG_TAG, "Error in isExternalStorageReadOnly", ex);
         }
         return false;
     }
@@ -188,7 +179,7 @@ public class SCFileUtilities {
                 return true;
             }
         } catch (Exception ex) {
-            Log.e(TAG, "Error in isExternalStorageAvailable", ex);
+            Log.e(LOG_TAG, "Error in isExternalStorageAvailable", ex);
         }
         return false;
     }
@@ -207,7 +198,7 @@ public class SCFileUtilities {
                 return matchingFiles;
             }
         } catch (Exception ex) {
-            Log.e(TAG, "Error in findFilesByExtension", ex);
+            Log.e(LOG_TAG, "Error in findFilesByExtension", ex);
         }
         return NO_FILES;
     }

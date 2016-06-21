@@ -1,3 +1,17 @@
+/**
+ * Copyright 2015-2016 Boundless, http://boundlessgeo.com
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the License
+ */
 package com.boundlessgeo.spatialconnect.jsbridge;
 
 import android.location.Location;
@@ -11,7 +25,7 @@ import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
-import com.boundlessgeo.spatialconnect.services.SCServiceManager;
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -37,10 +51,10 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
 
     private final String LOG_TAG = SCJavascriptBridgeHandler.class.getSimpleName();
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private SCServiceManager manager;
+    private SpatialConnect manager;
     private WebViewJavascriptBridge bridge;
 
-    public SCJavascriptBridgeHandler(SCServiceManager manager) {
+    public SCJavascriptBridgeHandler(SpatialConnect manager) {
         this.manager = manager;
     }
 
@@ -75,8 +89,8 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                                 @Override
                                 public void call(Location location) {
                                     bridge.callHandler("lastKnownLocation",
-                                            "{\"latitude\":\"" + location.getLatitude() + "\"," +
-                                                    "\"longitude\":\"" + location.getLongitude() + "\"}");
+                                            "{\"lat\":\"" + location.getLatitude() + "\"," +
+                                                    "\"lon\":\"" + location.getLongitude() + "\"}");
                                 }
                             });
                     return;

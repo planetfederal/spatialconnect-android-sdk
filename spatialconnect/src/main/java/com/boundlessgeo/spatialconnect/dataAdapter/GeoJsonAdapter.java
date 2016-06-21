@@ -1,26 +1,17 @@
-/*
+/**
+ * Copyright 2015-2016 Boundless, http://boundlessgeo.com
  *
- *  * ****************************************************************************
- *  *  Licensed to the Apache Software Foundation (ASF) under one
- *  *  or more contributor license agreements.  See the NOTICE file
- *  *  distributed with this work for additional information
- *  *  regarding copyright ownership.  The ASF licenses this file
- *  *  to you under the Apache License, Version 2.0 (the
- *  *  "License"); you may not use this file except in compliance
- *  *  with the License.  You may obtain a copy of the License at
- *  *
- *  *    http://www.apache.org/licenses/LICENSE-2.0
- *  *
- *  *  Unless required by applicable law or agreed to in writing,
- *  *  software distributed under the License is distributed on an
- *  *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- *  *  KIND, either express or implied.  See the License for the
- *  *  specific language governing permissions and limitations
- *  *  under the License.
- *  * ****************************************************************************
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and limitations under the License
  */
-
 package com.boundlessgeo.spatialconnect.dataAdapter;
 
 
@@ -44,6 +35,7 @@ import java.io.InputStreamReader;
 import java.util.HashSet;
 
 import rx.Observable;
+import rx.Subscriber;
 import rx.functions.Func1;
 
 
@@ -51,7 +43,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
     private static final String NAME = "GeoJsonAdapter";
     private static final String TYPE = "GeoJson";
     private static final int VERSION = 1;
-    private static final String DEFAULTLAYER = "d";
+    public static final String DEFAULTLAYER = "default";
     private Context context;
     private static final String LOG_TAG = GeoPackageAdapter.class.getSimpleName();
 
@@ -62,43 +54,49 @@ public class GeoJsonAdapter extends SCDataAdapter {
     }
 
     public Observable connect() {
-        super.connect();
+        final GeoJsonAdapter adapterInstance = this;
 
-        // if the file was packaged with the application, then attempt to connect
-        if (scStoreConfig.isMainBundle()) {
-            // first check if the GeoJson file already exists in the internal storage location specified in the uri
-            File f = new File(context.getFilesDir(), scStoreConfig.getUri());
-            if (!f.exists()) {
-                InputStream is = null;
-                // if the doesn't exist, then we attempt to create it by copying it from the raw
-                // resources to the destination specified in the config
-                try {
-                    int resourceId = context.getResources().getIdentifier(
-                            scStoreConfig.getUri().split("\\.")[0], "raw", context.getPackageName()
-                    );
-                    is = context.getResources().openRawResource(resourceId);
-                    FileUtils.copyInputStreamToFile(is, f);
-                    super.connected();
-                } catch (IOException e) {
-                    Log.w(LOG_TAG, "Couldn't connect to geojson store.", e);
-                    this.disconnect();
-                    e.printStackTrace();
-                } finally {
-                    if (is != null) {
+        return Observable.create(new Observable.OnSubscribe<Void>() {
+            @Override
+            public void call(Subscriber subscriber) {
+                adapterInstance.connect();
+
+                // if the file was packaged with the application, then attempt to connect
+                if (scStoreConfig.isMainBundle()) {
+                    // first check if the GeoJson file already exists in the internal storage location specified in the uri
+                    File f = new File(context.getFilesDir(), scStoreConfig.getUri());
+                    if (!f.exists()) {
+                        InputStream is = null;
+                        // if the doesn't exist, then we attempt to create it by copying it from the raw
+                        // resources to the destination specified in the config
                         try {
-                            is.close();
+                            int resourceId = context.getResources().getIdentifier(
+                                    scStoreConfig.getUri().split("\\.")[0], "raw", context.getPackageName()
+                            );
+                            is = context.getResources().openRawResource(resourceId);
+                            FileUtils.copyInputStreamToFile(is, f);
+                            adapterInstance.connected();
                         } catch (IOException e) {
-                            Log.e(LOG_TAG, "Couldn't close the stream.", e);
+                            Log.w(LOG_TAG, "Couldn't connect to geojson store.", e);
+                            adapterInstance.disconnect();
+                            e.printStackTrace();
+                        } finally {
+                            if (is != null) {
+                                try {
+                                    is.close();
+                                } catch (IOException e) {
+                                    Log.e(LOG_TAG, "Couldn't close the stream.", e);
+                                }
+                            }
                         }
+                    } else { // the file already exists so set the status to connected
+                        adapterInstance.connected();
                     }
                 }
-            } else { // the file already exists so set the status to connected
-                super.connected();
-                return null;
+                // TODO: else, look for the geojson file in other locations
+                subscriber.onCompleted();
             }
-        }
-        // TODO: else, look for the geojson file in other locations
-        return null;
+        });
     }
 
     public void disconnect() {
@@ -121,7 +119,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
               public Boolean call(SCSpatialFeature feature) {
                 if (feature instanceof SCGeometry &&
                   ((SCGeometry) feature).getGeometry() != null &&
-                  filter.getPredicate().isInBoundingBox((SCGeometry) feature)) {
+                  filter.getPredicate().applyFilter((SCGeometry) feature)) {
                   return true;
                 } else {
                   return false;
