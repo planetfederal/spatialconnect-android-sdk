@@ -1,6 +1,9 @@
 # spatialconnect-android-sdk
 SpatialConnect library for Android
 
+# Current Version
+0.3.0
+
 [![Build
 Status](https://travis-ci.org/boundlessgeo/spatialconnect-android-sdk.svg?branch=develop)](https://travis-ci.org/boundlessgeo/spatialconnect-android-sdk)
 
