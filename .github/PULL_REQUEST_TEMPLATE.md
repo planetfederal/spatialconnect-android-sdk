@@ -1,30 +1,24 @@
 ## Status
 **READY/IN DEVELOPMENT/HOLD**
 
+## JIRA TICKET
+The ticket id
+
 ## Description
 A few sentences describing the overall goals of the pull request's commits.
-
 
 ## Todos
 - [ ] Tests
 - [ ] Documentation
-
-
-## Deploy Notes
-Notes regarding deployment the contained body of work. 
+- [ ] License
 
 ## Steps to Test or Reproduce
 Outline the steps to test or reproduce the PR here.
 
 ```sh
-git pull --prune
-git checkout <feature_branch>
-bundle; script/server
+git fetch --all
+git checkout <feature_branch> 
+./gradlew connectedCheck
 ```
-
-## Impacted Areas in Application
-List general components of the application that this PR will affect:
-
-* 
 
 @boundlessgeo/spatial-connect
