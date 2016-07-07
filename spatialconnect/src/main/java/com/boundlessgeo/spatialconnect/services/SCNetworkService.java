@@ -85,8 +85,10 @@ public class SCNetworkService extends SCService {
     }
 
     public String post(String url, String json) throws IOException {
-        Log.d(LOG_TAG, "POST " + url + "\n" + json);
-        RequestBody body = RequestBody.create(JSON, json);
+        String authString = ",\"metadata\": " + "{\"client\":\"" +  SCConfigService.getClientId() + "\"}}";
+        String jsonBody = json.substring(0, json.length()-1) + authString;
+        Log.d(LOG_TAG, "POST " + url + "\n" + jsonBody);
+        RequestBody body = RequestBody.create(JSON, jsonBody);
         Request request = new Request.Builder()
                 .url(url)
                 .post(body)
