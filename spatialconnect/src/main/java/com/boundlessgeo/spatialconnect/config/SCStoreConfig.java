@@ -56,12 +56,6 @@ public class SCStoreConfig
      */
     private String name;
 
-    /**
-     * Optionally specify a default layer for this store
-     */
-    @JsonProperty("default_layer")
-    private String defaultLayer;
-
     public SCStoreConfig() {}
 
     public String getType()
@@ -117,13 +111,5 @@ public class SCStoreConfig
     public void setName(String name)
     {
         this.name = name;
-    }
-
-    public String getDefaultLayer() {
-        return defaultLayer;
-    }
-
-    public void setDefaultLayer(String defaultLayer) {
-        this.defaultLayer = defaultLayer;
     }
 }

@@ -16,7 +16,6 @@ package com.boundlessgeo.spatialconnect.geometries;
 
 
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
-import com.boundlessgeo.spatialconnect.services.SCConfigService;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -103,14 +102,6 @@ public class SCSpatialFeature
 
     public SCKeyTuple getKey() {
         return new SCKeyTuple(this.storeId, this.layerId, this.id);
-    }
-
-    public Map<String, Object> getMetadata() {
-        Map map = new HashMap<>(3);
-        map.put("storeId", storeId);
-        map.put("layerId", layerId);
-        map.put("client", SCConfigService.getClientId());
-        return map;
     }
 
     public String toJson() {
