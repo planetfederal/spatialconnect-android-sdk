@@ -26,6 +26,7 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
+import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
@@ -37,6 +38,9 @@ import org.junit.Test;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import rx.Observable;
+import rx.Subscriber;
+import rx.functions.Action1;
 import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
@@ -54,7 +58,8 @@ public class GeoPackageTest extends BaseTestCase {
         sc.initialize(activity);
         sc.addConfig(testConfigFile);
         sc.startAllServices();
-        waitForStoreToStart(WHITEHORSE_GPKG_ID);
+        sc.getAuthService().authenticate("admin@something.com", "admin");
+        waitForStoreToStart(HAITI_GPKG_ID);
     }
 
     @AfterClass
@@ -100,8 +105,8 @@ public class GeoPackageTest extends BaseTestCase {
         testSubscriber.awaitTerminalEvent();
 //        testSubscriber.assertCompleted();  // it never completes, only times out
 //        testSubscriber.assertNoErrors();  // it will throw a timeout error b/c it never completes
-        assertEquals("The query should have emitted the first 100 features",
-                (Integer) 100,
+        assertEquals("The query should have emitted the first 33 features",
+                (Integer) 33,
                 (Integer) testSubscriber.getOnNextEvents().size()
         );
         SCSpatialFeature feature = (SCSpatialFeature) testSubscriber.getOnNextEvents().get(0);
@@ -136,8 +141,8 @@ public class GeoPackageTest extends BaseTestCase {
         TestSubscriber testSubscriber = new TestSubscriber();
         gpkgStore.query(filter).timeout(5, TimeUnit.SECONDS).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
-        assertEquals("The query should have the first 100 features",
-                (Integer) 100,
+        assertEquals("The query should have the first 33 features",
+                (Integer) 33,
                 (Integer) testSubscriber.getOnNextEvents().size()
         );
         SCSpatialFeature feature = (SCSpatialFeature) testSubscriber.getOnNextEvents().get(0);
@@ -295,11 +300,28 @@ public class GeoPackageTest extends BaseTestCase {
     }
 
     private static void waitForStoreToStart(final String storeId) {
+        System.out.println("Waiting for store " + storeId + " to start");
         TestSubscriber testSubscriber = new TestSubscriber();
-        sc.getDataService().storeStarted(storeId).timeout(5, TimeUnit.MINUTES).subscribe(testSubscriber);
+        Observable.create(new Observable.OnSubscribe<Void>() {
+            @Override
+            public void call(final Subscriber<? super Void> subscriber) {
+                sc.getDataService().storeEvents
+                        .timeout(5, TimeUnit.MINUTES)
+                        .subscribe(new Action1<SCStoreStatusEvent>() {
+                            @Override
+                            public void call(SCStoreStatusEvent event) {
+                                if (event.getStoreId().equals(storeId) &&
+                                        event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+                                    System.out.println("Store started");
+                                    subscriber.onCompleted();
+                                }
+                            }
+                        });
+            }
+        }).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
-        testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();
+        testSubscriber.assertNoErrors();
     }
 
     // helper method to return a sample SCSpatialFeature to use in CRUD to/from a GeoPackage.

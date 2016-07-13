@@ -15,19 +15,15 @@ public class SCFormField {
     private String id;
 
     /**
-     * Unique id of the form.
-     */
-    @JsonProperty("form_id")
-    private String formId;
-
-    /**
      * Name for the field that can be used as a column name.
      */
+    @JsonProperty("field_key")
     private String key;
 
     /**
      * A label used for the display name of this field.
      */
+    @JsonProperty("field_label")
     private String label;
 
     /**
@@ -224,14 +220,6 @@ public class SCFormField {
 
     public void setExclusiveMaximum(Boolean exclusiveMaximum) {
         this.exclusiveMaximum = exclusiveMaximum;
-    }
-
-    public String getFormId() {
-        return formId;
-    }
-
-    public void setFormId(String formId) {
-        this.formId = formId;
     }
 
     public List<String> getOptions() {

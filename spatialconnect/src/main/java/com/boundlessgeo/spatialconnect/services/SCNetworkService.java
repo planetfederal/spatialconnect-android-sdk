@@ -22,6 +22,7 @@ import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
@@ -87,6 +88,14 @@ public class SCNetworkService extends SCService {
                 .build();
         Response response = client.newCall(request).execute();
         return response.body().string();
+    }
+
+    public InputStream getResponseAsInputStream(String url) throws IOException {
+        Request request = new Request.Builder()
+                .url(url)
+                .build();
+        Response response = client.newCall(request).execute();
+        return response.body().byteStream();
     }
 
     public String post(String url, String json) throws IOException {

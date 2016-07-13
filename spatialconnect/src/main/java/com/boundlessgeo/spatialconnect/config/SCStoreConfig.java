@@ -18,6 +18,8 @@ package com.boundlessgeo.spatialconnect.config;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
+
 /**
  * Represents a JSON object describing a SCSpatialStore.
  */
@@ -57,10 +59,10 @@ public class SCStoreConfig
     private String name;
 
     /**
-     * Optionally specify a default layer for this store
+     * Optionally specify default layers for this store.
      */
-    @JsonProperty("default_layer")
-    private String defaultLayer;
+    @JsonProperty("default_layers")
+    private List<String> defaultLayers;
 
     public SCStoreConfig() {}
 
@@ -119,11 +121,11 @@ public class SCStoreConfig
         this.name = name;
     }
 
-    public String getDefaultLayer() {
-        return defaultLayer;
+    public List<String> getDefaultLayers() {
+        return defaultLayers;
     }
 
-    public void setDefaultLayer(String defaultLayer) {
-        this.defaultLayer = defaultLayer;
+    public void setDefaultLayers(List<String> defaultLayers) {
+        this.defaultLayers = defaultLayers;
     }
 }
