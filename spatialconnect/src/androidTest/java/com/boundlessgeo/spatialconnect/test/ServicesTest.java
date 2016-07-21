@@ -42,8 +42,9 @@ public class ServicesTest extends BaseTestCase {
         }
         SpatialConnect sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        assertEquals("5 default services should have been initialized (data, network, config, sensor, and kvpstore)",
-                5, sc.getServices().size()
+        assertEquals("6 default services should have been initialized (data, network, config, sensor, auth, and " +
+                        "kvpstore)",
+                6, sc.getServices().size()
         );
         assertEquals("There should be only 4 supported data stores: geojson.1, gpkg.1 and geojson.1.0, gpkg.1.0",
                 4,
