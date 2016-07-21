@@ -17,6 +17,7 @@ package com.boundlessgeo.spatialconnect;
 import android.content.Context;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.services.SCKVPStoreService;
@@ -42,6 +43,8 @@ public class SpatialConnect {
     private SCSensorService sensorService;
     private SCConfigService configService;
     private SCNetworkService networkService;
+    private SCAuthService authService;
+
     private Context context;
 
     private SpatialConnect() {}
@@ -69,6 +72,7 @@ public class SpatialConnect {
         this.sensorService = new SCSensorService(context);
         this.networkService = new SCNetworkService(context);
         this.configService = new SCConfigService(context);
+        this.authService = new SCAuthService(context);
         this.context = context;
         addDefaultServices();
     }
@@ -82,6 +86,7 @@ public class SpatialConnect {
         addService(this.configService);
         addService(this.kvpStoreService);
         addService(this.networkService);
+        addService(this.authService);
     }
 
     public void addService(SCService service) {
@@ -161,5 +166,8 @@ public class SpatialConnect {
         return networkService;
     }
 
+    public SCAuthService getAuthService() {
+        return authService;
+    }
 }
 
