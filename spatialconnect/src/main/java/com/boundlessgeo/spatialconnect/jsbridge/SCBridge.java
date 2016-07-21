@@ -28,10 +28,13 @@ import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.stores.DefaultStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
+import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
@@ -50,12 +53,14 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
 import java.util.List;
 
 import rx.Subscriber;
 import rx.functions.Action1;
+import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 /**
@@ -89,13 +94,62 @@ public class SCBridge extends ReactContextBaseJavaModule {
      * .html#sending-events-to-javascript</a>
      */
     public void sendEvent(Integer eventType, @Nullable WritableMap params) {
-        Log.v(LOG_TAG, String.format("Sending event %s to Javascript: %s", eventType.toString(), params.toString()));
+        Log.v(LOG_TAG, String.format("Sending {\"type\": %s, \"payload\": %s} to Javascript",
+                        eventType.toString(),
+                        params.toString())
+        );
         WritableMap newAction = Arguments.createMap();
         newAction.putInt("type", eventType);
         newAction.putMap("payload", params);
         this.reactContext
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
                 .emit(eventType.toString(), newAction);
+    }
+
+    /**
+     * Sends an event to Javascript.
+     *
+     * @param eventType  the name of the event
+     * @param responseId the responseId used to identify the observable that is listening for a response
+     * @param params     a map of the key/value pairs associated with the event
+     * @see <a href="https://facebook.github.io/react-native/docs/native-modules-android
+     * .html#sending-events-to-javascript"> https://facebook.github.io/react-native/docs/native-modules-android
+     * .html#sending-events-to-javascript</a>
+     */
+    public void sendEvent(Integer eventType, String responseId, @Nullable WritableMap params) {
+        Log.v(LOG_TAG, String.format("Sending {\"type\": %s, \"payload\": %s} to Javascript",
+                        eventType.toString(),
+                        params.toString())
+        );
+        WritableMap newAction = Arguments.createMap();
+        newAction.putInt("type", eventType);
+        newAction.putMap("payload", params);
+        this.reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(responseId, newAction);
+    }
+
+    /**
+     * Sends an event to Javascript.
+     *
+     * @param eventType     the name of the event
+     * @param responseId    the responseId used to identify the observable that is listening for a response
+     * @param payloadString a payload string associated with the event
+     * @see <a href="https://facebook.github.io/react-native/docs/native-modules-android
+     * .html#sending-events-to-javascript"> https://facebook.github.io/react-native/docs/native-modules-android
+     * .html#sending-events-to-javascript</a>
+     */
+    public void sendEvent(Integer eventType, String responseId, @Nullable String payloadString) {
+        Log.v(LOG_TAG, String.format("Sending {\"type\": %s, \"payload\": \"%s\"} to Javascript",
+                        eventType.toString(),
+                        payloadString)
+        );
+        WritableMap newAction = Arguments.createMap();
+        newAction.putInt("type", eventType);
+        newAction.putString("payload", payloadString);
+        this.reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(responseId, newAction);
     }
 
     /**
@@ -108,7 +162,10 @@ public class SCBridge extends ReactContextBaseJavaModule {
      * .html#sending-events-to-javascript</a>
      */
     public void sendEvent(Integer eventType, @Nullable String payloadString) {
-        Log.v(LOG_TAG, String.format("Sending event %s to Javascript: %s", eventType.toString(), payloadString));
+        Log.v(LOG_TAG, String.format("Sending {\"type\": %s, \"payload\": \"%s\"} to Javascript",
+                        eventType.toString(),
+                        payloadString)
+        );
         WritableMap newAction = Arguments.createMap();
         newAction.putInt("type", eventType);
         newAction.putString("payload", payloadString);
@@ -116,6 +173,29 @@ public class SCBridge extends ReactContextBaseJavaModule {
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
                 .emit(eventType.toString(), newAction);
     }
+
+    /**
+     * Sends an event to Javascript.
+     *
+     * @param eventType      the name of the event
+     * @param payloadInteger a payload integer associated with the event
+     * @see <a href="https://facebook.github.io/react-native/docs/native-modules-android
+     * .html#sending-events-to-javascript"> https://facebook.github.io/react-native/docs/native-modules-android
+     * .html#sending-events-to-javascript</a>
+     */
+    public void sendEvent(Integer eventType, @Nullable Integer payloadInteger) {
+        Log.v(LOG_TAG, String.format("Sending {\"type\": %s, \"payload\": %d} to Javascript",
+                        eventType.toString(),
+                        payloadInteger)
+        );
+        WritableMap newAction = Arguments.createMap();
+        newAction.putInt("type", eventType);
+        newAction.putInt("payload", payloadInteger);
+        this.reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(eventType.toString(), newAction);
+    }
+
 
     /**
      * Handles a message sent from Javascript.  Expects the message envelope to look like:
@@ -163,7 +243,61 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (command.equals(BridgeCommand.DATASERVICE_FORMSLIST)) {
                 handleFormsList(message);
             }
+            if (command.equals(BridgeCommand.AUTHSERVICE_AUTHENTICATE)) {
+                handleAuthenticate(message);
+            }
+            if (command.equals(BridgeCommand.AUTHSERVICE_ACCESS_TOKEN)) {
+                handleAccessToken(message);
+            }
+            if (command.equals(BridgeCommand.AUTHSERVICE_LOGIN_STATUS)) {
+                handleLoginStatus(message);
+            }
+            if (command.equals(BridgeCommand.AUTHSERVICE_LOGOUT)) {
+                handleLogout(message);
+            }
         }
+    }
+
+    private void handleLogout(ReadableMap message) {
+        Log.d(LOG_TAG, "Handling AUTHSERVICE_LOGOUT message " + message.toString());
+        SCAuthService.logout();
+    }
+
+    /**
+     * Handles the {@link BridgeCommand#AUTHSERVICE_LOGIN_STATUS} command.
+     *
+     * @param message
+     */
+    private void handleLoginStatus(final ReadableMap message) {
+        Log.d(LOG_TAG, "Handling AUTHSERVICE_LOGIN_STATUS message " + message.toString());
+        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
+            @Override
+            public void call(Integer integer) {
+                sendEvent(message.getInt("type"), integer);
+            }
+        });
+    }
+
+    private void handleAccessToken(ReadableMap message) {
+        Log.d(LOG_TAG, "Handling AUTHSERVICE_ACCESS_TOKEN message " + message.toString());
+        try {
+            String accessToken = SCAuthService.getAccessToken();
+            if (accessToken != null) {
+                sendEvent(message.getInt("type"), accessToken);
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+            Log.w(LOG_TAG, "Could not get access token");
+        }
+    }
+
+    private void handleAuthenticate(ReadableMap message) {
+        Log.d(LOG_TAG, "Handling AUTHSERVICE_AUTHENTICATE message " + message.toString());
+        String email = message.getMap("payload").getString("email");
+        String password = message.getMap("payload").getString("password");
+        SCAuthService authService = SpatialConnect.getInstance().getAuthService();
+        authService.authenticate(email, password);
     }
 
 
@@ -206,8 +340,27 @@ public class SCBridge extends ReactContextBaseJavaModule {
     /**
      * Handles the {@link BridgeCommand#DATASERVICE_ACTIVESTORESLIST} command.
      */
-    private void handleActiveStoresList(ReadableMap message) {
+    private void handleActiveStoresList(final ReadableMap message) {
         Log.d(LOG_TAG, "Handling DATASERVICE_ACTIVESTORESLIST message");
+        sendEvent(message.getInt("type"), message.getString("responseId"), getActiveStoresPayload());
+        // send a message
+        SpatialConnect.getInstance().getDataService().storeEvents
+                .filter(new Func1<SCStoreStatusEvent, Boolean>() {
+                    @Override
+                    public Boolean call(SCStoreStatusEvent event) {
+                        return event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_STARTED)
+                                || event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+                    }
+                })
+                .subscribe(new Action1<SCStoreStatusEvent> () {
+                    @Override
+                    public void call(SCStoreStatusEvent event) {
+                        sendEvent(message.getInt("type"), getActiveStoresPayload());
+                    }
+                });
+    }
+
+    private WritableMap getActiveStoresPayload() {
         List<SCDataStore> stores = sc.getDataService().getActiveStores();
         WritableMap eventPayload = Arguments.createMap();
         WritableArray storesArray = Arguments.createArray();
@@ -215,7 +368,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
             storesArray.pushMap(getStoreMap(store));
         }
         eventPayload.putArray("stores", storesArray);
-        sendEvent(message.getInt("type"), eventPayload);
+        return eventPayload;
     }
 
     /**
@@ -230,7 +383,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
             formsArray.pushMap(getFormMap(config));
         }
         eventPayload.putArray("forms", formsArray);
-        sendEvent(message.getInt("type"), eventPayload);
+        sendEvent(message.getInt("type"), message.getString("responseId"), eventPayload);
     }
 
     /**
@@ -317,7 +470,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
                                 }
                             }
                     );
-        } catch (UnsupportedEncodingException e) {
+        }
+        catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
     }
@@ -353,7 +507,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
                                 }
                             }
                     );
-        } catch (UnsupportedEncodingException e) {
+        }
+        catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
     }
@@ -369,7 +524,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
         try {
             SCSpatialFeature newFeature = getNewFeature(message.getMap("payload"));
             // if no store was specified, use the default store
-            if(newFeature.getKey().getStoreId() == null || newFeature.getKey().getStoreId().isEmpty()) {
+            if (newFeature.getKey().getStoreId() == null || newFeature.getKey().getStoreId().isEmpty()) {
                 newFeature.setStoreId(DefaultStore.NAME);
             }
             sc.getDataService().getStoreById(newFeature.getKey().getStoreId())
@@ -395,13 +550,15 @@ public class SCBridge extends ReactContextBaseJavaModule {
                                         String encodedId = feature.getKey().encodedCompositeKey();
                                         feature.setId(encodedId);
                                         sendEvent(message.getInt("type"), feature.toJson());
-                                    } catch (UnsupportedEncodingException e) {
+                                    }
+                                    catch (UnsupportedEncodingException e) {
                                         e.printStackTrace();
                                     }
                                 }
                             }
                     );
-        } catch (UnsupportedEncodingException e) {
+        }
+        catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
     }
@@ -471,7 +628,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
         params.putString("layer_name", formConfig.getLayerName());
         WritableArray fields = Arguments.createArray();
         // for each field, create a WriteableMap with all the SCFormField params
-        for (SCFormField field: formConfig.getFields()) {
+        for (SCFormField field : formConfig.getFields()) {
             WritableMap fieldMap = Arguments.createMap();
             fieldMap.putString("id", field.getId());
             fieldMap.putString("key", field.getKey());
@@ -527,17 +684,23 @@ public class SCBridge extends ReactContextBaseJavaModule {
             Object value = jsonObject.get(key);
             if (value instanceof JSONObject) {
                 map.putMap(key, convertJsonToMap((JSONObject) value));
-            } else if (value instanceof JSONArray) {
+            }
+            else if (value instanceof JSONArray) {
                 map.putArray(key, convertJsonToArray((JSONArray) value));
-            } else if (value instanceof  Boolean) {
+            }
+            else if (value instanceof Boolean) {
                 map.putBoolean(key, (Boolean) value);
-            } else if (value instanceof  Integer) {
+            }
+            else if (value instanceof Integer) {
                 map.putInt(key, (Integer) value);
-            } else if (value instanceof  Double) {
+            }
+            else if (value instanceof Double) {
                 map.putDouble(key, (Double) value);
-            } else if (value instanceof String)  {
+            }
+            else if (value instanceof String) {
                 map.putString(key, (String) value);
-            } else {
+            }
+            else {
                 map.putString(key, value.toString());
             }
         }
@@ -551,17 +714,23 @@ public class SCBridge extends ReactContextBaseJavaModule {
             Object value = jsonArray.get(i);
             if (value instanceof JSONObject) {
                 array.pushMap(convertJsonToMap((JSONObject) value));
-            } else if (value instanceof  JSONArray) {
+            }
+            else if (value instanceof JSONArray) {
                 array.pushArray(convertJsonToArray((JSONArray) value));
-            } else if (value instanceof  Boolean) {
+            }
+            else if (value instanceof Boolean) {
                 array.pushBoolean((Boolean) value);
-            } else if (value instanceof  Integer) {
+            }
+            else if (value instanceof Integer) {
                 array.pushInt((Integer) value);
-            } else if (value instanceof  Double) {
+            }
+            else if (value instanceof Double) {
                 array.pushDouble((Double) value);
-            } else if (value instanceof String)  {
+            }
+            else if (value instanceof String) {
                 array.pushString((String) value);
-            } else {
+            }
+            else {
                 array.pushString(value.toString());
             }
         }

@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import rx.functions.Action1;
+
 /**
  * The SCConfigService is responsible for managing the configuration for SpatialConnect.  This includes downloading
  * remote configuration and sweeping the external storage for config files, if required.
@@ -50,6 +52,9 @@ public class SCConfigService extends SCService {
     private SCNetworkService networkService;
     private static SCKVPStoreService kvpStoreService;
     public static String CLIENT_ID = null;
+    /**
+     * The API_URL of the spatialconnect-service api.  This will always end with a trailing slash, "/api/"
+     */
     public static String API_URL = null;
 
     public SCConfigService(Context context) {
@@ -119,9 +124,19 @@ public class SCConfigService extends SCService {
      * Loads the config from the API.
      */
     private void loadRemoteConfig() {
-        Log.i(LOG_TAG, "Attempting to load remote config.");
-        String configUrl = API_URL + "config";
-        loadConfigs(Arrays.asList(networkService.getFileBlocking(configUrl)));
+        Log.i(LOG_TAG, "Attempting to load remote config if client is authenticated.");
+        final String configUrl = API_URL + "config";
+        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
+            @Override
+            public void call(Integer integer) {
+                if (integer == 1) {
+                    File configFile = networkService.getFileBlocking(configUrl);
+                    if (configFile != null) {
+                        loadConfigs(Arrays.asList(configFile));
+                    }
+                }
+            }
+        });
     }
 
     // method to load the configuration from a file.

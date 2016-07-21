@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.UUID;
 
+import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -32,15 +33,21 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 
+// TODO: consider using https://github.com/stephanenicolas/robospice as this class evolves
 public class SCNetworkService extends SCService {
 
     private static final String LOG_TAG = SCNetworkService.class.getSimpleName();
     private static Context context;
-    private static OkHttpClient client = new OkHttpClient();
+    private static OkHttpClient client;
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
     public SCNetworkService(Context context) {
         this.context = context;
+        this.client = new OkHttpClient.Builder()
+                .addNetworkInterceptor(new LoggingInterceptor())
+                .addNetworkInterceptor(new SCAuthService.AuthHeaderInterceptor())
+                .authenticator(new SCAuthService.SCAuthenticator())
+                .build();
     }
 
     public File getFileBlocking(final String theUrl) {
@@ -53,27 +60,25 @@ public class SCNetworkService extends SCService {
         File scConfigFile = null;
         try {
             response = client.newCall(request).execute();
-            BufferedInputStream is = new BufferedInputStream(response.body().byteStream());
-            scConfigFile = File.createTempFile(UUID.randomUUID().toString(), null, context.getCacheDir());
-            OutputStream os = new FileOutputStream(scConfigFile);
-            byte[] buffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = is.read(buffer)) != -1) {
-                os.write(buffer, 0, bytesRead);
+            if (response.isSuccessful()) {
+                BufferedInputStream is = new BufferedInputStream(response.body().byteStream());
+                scConfigFile = File.createTempFile(UUID.randomUUID().toString(), null, context.getCacheDir());
+                OutputStream os = new FileOutputStream(scConfigFile);
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = is.read(buffer)) != -1) {
+                    os.write(buffer, 0, bytesRead);
+                }
+                os.flush();
+                os.close();
+                is.close();
             }
-            os.flush();
-            os.close();
-            is.close();
         }
         catch (IOException e) {
             Log.e(LOG_TAG, "Could not download file");
             e.printStackTrace();
         }
         return scConfigFile;
-    }
-
-    public static OkHttpClient getHttpClient() {
-        return client;
     }
 
     public String get(String url) throws IOException {
@@ -93,6 +98,25 @@ public class SCNetworkService extends SCService {
                 .build();
         Response response = client.newCall(request).execute();
         return response.body().string();
+    }
+
+    class LoggingInterceptor implements Interceptor {
+        @Override
+        public Response intercept(Interceptor.Chain chain) throws IOException {
+            Request request = chain.request();
+
+            long t1 = System.nanoTime();
+            Log.d(LOG_TAG, String.format("Sending request %s on %s%n%s",
+                    request.url(), chain.connection(), request.headers()));
+
+            Response response = chain.proceed(request);
+
+            long t2 = System.nanoTime();
+            Log.d(LOG_TAG, String.format("Received %d response for %s in %.1fms%n%s",
+                    response.code(), response.request().url(), (t2 - t1) / 1e6d, response.headers()));
+
+            return response;
+        }
     }
 
 }
