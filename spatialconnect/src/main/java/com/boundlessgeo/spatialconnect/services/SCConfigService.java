@@ -16,8 +16,8 @@
 package com.boundlessgeo.spatialconnect.services;
 
 import android.content.Context;
+import android.os.Build;
 import android.os.Environment;
-import android.provider.Settings;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
@@ -264,20 +264,26 @@ public class SCConfigService extends SCService {
     }
 
     private void registerDevice() {
-        final String android_id = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
-        Log.d(LOG_TAG, "Registering the device with name " + "android_" + android_id + " and id " + getClientId());
-        final String registrationEndpoint = API_URL + "device/register";
+        final String registrationEndpoint = API_URL + "devices/register";
+        final String deviceEndpoint = API_URL + "devices/%s";
+
         SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
             @Override
             public void call(Integer integer) {
                 if (integer == 1) {
                     try {
-                        // TODO: first check if device is already registered
-                        networkService.post(registrationEndpoint,
-                                String.format("{\"name\": \"%s\", \"identifier\": \"%s\"}",
-                                        "android_" + android_id, getClientId()
-                                )
-                        );
+                        // first check if device is already registered
+                        String response = networkService.get(String.format(deviceEndpoint, getClientId()));
+                        if (response.equals("null")) {
+                            networkService.post(registrationEndpoint,
+                                    String.format("{\"identifier\": \"%s\", \"device_info\": {\"os\":\"%s\"} }",
+                                            getClientId(), getAndroidVersion()
+                                    )
+                            );
+                        }
+                        else {
+                            Log.d(LOG_TAG, "Device is already registered.");
+                        }
                     }
                     catch (IOException e) {
                         e.printStackTrace();
@@ -291,6 +297,13 @@ public class SCConfigService extends SCService {
 
     }
 
+    /**
+     * Gets the unique identifier that identifies this installation of the application.
+     *
+     * @see <a href="https://developer.android.com/training/articles/user-data-ids.html">
+     *     https://developer.android.com/training/articles/user-data-ids.html</a>
+     * @return The UUID string that identifies this application
+     */
     public static String getClientId() {
         if (CLIENT_ID != null) {
             return CLIENT_ID;
@@ -304,5 +317,11 @@ public class SCConfigService extends SCService {
             kvpStoreService.put("clientId", CLIENT_ID);
         }
         return CLIENT_ID;
+    }
+
+    public static String getAndroidVersion() {
+        String release = Build.VERSION.RELEASE;
+        int sdkVersion = Build.VERSION.SDK_INT;
+        return "Android SDK: " + sdkVersion + " (" + release +")";
     }
 }
