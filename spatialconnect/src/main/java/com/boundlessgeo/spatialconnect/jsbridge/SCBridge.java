@@ -117,10 +117,13 @@ public class SCBridge extends ReactContextBaseJavaModule {
      * .html#sending-events-to-javascript</a>
      */
     public void sendEvent(Integer eventType, String responseId, @Nullable WritableMap params) {
-        Log.v(LOG_TAG, String.format("Sending {\"type\": %s, \"payload\": %s} to Javascript",
-                        eventType.toString(),
-                        params.toString())
-        );
+        if (eventType != 113) {
+            Log.v(LOG_TAG, String.format("Sending {\"responseID\": \"%s\", \"type\": %s, \"payload\": %s} to Javascript",
+                            responseId,
+                            eventType.toString(),
+                            params.toString())
+            );
+        }
         WritableMap newAction = Arguments.createMap();
         newAction.putInt("type", eventType);
         newAction.putMap("payload", params);
@@ -140,10 +143,13 @@ public class SCBridge extends ReactContextBaseJavaModule {
      * .html#sending-events-to-javascript</a>
      */
     public void sendEvent(Integer eventType, String responseId, @Nullable String payloadString) {
-        Log.v(LOG_TAG, String.format("Sending {\"type\": %s, \"payload\": \"%s\"} to Javascript",
-                        eventType.toString(),
-                        payloadString)
-        );
+        if (eventType != 113) {
+            Log.v(LOG_TAG, String.format("Sending {\"responseID\": \"%s\", \"type\": %s, \"payload\": %s} to Javascript",
+                            responseId,
+                            eventType.toString(),
+                            payloadString)
+            );
+        }
         WritableMap newAction = Arguments.createMap();
         newAction.putInt("type", eventType);
         newAction.putString("payload", payloadString);
@@ -410,6 +416,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
         if (filter != null) {
             sc.getDataService().queryAllStores(filter)
                     .subscribeOn(Schedulers.io())
+//                    .onBackpressureBuffer(filter.getLimit())
                     .subscribe(
                             new Subscriber<SCSpatialFeature>() {
                                 @Override
@@ -419,7 +426,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
                                 @Override
                                 public void onError(Throwable e) {
-                                    Log.e(LOG_TAG, "onError()\n" + e.getMessage());
+                                    e.printStackTrace();
+                                    Log.e(LOG_TAG, "Could not complete query on all stores\n" + e.getMessage());
                                 }
 
                                 @Override
@@ -428,9 +436,16 @@ public class SCBridge extends ReactContextBaseJavaModule {
                                         // base64 encode id and set it before sending across wire
                                         String encodedId = ((SCGeometry) feature).getKey().encodedCompositeKey();
                                         feature.setId(encodedId);
-                                        sendEvent(message.getInt("type"), ((SCGeometry) feature).toJson());
+                                        sendEvent(
+                                                message.getInt("type"),
+                                                message.getString("responseId"),
+                                                convertJsonToMap(new JSONObject(feature.toJson()))
+                                        );
                                     }
                                     catch (UnsupportedEncodingException e) {
+                                        e.printStackTrace();
+                                    }
+                                    catch (JSONException e) {
                                         e.printStackTrace();
                                     }
                                 }
@@ -466,7 +481,6 @@ public class SCBridge extends ReactContextBaseJavaModule {
                                 @Override
                                 public void onNext(SCSpatialFeature updated) {
                                     Log.d(LOG_TAG, "feature updated!");
-                                    //TODO: send this over some "update" stream
                                 }
                             }
                     );
@@ -502,7 +516,6 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
                                 @Override
                                 public void onNext(Boolean deleted) {
-                                    //TODO: send this over some "deleted" stream
                                     Log.d(LOG_TAG, "feature deleted!");
                                 }
                             }
@@ -595,16 +608,36 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
     // builds a query filter based on the filter in payload
     private SCQueryFilter getFilter(ReadableMap message) {
-        ReadableArray extent = message.getMap("payload").getMap("filter").getArray("$geocontains");
-        SCBoundingBox bbox = new SCBoundingBox(
-                extent.getDouble(0),
-                extent.getDouble(1),
-                extent.getDouble(2),
-                extent.getDouble(3)
-        );
-        SCQueryFilter filter = new SCQueryFilter(
-                new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
-        );
+        SCQueryFilter filter = new SCQueryFilter();
+        if (message.getMap("payload").getMap("filter").hasKey("$geocontains")) {
+            ReadableArray extent = message.getMap("payload").getMap("filter").getArray("$geocontains");
+            SCBoundingBox bbox = new SCBoundingBox(
+                    extent.getDouble(0),
+                    extent.getDouble(1),
+                    extent.getDouble(2),
+                    extent.getDouble(3)
+            );
+            filter = new SCQueryFilter(
+                    new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
+            );
+        } else {
+            // add a bbox for everything
+            SCBoundingBox bbox = new SCBoundingBox(-180, -90, 180, 90);
+            filter = new SCQueryFilter(
+                    new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
+            );
+        }
+        // add layers to filter
+        if (message.getMap("payload").getMap("filter").hasKey("layers")) {
+            ReadableArray layers = message.getMap("payload").getMap("filter").getArray("layers");
+            for (int i = 0; i < layers.size(); i++) {
+                filter.addLayerId(layers.getString(i));
+            }
+        }
+        // add limit
+        if (message.getMap("payload").getMap("filter").hasKey("limit")) {
+            filter.setLimit(message.getMap("payload").getMap("filter").getInt("limit"));
+        }
         return filter;
     }
 
@@ -614,7 +647,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
         params.putString("storeId", store.getStoreId());
         params.putString("name", store.getName());
         params.putString("type", store.getType());
-        params.putInt("version", store.getVersion());
+        params.putString("version", store.getVersion());
         params.putString("key", store.getKey());
         return params;
     }
@@ -623,16 +656,17 @@ public class SCBridge extends ReactContextBaseJavaModule {
     private WritableMap getFormMap(SCFormConfig formConfig) {
         WritableMap params = Arguments.createMap();
         params.putString("id", formConfig.getId());
-        params.putString("name", formConfig.getName());
-        params.putString("display_name", formConfig.getDisplayName());
-        params.putString("layer_name", formConfig.getLayerName());
+        params.putString("form_key", formConfig.getFormKey());  // same as layer name
+        params.putString("form_label", formConfig.getFormLabel());
+        params.putString("version", formConfig.getVersion());
+        // TODO: put username in metadatadata
         WritableArray fields = Arguments.createArray();
         // for each field, create a WriteableMap with all the SCFormField params
         for (SCFormField field : formConfig.getFields()) {
             WritableMap fieldMap = Arguments.createMap();
             fieldMap.putString("id", field.getId());
-            fieldMap.putString("key", field.getKey());
-            fieldMap.putString("label", field.getLabel());
+            fieldMap.putString("field_key", field.getKey());
+            fieldMap.putString("field_label", field.getLabel());
             if (field.isRequired() != null) {
                 fieldMap.putBoolean("is_required", field.isRequired());
             }

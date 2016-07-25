@@ -28,6 +28,7 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
+import com.boundlessgeo.spatialconnect.stores.WFSStore;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -113,11 +114,11 @@ public class SCDataService extends SCService {
     }
 
     public void addDefaultStoreImpls() {
-        this.supportedStores.add(GeoJsonStore.versionKey());
-        this.supportedStores.add(GeoPackageStore.versionKey());
-        this.supportedStores.add(GeoJsonStore.versionKey() + ".0"); // so 1.0 and 1 are the same version
-        this.supportedStores.add(GeoPackageStore.versionKey() + ".0");  // so 1.0 and 1 are the same version
-
+        this.supportedStores.add(GeoJsonStore.TYPE + "." + "1");
+        this.supportedStores.add(GeoJsonStore.TYPE + "." + "1.0");
+        this.supportedStores.add(GeoPackageStore.TYPE + "." + "1");
+        this.supportedStores.add(GeoPackageStore.TYPE + "." + "1.0");
+        this.supportedStores.add(WFSStore.TYPE + "." + "1.1.0");
     }
 
     public void startStore(final SCDataStore store) {
@@ -204,13 +205,17 @@ public class SCDataService extends SCService {
         Log.d(LOG_TAG, "Registering new store " + scStoreConfig.getName());
         String key = scStoreConfig.getType() + "." + scStoreConfig.getVersion();
         if (isStoreSupported(key)) {
-            if (key.startsWith("geojson")) {
+            if (key.startsWith(GeoJsonStore.TYPE)) {
+                Log.d(LOG_TAG, "Registering geojson store " + scStoreConfig.getName() + " with SCDataService.");
                 registerStore(new GeoJsonStore(context, scStoreConfig));
-                Log.d(LOG_TAG, "Registered geojson store " + scStoreConfig.getName() + " with SCDataService.");
             }
-            else if (key.startsWith("gpkg")) {
+            else if (key.startsWith(GeoPackageStore.TYPE)) {
+                Log.d(LOG_TAG, "Registering gpkg store " + scStoreConfig.getName() + " with SCDataService.");
                 registerStore(new GeoPackageStore(context, scStoreConfig));
-                Log.d(LOG_TAG, "Registered gpkg store " + scStoreConfig.getName() + " with SCDataService.");
+            }
+            else if (key.startsWith(WFSStore.TYPE)) {
+                Log.d(LOG_TAG, "Registering wfs store " + scStoreConfig.getName() + " with SCDataService.");
+                registerStore(new WFSStore(context, scStoreConfig));
             }
         }
         else {
@@ -234,7 +239,6 @@ public class SCDataService extends SCService {
         this.stores.put(store.getStoreId(), store);
         // if data service is started/running when a new store is added, then we want to start the store
         if (getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING)) {
-            Log.d(LOG_TAG, "Starting store " + store.getName());
             startStore(store);
         }
     }
@@ -324,7 +328,7 @@ public class SCDataService extends SCService {
     }
 
     public Observable<SCSpatialFeature> queryAllStores(final SCQueryFilter filter) {
-        Observable<SCSpatialFeature> queryResults =
+        return
                 Observable
                         .just(filter)
                         .flatMap(new Func1<SCQueryFilter, Observable<SCSpatialFeature>>() {
@@ -335,14 +339,12 @@ public class SCDataService extends SCService {
                                 List<Observable<SCSpatialFeature>> queryResults = new ArrayList<>();
                                 for (SCDataStore ds : runningStores) {
                                     SCSpatialStore sp = ds;
+                                    Log.d(LOG_TAG, "Querying store " + ds.getName());
                                     queryResults.add(sp.query(filter));
                                 }
-
-                                Observable<SCSpatialFeature> results = Observable.merge(queryResults);
-                                return results;
+                                return Observable.merge(queryResults);
                             }
                         });
-        return queryResults;
     }
 
     public DefaultStore getDefaultStore() {

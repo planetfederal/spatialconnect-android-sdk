@@ -187,13 +187,12 @@ public class SCConfigService extends SCService {
     /* Registers all the forms specified in each config file */
     private void registerForms(List<File> configFiles) {
         for (File file : configFiles) {
-            Log.d(LOG_TAG, "Registering forms for config file " + file.getPath());
             final SCConfig scConfig;
             try {
                 scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
-                if(scConfig.getFormConfigs() != null) {
+                if(scConfig.getFormConfigs() != null && scConfig.getFormConfigs().size() > 0) {
                     for (SCFormConfig formConfig : scConfig.getFormConfigs()) {
-                        Log.d(LOG_TAG, "Creating table for form " + formConfig.getName());
+                        Log.d(LOG_TAG, "Creating table for form " + formConfig.getFormKey());
                         DefaultStore store = dataService.getDefaultStore();
                         if (store != null) {
                             store.addFormLayer(formConfig);
@@ -214,7 +213,7 @@ public class SCConfigService extends SCService {
     /* Registers all the stores specified in each config file */
     private void registerDataStores(List<File> configFiles) {
         for (File file : configFiles) {
-            Log.d(LOG_TAG, "Registering stores for config file " + file.getPath());
+            Log.d(LOG_TAG, "Looking for stores for config file " + file.getPath());
             final SCConfig scConfig;
             try {
                 // parse the "stores" attribute from the scconfig file
@@ -265,20 +264,31 @@ public class SCConfigService extends SCService {
     }
 
     private void registerDevice() {
-        // TODO: first check if device is already registered
-        String android_id = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
+        final String android_id = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
         Log.d(LOG_TAG, "Registering the device with name " + "android_" + android_id + " and id " + getClientId());
-        String endpoint = API_URL + "device/register";
-        try {
-            networkService.post(endpoint,
-                    String.format("{\"name\": \"%s\", \"identifier\": \"%s\"}", "android_" + android_id, getClientId())
-            );
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-            Log.e(LOG_TAG, "Couldn't register device");
-            System.exit(0);
-        }
+        final String registrationEndpoint = API_URL + "device/register";
+        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
+            @Override
+            public void call(Integer integer) {
+                if (integer == 1) {
+                    try {
+                        // TODO: first check if device is already registered
+                        networkService.post(registrationEndpoint,
+                                String.format("{\"name\": \"%s\", \"identifier\": \"%s\"}",
+                                        "android_" + android_id, getClientId()
+                                )
+                        );
+                    }
+                    catch (IOException e) {
+                        e.printStackTrace();
+                        Log.e(LOG_TAG, "Couldn't register device");
+                        System.exit(0);
+                    }
+                }
+            }
+        });
+
+
     }
 
     public static String getClientId() {

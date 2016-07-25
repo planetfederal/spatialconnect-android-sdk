@@ -16,11 +16,13 @@ package com.boundlessgeo.spatialconnect.stores;
 
 
 import android.content.Context;
+import android.text.TextUtils;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapter;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,25 +34,24 @@ import java.util.UUID;
  * Some implementations may throw {@link SCDataStoreException} if a problem arises that the client cannot recover from.
  * For example, trying to write to a table that doesn't exist will throw a {@link SCDataStoreException}.
  */
-public abstract class SCDataStore implements SCSpatialStore
-{
+public abstract class SCDataStore implements SCSpatialStore {
 
     private SCDataAdapter adapter;
     // TODO: should we use the SCStoreConfig object instead of the store id?
     private String storeId;
     private String name;
-    private int version = 0;
+    private String version;
     private String type;
     private Context context;
     private SCDataStoreStatus status = SCDataStoreStatus.SC_DATA_STORE_STOPPED;
-    private String defaultLayerName;
+    private List<String> defaultLayers;
 
-    public SCDataStore(Context context, SCStoreConfig scStoreConfig)
-    {
+    public SCDataStore(Context context, SCStoreConfig scStoreConfig) {
         this.context = context;
         if (scStoreConfig.getUniqueID() != null) {
             this.storeId = scStoreConfig.getUniqueID();
-        } else {
+        }
+        else {
             this.storeId = UUID.randomUUID().toString();
         }
     }
@@ -59,92 +60,82 @@ public abstract class SCDataStore implements SCSpatialStore
         return DataStorePermissionEnum.READ;
     }
 
-    public SCDataAdapter getAdapter()
-    {
+    public SCDataAdapter getAdapter() {
         return this.adapter;
     }
 
-    public void setAdapter(SCDataAdapter adapter)
-    {
+    public void setAdapter(SCDataAdapter adapter) {
         this.adapter = adapter;
     }
 
-    public String getStoreId()
-    {
+    public String getStoreId() {
         return this.storeId;
     }
 
-    public String getName()
-    {
+    public String getName() {
         return this.name;
     }
 
-    public void setName(String name)
-    {
+    public void setName(String name) {
         this.name = name;
     }
 
-    public int getVersion()
-    {
+    public String getVersion() {
         return this.version;
     }
 
-    public void setVersion(int version)
-    {
+    public void setVersion(String version) {
         this.version = version;
     }
 
-    public String getType()
-    {
+    public String getType() {
         return this.type;
     }
 
-    public void setType(String type)
-    {
+    public void setType(String type) {
         this.type = type;
     }
 
-    public String getKey()
-    {
+    public String getKey() {
         return this.type + "." + this.version;
     }
 
-    public Context getContext()
-    {
+    public Context getContext() {
         return this.context;
     }
 
-    public void setContext(Context context)
-    {
+    public void setContext(Context context) {
         this.context = context;
     }
 
-    public SCDataStoreStatus getStatus()
-    {
+    public SCDataStoreStatus getStatus() {
         return this.status;
     }
 
-    public void setStatus(SCDataStoreStatus status)
-    {
+    public void setStatus(SCDataStoreStatus status) {
         this.status = status;
     }
 
-    public String getDefaultLayerName() {
-        return defaultLayerName;
+    public List<String> getDefaultLayers() {
+        return defaultLayers;
     }
 
-    public void setDefaultLayerName(String defaultLayerName) {
-        this.defaultLayerName = defaultLayerName;
+    public void setDefaultLayers(List<String> defaultLayers) {
+        this.defaultLayers = defaultLayers;
     }
 
-    public Map<String, String> toMap()
-    {
+    public String versionKey() {
+        return type + "." + version;
+    }
+
+    public Map<String, String> toMap() {
         Map<String, String> storeMap = new HashMap<>();
         storeMap.put("storeId", this.storeId);
         storeMap.put("name", this.name);
         storeMap.put("type", this.type);
-        storeMap.put("version", Integer.toString(this.version));
+        storeMap.put("version", this.version);
         storeMap.put("key", getKey());
+        storeMap.put("defaultLayers", TextUtils.join(",", getDefaultLayers()));
         return storeMap;
     }
 

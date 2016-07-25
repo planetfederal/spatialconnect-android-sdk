@@ -28,19 +28,15 @@ import rx.Observable;
 import rx.Subscriber;
 
 public class GeoJsonStore extends SCDataStore {
-    private static final String LOG_TAG = GeoJsonStore.class.getSimpleName();
-    private static String TYPE = "geojson";
-    private static int VERSION = 1;
 
-    public static String versionKey() {
-        return TYPE + "." + VERSION;
-    }
+    private static final String LOG_TAG = GeoJsonStore.class.getSimpleName();
+    public static final String TYPE = "geojson";
 
     public GeoJsonStore(Context context, SCStoreConfig scStoreConfig) {
         super(context, scStoreConfig);
         this.setName(scStoreConfig.getName());
         this.setType(TYPE);
-        this.setVersion(VERSION);
+        this.setVersion(scStoreConfig.getVersion());
         this.setAdapter(new GeoJsonAdapter(context, scStoreConfig));
     }
 
@@ -48,8 +44,7 @@ public class GeoJsonStore extends SCDataStore {
     @Override
     public Observable<SCSpatialFeature> query(SCQueryFilter scFilter) {
         GeoJsonAdapter geoJsonAdapter = (GeoJsonAdapter) this.getAdapter();
-        Observable<SCSpatialFeature> queryResults = geoJsonAdapter.query(scFilter);
-        return queryResults;
+        return geoJsonAdapter.query(scFilter);
     }
 
     @Override
@@ -128,6 +123,8 @@ public class GeoJsonStore extends SCDataStore {
                 new Observable.OnSubscribe<SCStoreStatusEvent>() {
                     @Override
                     public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
+                        Log.d(LOG_TAG, "Connecting to GeoJson adapter for store " + storeInstance.getName());
+
                         // subscribe to an Observable/stream that lets us know when the adapter is connected or disconnected
                         storeInstance.getAdapter().connect().subscribe(new Subscriber<SCDataAdapterStatus>() {
 
