@@ -149,9 +149,6 @@ public class SCConfigService extends SCService {
             if (remoteUrl != null) {
                 // ensure the url ends with a slash
                 API_URL = remoteUrl.endsWith("/") ? remoteUrl + "api/" : remoteUrl + "/api/";
-                if (API_URL != null) {
-                    loadRemoteConfig();
-                }
             }
         }
     }
@@ -249,6 +246,7 @@ public class SCConfigService extends SCService {
         Log.d(LOG_TAG, "Starting SCConfig Service.  Loading all configs");
         loadConfigs();
         if (API_URL != null) {
+            loadRemoteConfig();
             registerDevice();
         }
         this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
