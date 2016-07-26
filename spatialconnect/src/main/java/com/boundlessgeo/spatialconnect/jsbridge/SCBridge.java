@@ -361,7 +361,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
                 .subscribe(new Action1<SCStoreStatusEvent> () {
                     @Override
                     public void call(SCStoreStatusEvent event) {
-                        sendEvent(message.getInt("type"), getActiveStoresPayload());
+                        sendEvent(message.getInt("type"), message.getString("responseId"), getActiveStoresPayload());
                     }
                 });
     }
@@ -562,7 +562,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
                                         // base64 encode id and set it before sending across wire
                                         String encodedId = feature.getKey().encodedCompositeKey();
                                         feature.setId(encodedId);
-                                        sendEvent(message.getInt("type"), feature.toJson());
+                                        sendEvent(message.getInt("type"), message.getString("responseId"),
+                                                feature.toJson());
                                     }
                                     catch (UnsupportedEncodingException e) {
                                         e.printStackTrace();
