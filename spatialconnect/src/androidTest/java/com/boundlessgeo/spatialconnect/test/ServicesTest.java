@@ -29,8 +29,8 @@ public class ServicesTest extends BaseTestCase {
     public void testDataServiceInitialization() {
         SpatialConnect.getInstance().initialize(testContext);
         SCDataService dataService = SpatialConnect.getInstance().getDataService();
-        assertEquals("The data service should have 4 supported stores.",
-                4, dataService.getSupportedStoreKeys().size());
+        assertEquals("The data service should have 5 supported stores.",
+                5, dataService.getSupportedStoreKeys().size());
     }
 
     @Test
@@ -42,11 +42,13 @@ public class ServicesTest extends BaseTestCase {
         }
         SpatialConnect sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        assertEquals("5 default services should have been initialized (data, network, config, sensor, and kvpstore)",
-                5, sc.getServices().size()
+        assertEquals("6 default services should have been initialized (data, network, config, sensor, auth, and " +
+                        "kvpstore)",
+                6, sc.getServices().size()
         );
-        assertEquals("There should be only 4 supported data stores: geojson.1, gpkg.1 and geojson.1.0, gpkg.1.0",
-                4,
+        assertEquals("There should be only 5 supported data stores: geojson.1, gpkg.1 and geojson.1.0, gpkg.1.0, " +
+                        "wfs.1.1.0",
+                5,
                 sc.getDataService().getSupportedStoreKeys().size()
         );
         assertTrue("The geojson.1 store should be in the list of supported stores.",
@@ -54,6 +56,9 @@ public class ServicesTest extends BaseTestCase {
         );
         assertTrue("The gpkg.1 store should be in the list of supported stores.",
                 sc.getDataService().getSupportedStoreKeys().contains("gpkg.1")
+        );
+        assertTrue("The wfs.1.1.0 store should be in the list of supported stores.",
+                sc.getDataService().getSupportedStoreKeys().contains("wfs.1.1.0")
         );
     }
 }

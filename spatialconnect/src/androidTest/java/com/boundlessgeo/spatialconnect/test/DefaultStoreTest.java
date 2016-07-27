@@ -29,7 +29,8 @@ public class DefaultStoreTest extends BaseTestCase {
         sc.initialize(activity);
         sc.addConfig(testConfigFile);
         sc.startAllServices();
-        waitForStoreToStart(WHITEHORSE_GPKG_ID);
+        sc.getAuthService().authenticate("admin@something.com", "admin");
+        waitForStoreToStart(HAITI_GPKG_ID);
     }
 
     @AfterClass
@@ -44,8 +45,8 @@ public class DefaultStoreTest extends BaseTestCase {
                 defaultStore.getAdapter().getStatus(),
                 SCDataAdapterStatus.DATA_ADAPTER_CONNECTED
         );
-        assertEquals("The default store should have 2 form tables.",
-                2, ((GeoPackageAdapter)defaultStore.getAdapter()).getGeoPackageContents().size());
+        assertEquals("The default store should have 3 form tables.",
+                3, ((GeoPackageAdapter)defaultStore.getAdapter()).getGeoPackageContents().size());
     }
 
     @Test @Ignore

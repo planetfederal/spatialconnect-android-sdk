@@ -30,7 +30,7 @@ public class DefaultStore extends GeoPackageStore {
 
 
     public void addFormLayer(SCFormConfig formConfig) {
-        Log.d(LOG_TAG, "Saving form config " + formConfig.getName());
+        Log.d(LOG_TAG, "Saving form config " + formConfig.getFormKey());
         formConfigs.add(formConfig);
         ((GeoPackageAdapter) getAdapter()).addFormLayer(formConfig);
     }
@@ -38,7 +38,7 @@ public class DefaultStore extends GeoPackageStore {
     public void deleteFormLayer(String layerName) {
         Iterator<SCFormConfig> itr = formConfigs.iterator();
         while (itr.hasNext()) {
-            if (itr.next().getName().equals(layerName)) {
+            if (itr.next().getFormKey().equals(layerName)) {
                 itr.remove();
             }
         }

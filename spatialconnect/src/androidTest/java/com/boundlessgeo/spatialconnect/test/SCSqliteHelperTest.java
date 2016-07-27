@@ -28,6 +28,7 @@ public class SCSqliteHelperTest extends BaseTestCase {
         sc.initialize(activity);
         sc.addConfig(testConfigFile);
         sc.startAllServices();
+        sc.getAuthService().authenticate("admin@something.com", "admin");
         waitForStoreToStart(HAITI_GPKG_ID);
         haiti = new SCSqliteHelper(testContext, "gpkg1").db();
     }

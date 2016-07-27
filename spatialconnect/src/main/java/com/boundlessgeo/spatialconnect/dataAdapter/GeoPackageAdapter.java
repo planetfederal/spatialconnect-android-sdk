@@ -171,8 +171,8 @@ public class GeoPackageAdapter extends SCDataAdapter {
      */
     public void addFormLayer(SCFormConfig formConfig) {
         if (!formLayerExists(formConfig)) {
-            Log.d(LOG_TAG, "Creating a table for form " + formConfig.getName());
-            final String tableName = formConfig.getLayerName();
+            Log.d(LOG_TAG, "Creating a table for form " + formConfig.getFormKey());
+            final String tableName = formConfig.getFormKey();
             Cursor cursor = null;
             BriteDatabase.Transaction tx = gpkg.newTransaction();
             try {
@@ -204,7 +204,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
 
     private boolean formLayerExists(SCFormConfig formConfig) {
         boolean formLayerExists = false;
-        String formTableName = formConfig.getLayerName();
+        String formTableName = formConfig.getFormKey();
         Cursor cursor = gpkg.query(
                 "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",
                 new String[]{formTableName}
@@ -238,7 +238,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
     }
 
     private String createFormTableSQL(SCFormConfig formConfig){
-        final String tableName = formConfig.getLayerName();
+        final String tableName = formConfig.getFormKey();
         StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName);
         sb.append(" (id INTEGER PRIMARY KEY AUTOINCREMENT, ");
         boolean isFirst = true;
@@ -291,6 +291,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                 .flatMap(new Func1<String, Observable<SCSpatialFeature>>() {
                     @Override
                     public Observable<SCSpatialFeature> call(final String layerName) {
+                        Log.d(LOG_TAG, "Querying on layer " + layerName);
                         final SCGpkgFeatureSource featureSource = getFeatureSourceByName(layerName);
                         return gpkg.createQuery(
                                 layerName,
@@ -300,9 +301,9 @@ public class GeoPackageAdapter extends SCDataAdapter {
                                         layerName,
                                         featureSource.getPrimaryKeyName(),
                                         createRtreeSubQuery(featureSource, queryFilter.getPredicate().getBoundingBox()),
-                                        queryFilter.getLimit()
+                                        queryFilter.getLimit() / getGeoPackageContents().size()
                                 )
-                        ).flatMap(getFeatureMapper(featureSource));
+                        ).flatMap(getFeatureMapper(featureSource)).onBackpressureBuffer(queryFilter.getLimit());
                     }
                 });
     }
@@ -455,20 +456,25 @@ public class GeoPackageAdapter extends SCDataAdapter {
     private void postCreatedFeature(SCSpatialFeature feature) {
         String formId = "";
         for(SCFormConfig config : SpatialConnect.getInstance().getDataService().getDefaultStore().getFormConfigs()) {
-            if (config.getLayerName().equals(feature.getKey().getLayerId())) {
+            if (config.getFormKey().equals(feature.getKey().getLayerId())) {
                 formId = config.getId();
             }
         }
-        final String theUrl = SCConfigService.API_URL + "forms/" + formId + "/submit";
-        Log.d(LOG_TAG, "Posting created feature to " + theUrl);
-        SCNetworkService networkService = SpatialConnect.getInstance().getNetworkService();
-        String response = null;
-        try {
-            response = networkService.post(theUrl, feature.toJson());
-            Log.d(LOG_TAG, "create new feature response " + response);
+        if (formId != null) {
+            final String theUrl = SCConfigService.API_URL + "forms/" + formId + "/submit";
+            Log.d(LOG_TAG, "Posting created feature to " + theUrl);
+            SCNetworkService networkService = SpatialConnect.getInstance().getNetworkService();
+            String response = null;
+            try {
+                response = networkService.post(theUrl, feature.toJson());
+                Log.d(LOG_TAG, "create new feature response " + response);
+            }
+            catch (IOException e) {
+                Log.w(LOG_TAG, "could not create new feature on backend");
+            }
         }
-        catch (IOException e) {
-            Log.w(LOG_TAG, "could not create new feature on backend");
+        else {
+            Log.w(LOG_TAG, "Could not post feature b/c form id was null");
         }
     }
 

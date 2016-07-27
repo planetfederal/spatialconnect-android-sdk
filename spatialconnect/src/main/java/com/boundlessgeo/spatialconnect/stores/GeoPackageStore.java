@@ -32,13 +32,7 @@ import rx.Subscriber;
 public class GeoPackageStore extends SCDataStore {
 
     private static final String LOG_TAG = GeoPackageStore.class.getSimpleName();
-
-    private static String TYPE = "gpkg";
-    private static int VERSION = 1;
-
-    public static String versionKey() {
-        return TYPE + "." + VERSION;
-    }
+    public static final String TYPE = "gpkg";
 
     /**
      * Constructor for GeoPackageStore that initializes the data store adapter
@@ -51,7 +45,7 @@ public class GeoPackageStore extends SCDataStore {
         super(context, scStoreConfig);
         this.setName(scStoreConfig.getName());
         this.setType(TYPE);
-        this.setVersion(VERSION);
+        this.setVersion(scStoreConfig.getVersion());
         this.getKey();
         // setup the adapter for this store
         GeoPackageAdapter adapter = new GeoPackageAdapter(context, scStoreConfig);

@@ -1,5 +1,5 @@
 {
-  "remote": "http://efc.boundlessgeo.com",
+  "remote": "http://efc-dev.boundlessgeo.com",
   "stores":[
     {
       "store_type": "geojson",
@@ -8,6 +8,14 @@
       "isMainBundle":true,
       "id":"50402599-3ad3-439f-9c49-3c8a7579933b",
       "name":"Simple"
+    },
+    {
+      "store_type": "wfs",
+      "version": "1.1.0",
+      "uri": "http://efc-dev.boundlessgeo.com:8080/geoserver/ows",
+      "id":"af4a0dc8-2077-4cfc-a4e0-b513d8c14a71",
+      "name":"EFC Dev GeoServer",
+      "default_layers": ["baseball_team"]
     }
   ]
 }

@@ -30,7 +30,8 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
         sc.initialize(activity);
         sc.addConfig(testConfigFile);
         sc.startAllServices();
-        waitForStoreToStart(WHITEHORSE_GPKG_ID);
+        sc.getAuthService().authenticate("admin@something.com", "admin");
+        waitForStoreToStart(HAITI_GPKG_ID);
     }
 
     @AfterClass

@@ -67,7 +67,7 @@ public class SCSqliteHelper extends SQLiteOpenHelper {
             dbDirectory.mkdir();
             getWritableDatabase();
         }
-        db.setLoggingEnabled(true);
+//        db.setLoggingEnabled(true);
     }
 
     /**

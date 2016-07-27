@@ -2,8 +2,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'maven'
 
 group 'com.boundlessgeo.spatialconnect'
-
-version '0.3.0'
+version '0.4.0'
 
 def isCi = "true".equals(System.getenv("CI"))
 def preDexEnabled = "true".equals(System.getProperty("pre-dex", "true"))
@@ -72,7 +71,7 @@ dependencies {
     compile 'io.reactivex:rxandroid:1.1.0'
     compile 'io.reactivex:rxjava:1.1.0'
     compile 'commons-io:commons-io:2.4'
-    compile 'com.squareup.okhttp3:okhttp:3.2.0'
+    compile 'com.squareup.okhttp3:okhttp:3.4.1'
     compile 'com.facebook.react:react-native:+'
     compile('io.jeo:jeo:0.6') {
         exclude group: 'com.vividsolutions'

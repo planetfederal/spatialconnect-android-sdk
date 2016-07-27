@@ -32,7 +32,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.HashSet;
 
 import rx.Observable;
 import rx.Subscriber;
@@ -55,6 +54,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
 
     public Observable connect() {
         final GeoJsonAdapter adapterInstance = this;
+        Log.d(LOG_TAG, "Attempting to connect GeoJson store at " + scStoreConfig.getUri());
 
         return Observable.create(new Observable.OnSubscribe<Void>() {
             @Override
@@ -66,35 +66,52 @@ public class GeoJsonAdapter extends SCDataAdapter {
                     // first check if the GeoJson file already exists in the internal storage location specified in the uri
                     File f = new File(context.getFilesDir(), scStoreConfig.getUri());
                     if (!f.exists()) {
+                        Log.d(LOG_TAG, "File does not exist at " + scStoreConfig.getUri());
                         InputStream is = null;
                         // if the doesn't exist, then we attempt to create it by copying it from the raw
                         // resources to the destination specified in the config
                         try {
+                            Log.d(LOG_TAG, "Attempting to connect to " + scStoreConfig.getUri().split("\\.")[0]);
                             int resourceId = context.getResources().getIdentifier(
                                     scStoreConfig.getUri().split("\\.")[0], "raw", context.getPackageName()
                             );
-                            is = context.getResources().openRawResource(resourceId);
-                            FileUtils.copyInputStreamToFile(is, f);
-                            adapterInstance.connected();
-                        } catch (IOException e) {
+                            if (resourceId != 0) {
+                                is = context.getResources().openRawResource(resourceId);
+                                FileUtils.copyInputStreamToFile(is, f);
+                                adapterInstance.connected();
+                                subscriber.onCompleted();
+                            }
+                            else {
+                                String errorString =  "The config specified a store that should exist on the " +
+                                        "filesystem but it could not be located.";
+                                Log.w(LOG_TAG, errorString);
+                                subscriber.onError(new Throwable(errorString));
+                            }
+                        }
+                        catch (Exception e) {
                             Log.w(LOG_TAG, "Couldn't connect to geojson store.", e);
                             adapterInstance.disconnect();
                             e.printStackTrace();
-                        } finally {
+                            subscriber.onError(e);
+                        }
+                        finally {
                             if (is != null) {
                                 try {
                                     is.close();
-                                } catch (IOException e) {
+                                }
+                                catch (IOException e) {
                                     Log.e(LOG_TAG, "Couldn't close the stream.", e);
                                 }
                             }
                         }
-                    } else { // the file already exists so set the status to connected
+                    }
+                    else {
+                        Log.d(LOG_TAG, "File already exists so set the status to connected.");
                         adapterInstance.connected();
+                        subscriber.onCompleted();
                     }
                 }
                 // TODO: else, look for the geojson file in other locations
-                subscriber.onCompleted();
             }
         });
     }
@@ -105,7 +122,6 @@ public class GeoJsonAdapter extends SCDataAdapter {
 
     // using a GeoJSON file to queryFeature is not going to be fast
     public Observable<SCSpatialFeature> query(final SCQueryFilter filter) {
-        HashSet<SCSpatialFeature> scSpatialFeatures = new HashSet<SCSpatialFeature>();
         SCGeometryFactory factory = new SCGeometryFactory();
         // TODO: updated the Json --> SCSpatialFetures code to use InputStreams instead of Strings
         final SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(
@@ -113,17 +129,18 @@ public class GeoJsonAdapter extends SCDataAdapter {
         );
 
         return Observable.from(collection.getFeatures())
-          .filter(
-            new Func1<SCSpatialFeature, Boolean>() {
-              @Override
-              public Boolean call(SCSpatialFeature feature) {
-                if (feature instanceof SCGeometry &&
-                  ((SCGeometry) feature).getGeometry() != null &&
-                  filter.getPredicate().applyFilter((SCGeometry) feature)) {
-                  return true;
-                } else {
-                  return false;
-                }
+                .filter(
+                        new Func1<SCSpatialFeature, Boolean>() {
+                            @Override
+                            public Boolean call(SCSpatialFeature feature) {
+                                if (feature instanceof SCGeometry &&
+                                        ((SCGeometry) feature).getGeometry() != null &&
+                                        filter.getPredicate().applyFilter((SCGeometry) feature)) {
+                                    return true;
+                                }
+                                else {
+                                    return false;
+                                }
               }
             }
           ).map(new Func1<SCSpatialFeature, SCSpatialFeature>() {

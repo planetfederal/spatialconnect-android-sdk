@@ -1,11 +1,9 @@
 package com.boundlessgeo.spatialconnect.config;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class SCFormConfig {
 
     /**
@@ -15,10 +13,22 @@ public class SCFormConfig {
     private String id;
 
     /**
-     * Name of the form.
+     * Immutable name of the form.
      */
-    @JsonProperty("name")
-    private String name;
+    @JsonProperty("form_key")
+    private String formKey;
+
+    /**
+     * The label to display for the form.
+     */
+    @JsonProperty("form_label")
+    private String formLabel;
+
+    /**
+     * The version of this form.
+     */
+    @JsonProperty("version")
+    private String version;
 
     /**
      * List of the form fields that define this form.
@@ -34,20 +44,36 @@ public class SCFormConfig {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public List<SCFormField> getFields() {
         return fields;
     }
 
     public void setFields(List<SCFormField> fields) {
         this.fields = fields;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
+    }
+
+    public String getFormKey() {
+        return formKey;
+    }
+
+    public void setFormKey(String formKey) {
+        this.formKey = formKey;
+    }
+
+    public String getFormLabel() {
+        return formLabel;
+    }
+
+    public void setFormLabel(String formLabel) {
+        this.formLabel = formLabel;
     }
 
     @Override
@@ -66,14 +92,6 @@ public class SCFormConfig {
         return id != null ? id.hashCode() : 0;
     }
 
-    @JsonProperty("layer_name")
-    public String getLayerName() {
-        return name.replace(" ", "_").toLowerCase();
-    }
-
-    @JsonProperty("display_name")
-    public String getDisplayName() {
-        return name;
-    }
 }
+
 
