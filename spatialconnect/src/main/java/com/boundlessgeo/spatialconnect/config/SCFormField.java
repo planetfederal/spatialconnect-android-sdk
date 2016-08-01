@@ -245,6 +245,8 @@ public class SCFormField {
                 return "TEXT";
             case "slider":
                 return "TEXT";
+            case "photo":
+                return "TEXT";
             case "counter":
                 return "INTEGER";
             case "select":
