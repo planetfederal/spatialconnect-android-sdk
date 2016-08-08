@@ -6,7 +6,10 @@ import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
+import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
+import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 import com.squareup.sqlbrite.BriteDatabase;
 
 import org.junit.AfterClass;
@@ -15,6 +18,9 @@ import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
 
+import rx.Observable;
+import rx.Subscriber;
+import rx.functions.Action1;
 import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
@@ -31,35 +37,37 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
         sc.addConfig(testConfigFile);
         sc.startAllServices();
         sc.getAuthService().authenticate("admin@something.com", "admin");
-        waitForStoreToStart(HAITI_GPKG_ID);
+        waitForStoreToStart(RIO_GPKG_ID);
+        waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
+        sc.getNetworkService().cancelAllRequests();
         deleteDatabases();
     }
 
     @Test
     public void testGetGeoPackageContents() {
-        SCDataStore haiti = sc.getDataService().getStoreById(HAITI_GPKG_ID);
-        int contentsSize = ((GeoPackageAdapter) haiti.getAdapter()).getGeoPackageContents().size();
-        assertEquals("The Haiti gpkg should only have 3 rows in the gpkg_contents table.", 3, contentsSize);
+        SCDataStore rio = sc.getDataService().getStoreById(RIO_GPKG_ID);
+        int contentsSize = ((GeoPackageAdapter) rio.getAdapter()).getGeoPackageContents().size();
+        assertEquals("The Rio gpkg should have 27 rows in the gpkg_contents table.", 27, contentsSize);
         SCDataStore whitehorse = sc.getDataService().getStoreById(WHITEHORSE_GPKG_ID);
         contentsSize = ((GeoPackageAdapter) whitehorse.getAdapter()).getGeoPackageContents().size();
-        assertEquals("The Whitehorese gpkg should only have 1 row in the gpkg_contents table.", 1, contentsSize);
+        assertEquals("The Whitehorse gpkg should only have 1 row in the gpkg_contents table.", 1, contentsSize);
     }
 
     @Test
     public void testGetFeatureSources() {
-        SCDataStore store = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore store = sc.getDataService().getStoreById(RIO_GPKG_ID);
         int featureSourcesSize = ((GeoPackageAdapter) store.getAdapter()).getFeatureSources().size();
-        assertEquals("The Haiti gpkg should only have 3 feature tables.", 3, featureSourcesSize);
+        assertEquals("The Haiti gpkg should have 27 feature tables.", 27, featureSourcesSize);
     }
 
     @Test
     public void testRtreeIndexIsCreated() {
-        BriteDatabase db = new SCSqliteHelper(testContext, "gpkg1").db();
-        SCDataStore store = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        BriteDatabase db = new SCSqliteHelper(testContext, "Rio").db();
+        SCDataStore store = sc.getDataService().getStoreById(RIO_GPKG_ID);
         Cursor cursor = null;
         for (SCGpkgFeatureSource source : ((GeoPackageAdapter) store.getAdapter()).getFeatureSources()) {
             try {
@@ -79,11 +87,34 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
     }
 
     private static void waitForStoreToStart(final String storeId) {
+        System.out.println("Waiting for store " + storeId + " to start");
         TestSubscriber testSubscriber = new TestSubscriber();
-        sc.getDataService().storeStarted(storeId).timeout(5, TimeUnit.MINUTES).subscribe(testSubscriber);
+        Observable.create(new Observable.OnSubscribe<Void>() {
+            @Override
+            public void call(final Subscriber<? super Void> subscriber) {
+                SCDataService dataService = sc.getDataService();
+                if (dataService.getStoreById(storeId).getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+                    subscriber.onCompleted();
+                }
+                else {
+                    dataService.storeEvents.autoConnect()
+                            .timeout(5, TimeUnit.MINUTES)
+                            .subscribe(new Action1<SCStoreStatusEvent>() {
+                                @Override
+                                public void call(SCStoreStatusEvent event) {
+                                    if (event.getStoreId().equals(storeId) &&
+                                            event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+                                        subscriber.onCompleted();
+                                    }
+                                }
+                            });
+                }
+            }
+        }).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
-        testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();
+        testSubscriber.assertNoErrors();
     }
+
 
 }

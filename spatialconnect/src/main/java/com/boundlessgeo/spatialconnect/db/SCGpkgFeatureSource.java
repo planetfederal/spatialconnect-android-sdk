@@ -46,7 +46,7 @@ public class SCGpkgFeatureSource {
     /**
      * A map of the columns and their database types.
      */
-    private Map<String, SQLiteType> columns = new LinkedHashMap<String, SQLiteType>();
+    private Map<String, String> columns = new LinkedHashMap<String, String>();
 
 
     /**
@@ -61,11 +61,11 @@ public class SCGpkgFeatureSource {
         this.tableName = tableName;
     }
 
-    public Map<String, SQLiteType> getColumns() {
+    public Map<String, String> getColumns() {
         return columns;
     }
 
-    public void addColumn(String columnName, SQLiteType columnType) {
+    public void addColumn(String columnName, String columnType) {
         this.columns.put(columnName, columnType);
     }
 

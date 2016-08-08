@@ -49,11 +49,12 @@ public class GeoJsonTest extends BaseTestCase {
         sc.addConfig(testConfigFile);
         sc.startAllServices();
         sc.getAuthService().authenticate("admin@something.com", "admin");
-        waitForStoreToStart(HAITI_GPKG_ID);
+        waitForStoreToStart(RIO_GPKG_ID);
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
+        sc.getNetworkService().cancelAllRequests();
         testContext.deleteFile("nola_polling_places.json");
         deleteDatabases();
     }
