@@ -41,6 +41,11 @@ public class GeoPackage {
     private Context context;
 
     /**
+     * Determines if this GeoPackage passes
+     */
+     private boolean isValid = false;
+
+    /**
      * Creates an instance of a {@link GeoPackage}. After creating a {@link BriteDatabase} for the GeoPackage, it will
      * validate the db schema against the GeoPackage spec, then initialize the feature tables for use in SpatialConnect.
      *
@@ -51,9 +56,16 @@ public class GeoPackage {
         Log.d(LOG_TAG, "Initializing GeoPackage for " + name);
         this.name = name;
         this.context = context;
-        db = new SCSqliteHelper(context, name).db();
-        if (initializeSpatialMetadata() && validateGeoPackageSchema()) {
-            initializeFeatureSources();
+        try {
+            db = new SCSqliteHelper(context, name).db();
+            if (initializeSpatialMetadata() && validateGeoPackageSchema()) {
+                initializeFeatureSources();
+                isValid = true;
+            }
+        }
+        catch (Exception ex) {
+            Log.w(LOG_TAG, "Could not initialize GeoPackage b/c of " + ex.toString());
+            isValid = false;
         }
     }
 
@@ -65,8 +77,8 @@ public class GeoPackage {
             cursor.moveToFirst();
             return true;
         }
-        catch (SQLException ex) {
-            Log.w(LOG_TAG, String.format("GeoPackage %s could not be initialized.", name));
+        catch (Exception ex) {
+            Log.w(LOG_TAG, String.format("GeoPackage %s could not be initialized b/c %s", name, ex.toString()));
             return false;
         }
         finally {
@@ -84,8 +96,8 @@ public class GeoPackage {
             cursor.moveToFirst();
             return true;
         }
-        catch (SQLException ex) {
-            Log.w(LOG_TAG, String.format("GeoPackage %s was not valid.", name));
+        catch (Exception ex) {
+            Log.w(LOG_TAG, String.format("GeoPackage %s could not be validated b/c %s", name, ex.toString()));
             return false;
         }
         finally {
@@ -205,8 +217,6 @@ public class GeoPackage {
                 .flatMap(new Func1<GeoPackageContents, Observable<SCGpkgFeatureSource>>() {
                     @Override
                     public Observable<SCGpkgFeatureSource> call(GeoPackageContents geoPackageContents) {
-                        Log.d(LOG_TAG, "get schema for feature table " + geoPackageContents.getTableName());
-
                         // execute a query to get schema for this feature table
                         Cursor cursor = db.query(
                                 // need to use String.format b/c you can't prepare PRAGMA queries:
@@ -214,24 +224,24 @@ public class GeoPackage {
                                 String.format("PRAGMA table_info(%s)", geoPackageContents.getTableName())
                         );
                         if (cursor == null) {
-                            Log.e(LOG_TAG, "Something wrong with the query.");
+                            Log.e(LOG_TAG, "Something wrong with the PRAGMA table_info query.");
                             return Observable.empty();
                         }
                         // build a feature source from the table schema
                         SCGpkgFeatureSource source = createFeatureSource(geoPackageContents.getTableName());
                         while (cursor.moveToNext()) {
                             String columnName = SCSqliteHelper.getString(cursor, "name");
-                            if (SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("Geometry")) {
+                            if (SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("GEOMETRY")
+                                    || SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("POINT")
+                                    || SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("LINESTRING")
+                                    || SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("POLYGON")) {
                                 source.setGeomColumnName(columnName);
                             }
                             else if (SCSqliteHelper.getInt(cursor, "pk") == 1) {
                                 source.setPrimaryKeyName(columnName);
                             }
                             else {
-                                source.addColumn(
-                                        columnName,
-                                        SQLiteType.valueOf(SCSqliteHelper.getString(cursor, "type").toUpperCase())
-                                );
+                                source.addColumn(columnName, SCSqliteHelper.getString(cursor, "type"));
                             }
                         }
                         return Observable.just(source);
@@ -313,6 +323,10 @@ public class GeoPackage {
 
         return name.equals(that.name);
 
+    }
+
+    public boolean isValid() {
+        return isValid;
     }
 
     @Override

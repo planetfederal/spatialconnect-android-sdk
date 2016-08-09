@@ -27,8 +27,10 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.runner.RunWith;
 
-
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 @RunWith(AndroidJUnit4.class)
 public abstract class BaseTestCase {
@@ -48,6 +50,7 @@ public abstract class BaseTestCase {
      */
     protected static File testConfigFile;
 
+    protected final static String RIO_GPKG_ID = "5729cac9-cf37-476a-997d-f9c687b4df67";
     protected final static String HAITI_GPKG_ID = "f6dcc750-1349-46b9-a324-0223764d46d1";
     protected final static String WHITEHORSE_GPKG_ID = "fad33ae1-f529-4c79-affc-befc37c104ae";
     protected final static String GEOJSON_STORE_ID = "50402599-3ad3-439f-9c49-3c8a7579933b";
@@ -66,11 +69,25 @@ public abstract class BaseTestCase {
                 "com.boundlessgeo.spatialconnect.test",
                 Context.CONTEXT_IGNORE_SECURITY
         );
+        try {
+            testConfigFile = File.createTempFile("config.scfg", null, activity.getCacheDir());
+            // read test scconfig.json file from test resources directory
+            InputStream is = testContext.getResources().openRawResource(R.raw.scconfig);
+            FileOutputStream fos = new FileOutputStream(testConfigFile);
+            byte[] data = new byte[is.available()];
+            is.read(data);
+            fos.write(data);
+            is.close();
+            fos.close();
+        } catch (IOException ex) {
+            System.exit(0);
+        }
     }
 
    protected static void deleteDatabases() {
-       testContext.deleteDatabase("gpkg1");
-       testContext.deleteDatabase("gpkg2");
+       testContext.deleteDatabase("Rio");
+       testContext.deleteDatabase("Haiti");
+       testContext.deleteDatabase("Whitehorse");
        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
        testContext.deleteDatabase(DefaultStore.NAME);
    }

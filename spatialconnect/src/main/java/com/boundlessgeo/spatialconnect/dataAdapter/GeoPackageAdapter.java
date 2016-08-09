@@ -27,7 +27,6 @@ import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.db.GeoPackageContents;
 import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
-import com.boundlessgeo.spatialconnect.db.SQLiteType;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -56,17 +55,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import okhttp3.Interceptor;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
 import okhttp3.Response;
-import okhttp3.ResponseBody;
-import okio.Buffer;
-import okio.BufferedSource;
-import okio.ForwardingSource;
-import okio.Okio;
-import okio.Source;
 import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Action1;
@@ -114,8 +103,15 @@ public class GeoPackageAdapter extends SCDataAdapter {
                     Log.d(LOG_TAG, "GeoPackage " + scStoreConfig.getName() + " already exists.  Not downloading.");
                     // create new GeoPackage for the file that's already on disk
                     gpkg = new GeoPackage(context, scStoreConfig.getName());
-                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
-                    subscriber.onCompleted();
+                    if (gpkg.isValid()) {
+                        adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
+                        subscriber.onCompleted();
+                    }
+                    else {
+                        Log.w(LOG_TAG, "GeoPackage was not valid.");
+                        adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+                        subscriber.onError(new Throwable("GeoPackage was not valid."));
+                    }
                 }
                 else {
                     // download geopackage and store it locally
@@ -129,17 +125,26 @@ public class GeoPackageAdapter extends SCDataAdapter {
                                         @Override
                                         public void call(Response response) {
                                             if (!response.isSuccessful()) {
+                                                adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
                                                 subscriber.onError(new IOException("Unexpected code " + response));
                                             }
                                             try {
                                                 // save the file to the databases directory
                                                 saveFileToFilesystem(response.body().byteStream());
-                                                // create new GeoPackage now that we've saved the file
+                                                // create new GeoPackage instance now that we've saved the file
                                                 gpkg = new GeoPackage(context, scStoreConfig.getName());
-                                                adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
-                                                subscriber.onCompleted();
+                                                if (gpkg.isValid()) {
+                                                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
+                                                    subscriber.onCompleted();
+                                                }
+                                                else {
+                                                    Log.w(LOG_TAG, "GeoPackage was not valid.");
+                                                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+                                                    subscriber.onError(new Throwable("GeoPackage was not valid."));
+                                                }
                                             }
                                             catch (IOException e) {
+                                                adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
                                                 subscriber.onError(e);
                                             }
                                             finally {
@@ -156,8 +161,15 @@ public class GeoPackageAdapter extends SCDataAdapter {
                     }
                     else if (scStoreConfig.getUri().startsWith("file")) {
                         gpkg = new GeoPackage(context, scStoreConfig.getName());
-                        adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
-                        subscriber.onCompleted();
+                        if (gpkg.isValid()) {
+                            adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
+                            subscriber.onCompleted();
+                        }
+                        else {
+                            Log.w(LOG_TAG, "GeoPackage was not valid.");
+                            adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+                            subscriber.onError(new Throwable("GeoPackage was not valid."));
+                        }
                     }
                 }
             }
@@ -276,11 +288,13 @@ public class GeoPackageAdapter extends SCDataAdapter {
      */
     public Observable<SCSpatialFeature> query(final SCQueryFilter queryFilter) {
         final List<SCGpkgFeatureSource> sources = getFeatureSources();
-        // if there are no layer names supplied in the query filter, then search on all tables
         List<String> layerNames = queryFilter.getLayerIds();
+        // if there are no layer names supplied in the query filter, then search on all layers (aka tables)
         if (layerNames.size() == 0) {
             layerNames = getFeatureSourceNames();
         }
+        final List<String> finalLayerNames = layerNames;
+        final int queryLimit = queryFilter.getLimit() / finalLayerNames.size();
         return Observable.from(layerNames)
                 .filter(new Func1<String, Boolean>() {
                     @Override
@@ -301,7 +315,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                                         layerName,
                                         featureSource.getPrimaryKeyName(),
                                         createRtreeSubQuery(featureSource, queryFilter.getPredicate().getBoundingBox()),
-                                        queryFilter.getLimit() / getGeoPackageContents().size()
+                                        queryLimit
                                 )
                         ).flatMap(getFeatureMapper(featureSource)).onBackpressureBuffer(queryFilter.getLimit());
                     }
@@ -369,32 +383,38 @@ public class GeoPackageAdapter extends SCDataAdapter {
                         feature.setStoreId(scStoreConfig.getUniqueID());
                         feature.setLayerId(source.getTableName());
                         feature.setId(SCSqliteHelper.getString(cursor, source.getPrimaryKeyName()));
-                        for (Map.Entry<String, SQLiteType> column : source.getColumns().entrySet()) {
-                            switch (column.getValue()) {
-                                case BLOB:
-                                    feature.getProperties().put(
-                                            column.getKey(),
-                                            SCSqliteHelper.getBlob(cursor, column.getKey())
-                                    );
-                                    break;
-                                case INTEGER:
-                                    feature.getProperties().put(
-                                            column.getKey(),
-                                            SCSqliteHelper.getInt(cursor, column.getKey())
-                                    );
-                                    break;
-                                case REAL:
-                                    feature.getProperties().put(
-                                            column.getKey(),
-                                            SCSqliteHelper.getLong(cursor, column.getKey())
-                                    );
-                                    break;
-                                case TEXT:
-                                    feature.getProperties().put(
-                                            column.getKey(),
-                                            SCSqliteHelper.getString(cursor, column.getKey())
-                                    );
-                                    break;
+                        for (Map.Entry<String, String> column : source.getColumns().entrySet()) {
+                            if (column.getValue().equalsIgnoreCase("BLOB")
+                                    || column.getValue().equalsIgnoreCase("GEOMETRY")
+                                    || column.getValue().equalsIgnoreCase("POINT")
+                                    || column.getValue().equalsIgnoreCase("LINESTRING")
+                                    || column.getValue().equalsIgnoreCase("POLYGON")) {
+                                feature.getProperties().put(
+                                        column.getKey(),
+                                        SCSqliteHelper.getBlob(cursor, column.getKey())
+                                );
+                            }
+                            else if (column.getValue().startsWith("INTEGER")) {
+                                feature.getProperties().put(
+                                        column.getKey(),
+                                        SCSqliteHelper.getInt(cursor, column.getKey())
+                                );
+                            }
+                            else if (column.getValue().startsWith("REAL")) {
+                                feature.getProperties().put(
+                                        column.getKey(),
+                                        SCSqliteHelper.getLong(cursor, column.getKey())
+                                );
+                            }
+                            else if (column.getValue().startsWith("TEXT")) {
+                                feature.getProperties().put(
+                                        column.getKey(),
+                                        SCSqliteHelper.getString(cursor, column.getKey())
+                                );
+                            }
+                            else {
+                                Log.w(LOG_TAG, "The column type " + column.getValue() + " did not match any supported" +
+                                        " column type so it wasn't added to the feature.");
                             }
                         }
                         return feature;
@@ -590,41 +610,13 @@ public class GeoPackageAdapter extends SCDataAdapter {
      */
     public Observable<Response> downloadGeoPackage(URL theUrl) {
         Log.d(LOG_TAG, "Downloading GeoPackage from " + theUrl.toString());
-
-        Request request = new Request.Builder()
-                .url(theUrl)
-                .build();
-
-        // TODO: should this be an http utility or part of the network service instead?
-        final ProgressListener progressListener = new ProgressListener() {
-            @Override
-            public void update(long bytesRead, long contentLength, boolean done) {
-                // TODO: consider wrapping the  update in an observable that you can throttle
-                // something like this: https://groups.google.com/forum/#!msg/rxjava/aqDM7Eq3zT8/PCF_7pdlGgAJ
-//                Log.v(LOG_TAG, String.format("%d%% done\n", (100 * bytesRead) / contentLength));
-            }
-        };
-
-        OkHttpClient client = new OkHttpClient.Builder()
-                .addNetworkInterceptor(new Interceptor() {
-                    @Override
-                    public Response intercept(Chain chain) throws IOException {
-                        Response originalResponse = chain.proceed(chain.request());
-                        return originalResponse.newBuilder()
-                                .body(new ProgressResponseBody(originalResponse.body(), progressListener))
-                                .build();
-                    }
-                })
-                .build();
-
         try {
-            return Observable.just(client.newCall(request).execute());
+            return Observable.just(SpatialConnect.getInstance().getNetworkService().getResponse(theUrl.toString()));
         }
         catch (IOException e) {
             Log.e(LOG_TAG, "Could not download GeoPackage from " + theUrl.toString());
             return Observable.error(e);
         }
-
     }
 
     /**
@@ -637,19 +629,27 @@ public class GeoPackageAdapter extends SCDataAdapter {
         ContentValues values = new ContentValues();
         String tableName = scSpatialFeature.getKey().getLayerId();
         SCGpkgFeatureSource featureSource = getFeatureSourceByName(tableName);
-        Map<String, SQLiteType> columns = featureSource.getColumns();
+        Map<String, String> columns = featureSource.getColumns();
         for (Map.Entry<String, Object> prop : scSpatialFeature.getProperties().entrySet()) {
-            if (columns.get(prop.getKey()).equals(SQLiteType.TEXT)) {
+            String columnType = columns.get(prop.getKey());
+            if (columnType.startsWith("TEXT")) {
                 values.put(prop.getKey(), (String) prop.getValue());
             }
-            else if (columns.get(prop.getKey()).equals(SQLiteType.BLOB)) {
+            else if (columnType.startsWith("BLOB")
+                    || columnType.equalsIgnoreCase("GEOMETRY")
+                    || columnType.equalsIgnoreCase("POINT")
+                    || columnType.equalsIgnoreCase("LINESTRING")
+                    || columnType.equalsIgnoreCase("POLYGON")) {
                 values.put(prop.getKey(), (byte[]) prop.getValue());
             }
-            else if (columns.get(prop.getKey()).equals(SQLiteType.INTEGER)) {
+            else if (columnType.startsWith("INTEGER")) {
                 values.put(prop.getKey(), (Integer) prop.getValue());
             }
-            else if (columns.get(prop.getKey()).equals(SQLiteType.REAL)) {
+            else if (columnType.startsWith("REAL")) {
                 values.put(prop.getKey(), (Double) prop.getValue());
+            }
+            else {
+                Log.w(LOG_TAG, "The column type " + columnType + " did not match any supported column type.");
             }
         }
         return values;
@@ -699,56 +699,6 @@ public class GeoPackageAdapter extends SCDataAdapter {
         fos.close();
         Log.d(LOG_TAG, "Saved file to " + dbFile.getPath());
         Log.d(LOG_TAG, "Size of file in bytes " + dbFile.length());
-    }
-
-    // from https://github.com/square/okhttp/blob/master/samples/guide/src/main/java/okhttp3/recipes/Progress.java
-    private static class ProgressResponseBody extends ResponseBody {
-
-        private final ResponseBody responseBody;
-        private final ProgressListener progressListener;
-        private BufferedSource bufferedSource;
-
-        public ProgressResponseBody(ResponseBody responseBody, ProgressListener progressListener) {
-            this.responseBody = responseBody;
-            this.progressListener = progressListener;
-        }
-
-        @Override
-        public MediaType contentType() {
-            return responseBody.contentType();
-        }
-
-        @Override
-        public long contentLength() {
-            return responseBody.contentLength();
-        }
-
-        @Override
-        public BufferedSource source() {
-            if (bufferedSource == null) {
-                bufferedSource = Okio.buffer(source(responseBody.source()));
-            }
-            return bufferedSource;
-        }
-
-        private Source source(Source source) {
-            return new ForwardingSource(source) {
-                long totalBytesRead = 0L;
-
-                @Override
-                public long read(Buffer sink, long byteCount) throws IOException {
-                    long bytesRead = super.read(sink, byteCount);
-                    // read() returns the number of bytes read, or -1 if this source is exhausted.
-                    totalBytesRead += bytesRead != -1 ? bytesRead : 0;
-                    progressListener.update(totalBytesRead, responseBody.contentLength(), bytesRead == -1);
-                    return bytesRead;
-                }
-            };
-        }
-    }
-
-    interface ProgressListener {
-        void update(long bytesRead, long contentLength, boolean done);
     }
 
 }

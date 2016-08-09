@@ -1,5 +1,7 @@
 package com.boundlessgeo.spatialconnect.test;
 
+import android.content.Context;
+
 import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 
 import org.junit.Before;
@@ -110,7 +112,7 @@ public class SCKVPStoreTest extends BaseTestCase {
     public void testByteArrayDeserialize() throws IOException {
         SCKVPStore SCKVPStore = new SCKVPStore(testContext);
         InputStream is = testContext.getResources().openRawResource(R.raw.boundless_logo);
-        FileOutputStream fos = new FileOutputStream(testConfigFile);
+        FileOutputStream fos = testContext.openFileOutput("someImg", Context.MODE_PRIVATE);
         byte[] data = new byte[is.available()];
         is.read(data);
         fos.write(data);

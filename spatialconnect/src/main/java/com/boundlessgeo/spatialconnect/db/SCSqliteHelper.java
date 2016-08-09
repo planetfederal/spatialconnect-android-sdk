@@ -22,6 +22,7 @@ import android.util.Log;
 import com.squareup.sqlbrite.BriteDatabase;
 import com.squareup.sqlbrite.SqlBrite;
 
+import org.sqlite.database.DatabaseErrorHandler;
 import org.sqlite.database.sqlite.SQLiteDatabase;
 import org.sqlite.database.sqlite.SQLiteOpenHelper;
 
@@ -32,7 +33,6 @@ import rx.schedulers.Schedulers;
 /**
  * SCSqliteHelper is used to expose the custom build of SQLite embedded with the spatialconnect-android-sdk.  It
  * provides a {@link BriteDatabase} object which can be used to provide observable sql queries.
- *
  */
 public class SCSqliteHelper extends SQLiteOpenHelper {
 
@@ -59,7 +59,12 @@ public class SCSqliteHelper extends SQLiteOpenHelper {
      */
     public SCSqliteHelper(Context context, String databaseName) {
         // http://stackoverflow.com/questions/26642797/android-custom-sqlite-build-cannot-open-database
-        super(context, context.getDatabasePath(databaseName).getPath(), null, DATABASE_VERSION);
+        super(context, context.getDatabasePath(databaseName).getPath(), null, DATABASE_VERSION, new DatabaseErrorHandler() {
+            @Override
+            public void onCorruption(SQLiteDatabase dbObj) {
+                throw new RuntimeException("Database is corrupted!  Cannot create SCSqliteHelper.");
+            }
+        });
         File dbDirectory = context.getDatabasePath(databaseName).getParentFile();
         if (!dbDirectory.exists()) {
             // force initialization if database directory doesn't exist
@@ -105,7 +110,7 @@ public class SCSqliteHelper extends SQLiteOpenHelper {
      * disk with the same DATABASE_NAME, but the DATABASE_VERSION is different than the version of the database that
      * exists on disk.
      *
-     * @param db The database.
+     * @param db         The database.
      * @param oldVersion The old database version.
      * @param newVersion The new database version.
      */

@@ -18,12 +18,19 @@ import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 
+import org.junit.AfterClass;
 import org.junit.Test;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
 public class ServicesTest extends BaseTestCase {
+
+    @AfterClass
+    public static void tearDown() throws Exception {
+        SpatialConnect.getInstance().getNetworkService().cancelAllRequests();
+        deleteDatabases();
+    }
 
     @Test
     public void testDataServiceInitialization() {

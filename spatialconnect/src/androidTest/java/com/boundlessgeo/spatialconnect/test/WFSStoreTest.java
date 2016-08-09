@@ -35,6 +35,7 @@ public class WFSStoreTest extends BaseTestCase {
 
     @AfterClass
     public static void tearDown() throws Exception {
+        sc.getNetworkService().cancelAllRequests();
         deleteDatabases();
     }
 
