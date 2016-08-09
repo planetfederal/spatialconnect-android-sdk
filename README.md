@@ -1,0 +1,1 @@
+# spatialconnect-schema
