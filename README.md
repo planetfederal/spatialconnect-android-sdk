@@ -15,6 +15,6 @@ protoc SCMessage.proto --java_out="./"
 ## Actions
 To build the actions run
 ```
-node index.js
+node index.js [objc|java]
 ```
 It will produce Commands.java and Commands.h. 
