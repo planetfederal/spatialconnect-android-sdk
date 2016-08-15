@@ -328,27 +328,18 @@ public class SCDataService extends SCService {
     }
 
     public Observable<SCSpatialFeature> queryAllStores(final SCQueryFilter filter) {
-        return
-                Observable
-                        .just(filter)
-                        .flatMap(new Func1<SCQueryFilter, Observable<SCSpatialFeature>>() {
-                            @Override
-                            public Observable<SCSpatialFeature> call(SCQueryFilter filter) {
-                                List<SCDataStore> runningStores = getActiveStores();
-
-                                List<Observable<SCSpatialFeature>> queryResults = new ArrayList<>();
-                                for (SCDataStore ds : runningStores) {
-                                    SCSpatialStore sp = ds;
-                                    Log.d(LOG_TAG, "Querying store " + ds.getName());
-                                    queryResults.add(sp.query(filter));
-                                }
-                                return Observable.merge(queryResults);
-                            }
-                        });
+        return Observable.from(getActiveStores())
+                .flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
+                    @Override
+                    public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
+                        Log.d(LOG_TAG, "Querying store " + scDataStore.getName());
+                        return scDataStore.query(filter);
+                    }
+                });
     }
 
     public DefaultStore getDefaultStore() {
-        for (SCDataStore store : stores.values()){
+        for (SCDataStore store : stores.values()) {
             if (store.getName().equals(DefaultStore.NAME)) {
                 return (DefaultStore) store;
             }

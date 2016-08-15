@@ -37,7 +37,6 @@ import java.util.UUID;
 public abstract class SCDataStore implements SCSpatialStore {
 
     private SCDataAdapter adapter;
-    // TODO: should we use the SCStoreConfig object instead of the store id?
     private String storeId;
     private String name;
     private String version;

@@ -48,8 +48,7 @@ public class GeoPackageStore extends SCDataStore {
         this.setVersion(scStoreConfig.getVersion());
         this.getKey();
         // setup the adapter for this store
-        GeoPackageAdapter adapter = new GeoPackageAdapter(context, scStoreConfig);
-        this.setAdapter(adapter);
+        this.setAdapter(new GeoPackageAdapter(context, scStoreConfig));
     }
 
     @Override
