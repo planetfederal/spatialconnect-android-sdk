@@ -46,7 +46,7 @@ public class SCGpkgFeatureSource {
     /**
      * A map of the columns and their database types.
      */
-    private Map<String, String> columns = new LinkedHashMap<String, String>();
+    private Map<String, String> columns = new LinkedHashMap<>();
 
 
     /**

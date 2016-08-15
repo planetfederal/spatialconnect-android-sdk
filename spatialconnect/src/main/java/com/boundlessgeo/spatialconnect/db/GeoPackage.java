@@ -9,7 +9,11 @@ import com.squareup.sqlbrite.QueryObservable;
 
 import org.sqlite.database.SQLException;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import rx.Observable;
 import rx.functions.Action1;
@@ -43,7 +47,18 @@ public class GeoPackage {
     /**
      * Determines if this GeoPackage passes
      */
-     private boolean isValid = false;
+    private boolean isValid = false;
+
+    /**
+     * A set of the {@link GeoPackageContents}
+     */
+    private HashSet<GeoPackageContents> contents = new HashSet<>();
+
+    /**
+     * A map of the {@link SCGpkgFeatureSource} which represent vector feature tables in a GeoPackage.  The key is the
+     * name of the table which is unique in a GeoPackage
+     */
+    private HashMap<String, SCGpkgFeatureSource> featureSources = new HashMap();
 
     /**
      * Creates an instance of a {@link GeoPackage}. After creating a {@link BriteDatabase} for the GeoPackage, it will
@@ -112,7 +127,7 @@ public class GeoPackage {
      * update with triggers) or create them if needed.
      */
     private void initializeFeatureSources() {
-        for (SCGpkgFeatureSource source: getFeatureSources().toBlocking().first()) {
+        for (SCGpkgFeatureSource source: getFeatureSources().values()) {
             // check if the spatial index tables exist for this feature table
             Cursor cursor = db.query(
                     "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",
@@ -158,7 +173,7 @@ public class GeoPackage {
      *
      * @return observable stream of the list of {@link GeoPackageContents}
      */
-    public Observable<List<GeoPackageContents>> getGeoPackageContents() {
+    public Observable<List<GeoPackageContents>> getGpkgContents() {
         return db.createQuery("gpkg_contents", "SELECT * FROM gpkg_contents")
                 .mapToList(new Func1<Cursor, GeoPackageContents>() {
                     @Override
@@ -203,11 +218,10 @@ public class GeoPackage {
     /**
      * Returns an observable of a List of {@link SCGpkgFeatureSource}s, one for each feature table in the GeoPackage.
      *
-     * @return observable stream of the list of {@link SCGpkgFeatureSource}
+     * @return observable stream of the list of feature tables as {@link SCGpkgFeatureSource}s
      */
-    public Observable<List<SCGpkgFeatureSource>> getFeatureSources() {
-        List<GeoPackageContents> contents = getGeoPackageContents().toBlocking().first();
-        return Observable.from(contents)
+    public Observable<List<SCGpkgFeatureSource>> getFeatureTables() {
+        return Observable.from(getGeoPackageContents())
                 .filter(new Func1<GeoPackageContents, Boolean>() {
                     @Override
                     public Boolean call(GeoPackageContents geoPackageContents) {
@@ -217,18 +231,19 @@ public class GeoPackage {
                 .flatMap(new Func1<GeoPackageContents, Observable<SCGpkgFeatureSource>>() {
                     @Override
                     public Observable<SCGpkgFeatureSource> call(GeoPackageContents geoPackageContents) {
+                        String tableName = geoPackageContents.getTableName();
                         // execute a query to get schema for this feature table
                         Cursor cursor = db.query(
                                 // need to use String.format b/c you can't prepare PRAGMA queries:
                                 // http://stackoverflow.com/questions/2389813/cant-prepare-pragma-queries-on-android
-                                String.format("PRAGMA table_info(%s)", geoPackageContents.getTableName())
+                                String.format("PRAGMA table_info(%s)", tableName)
                         );
                         if (cursor == null) {
                             Log.e(LOG_TAG, "Something wrong with the PRAGMA table_info query.");
                             return Observable.empty();
                         }
                         // build a feature source from the table schema
-                        SCGpkgFeatureSource source = createFeatureSource(geoPackageContents.getTableName());
+                        SCGpkgFeatureSource source = createFeatureSource(tableName);
                         while (cursor.moveToNext()) {
                             String columnName = SCSqliteHelper.getString(cursor, "name");
                             if (SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("GEOMETRY")
@@ -253,6 +268,41 @@ public class GeoPackage {
     // helper method to create a SCGpkgFeatureSource for this GeoPackage.
     private SCGpkgFeatureSource createFeatureSource(String tableName) {
         return new SCGpkgFeatureSource(this, tableName);
+    }
+
+    public Set<GeoPackageContents> getGeoPackageContents() {
+        if (this.contents.size() == 0) {
+            refreshGeoPackageContents();
+        }
+        return this.contents;
+    }
+
+    public Map<String, SCGpkgFeatureSource> getFeatureSources() {
+        if (this.featureSources.size() == 0) {
+            refreshFeatureSources();
+        }
+        return this.featureSources;
+    }
+
+    public void refreshGeoPackageContents() {
+        List<GeoPackageContents> contents = getGpkgContents().toBlocking().first();
+        this.contents = new HashSet<>(contents);
+    }
+
+    public void refreshFeatureSources() {
+        refreshGeoPackageContents();
+        List<SCGpkgFeatureSource> featureTables = getFeatureTables().toBlocking().first();
+        for (SCGpkgFeatureSource source : featureTables) {
+            this.featureSources.put(source.getTableName(), source);
+        }
+    }
+
+    public SCGpkgFeatureSource getFeatureSourceByName(String name) {
+        return this.featureSources.get(name);
+    }
+
+    public Set<String> getFeatureSourceNames() {
+        return this.featureSources.keySet();
     }
 
     // TODO: getTileSources

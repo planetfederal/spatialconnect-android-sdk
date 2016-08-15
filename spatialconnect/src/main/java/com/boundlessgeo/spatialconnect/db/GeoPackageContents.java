@@ -56,4 +56,20 @@ public class GeoPackageContents {
                 ", srsId=" + srsId +
                 '}';
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        GeoPackageContents that = (GeoPackageContents) o;
+
+        return tableName.equals(that.tableName);
+
+    }
+
+    @Override
+    public int hashCode() {
+        return tableName.hashCode();
+    }
 }

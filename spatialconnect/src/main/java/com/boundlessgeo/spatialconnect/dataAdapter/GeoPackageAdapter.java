@@ -54,6 +54,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import okhttp3.Response;
 import rx.Observable;
@@ -207,6 +208,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
             }
             finally {
                 tx.end();
+                gpkg.refreshFeatureSources();
                 if (cursor != null) {
                     cursor.close();
                 }
@@ -247,6 +249,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
         gpkg.query("DROP TABLE " + tableName);
         tx.markSuccessful();
         tx.end();
+        gpkg.refreshFeatureSources();
     }
 
     private String createFormTableSQL(SCFormConfig formConfig){
@@ -287,39 +290,43 @@ public class GeoPackageAdapter extends SCDataAdapter {
      * @return
      */
     public Observable<SCSpatialFeature> query(final SCQueryFilter queryFilter) {
-        final List<SCGpkgFeatureSource> sources = getFeatureSources();
-        List<String> layerNames = queryFilter.getLayerIds();
-        // if there are no layer names supplied in the query filter, then search on all layers (aka tables)
-        if (layerNames.size() == 0) {
-            layerNames = getFeatureSourceNames();
+        final Map<String, SCGpkgFeatureSource> layers = gpkg.getFeatureSources();
+
+        if (layers.size() > 0) {  // ensure only layers with feature sources are queried
+            // if there are no layer names supplied in the query filter, then search on all feature sources
+            final List<String> featureTableNames = queryFilter.getLayerIds().size() > 0 ?
+                    queryFilter.getLayerIds() :
+                    new ArrayList<>(layers.keySet());
+            final int queryLimit = queryFilter.getLimit() / featureTableNames.size();
+            return Observable.from(featureTableNames)
+                    .filter(new Func1<String, Boolean>() {
+                        @Override
+                        public Boolean call(String featureTableName) {
+                            return layers.containsKey(featureTableName);
+                        }
+                    })
+                    .flatMap(new Func1<String, Observable<SCSpatialFeature>>() {
+                        @Override
+                        public Observable<SCSpatialFeature> call(final String layerName) {
+                            final SCGpkgFeatureSource featureSource = gpkg.getFeatureSourceByName(layerName);
+                            return gpkg.createQuery(
+                                    layerName,
+                                    String.format(
+                                            "SELECT %s FROM %s WHERE %s IN (%s) LIMIT %d",
+                                            getSelectColumnsString(featureSource),
+                                            layerName,
+                                            featureSource.getPrimaryKeyName(),
+                                            createRtreeSubQuery(featureSource, queryFilter.getPredicate().getBoundingBox()),
+                                            queryLimit
+                                    )
+                            ).flatMap(getFeatureMapper(featureSource)).onBackpressureBuffer(queryFilter.getLimit());
+                        }
+                    });
         }
-        final List<String> finalLayerNames = layerNames;
-        final int queryLimit = queryFilter.getLimit() / finalLayerNames.size();
-        return Observable.from(layerNames)
-                .filter(new Func1<String, Boolean>() {
-                    @Override
-                    public Boolean call(String layer) {
-                        return sources.contains(getFeatureSourceByName(layer));
-                    }
-                })
-                .flatMap(new Func1<String, Observable<SCSpatialFeature>>() {
-                    @Override
-                    public Observable<SCSpatialFeature> call(final String layerName) {
-                        Log.d(LOG_TAG, "Querying on layer " + layerName);
-                        final SCGpkgFeatureSource featureSource = getFeatureSourceByName(layerName);
-                        return gpkg.createQuery(
-                                layerName,
-                                String.format(
-                                        "SELECT %s FROM %s WHERE %s IN (%s) LIMIT %d",
-                                        getSelectColumnsString(featureSource),
-                                        layerName,
-                                        featureSource.getPrimaryKeyName(),
-                                        createRtreeSubQuery(featureSource, queryFilter.getPredicate().getBoundingBox()),
-                                        queryLimit
-                                )
-                        ).flatMap(getFeatureMapper(featureSource)).onBackpressureBuffer(queryFilter.getLimit());
-                    }
-                });
+        else {
+            // can't query on geopackages with no features
+            return Observable.empty();
+        }
     }
 
     /**
@@ -330,7 +337,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
      */
     public Observable<SCSpatialFeature> queryById(final SCKeyTuple keyTuple) {
         final String tableName = keyTuple.getLayerId();
-        final SCGpkgFeatureSource featureSource = getFeatureSourceByName(tableName);
+        final SCGpkgFeatureSource featureSource = gpkg.getFeatureSourceByName(tableName);
         if (featureSource == null) {
             return Observable.error(
                     new SCDataStoreException(
@@ -432,7 +439,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
      */
     public Observable<SCSpatialFeature> create(final SCSpatialFeature scSpatialFeature) {
         final String tableName = scSpatialFeature.getKey().getLayerId();
-        final SCGpkgFeatureSource featureSource = getFeatureSourceByName(tableName);
+        final SCGpkgFeatureSource featureSource = gpkg.getFeatureSourceByName(tableName);
         if (featureSource == null) {
             return Observable.error(
                     new SCDataStoreException(
@@ -506,7 +513,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
      */
     public Observable<SCSpatialFeature> update(final SCSpatialFeature scSpatialFeature) {
         final String tableName = scSpatialFeature.getKey().getLayerId();
-        final SCGpkgFeatureSource featureSource = getFeatureSourceByName(tableName);
+        final SCGpkgFeatureSource featureSource = gpkg.getFeatureSourceByName(tableName);
         if (featureSource == null) {
             return Observable.error(
                     new SCDataStoreException(
@@ -548,7 +555,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
      */
     public Observable<Void> delete(final SCKeyTuple keyTuple) {
         final String tableName = keyTuple.getLayerId();
-        final SCGpkgFeatureSource featureSource = getFeatureSourceByName(tableName);
+        final SCGpkgFeatureSource featureSource = gpkg.getFeatureSourceByName(tableName);
         if (featureSource == null) {
             return Observable.error(
                     new SCDataStoreException(
@@ -584,21 +591,12 @@ public class GeoPackageAdapter extends SCDataAdapter {
         gpkg.close();
     }
 
-    public List<GeoPackageContents> getGeoPackageContents() {
-        return gpkg.getGeoPackageContents().toBlocking().first();
+    public Set<GeoPackageContents> getGeoPackageContents() {
+        return gpkg.getGeoPackageContents();
     }
 
-    public List<SCGpkgFeatureSource> getFeatureSources() {
-        return gpkg.getFeatureSources().toBlocking().first();
-    }
-
-    private List<String> getFeatureSourceNames() {
-        List<SCGpkgFeatureSource> featureSources = gpkg.getFeatureSources().toBlocking().first();
-        ArrayList<String> names = new ArrayList<>(featureSources.size());
-        for (SCGpkgFeatureSource source : featureSources) {
-            names.add(source.getTableName());
-        }
-        return names;
+    public Map<String, SCGpkgFeatureSource> getFeatureSources() {
+        return gpkg.getFeatureSources();
     }
 
 
@@ -628,7 +626,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
     private ContentValues getContentValues(SCSpatialFeature scSpatialFeature) {
         ContentValues values = new ContentValues();
         String tableName = scSpatialFeature.getKey().getLayerId();
-        SCGpkgFeatureSource featureSource = getFeatureSourceByName(tableName);
+        SCGpkgFeatureSource featureSource = gpkg.getFeatureSourceByName(tableName);
         Map<String, String> columns = featureSource.getColumns();
         for (Map.Entry<String, Object> prop : scSpatialFeature.getProperties().entrySet()) {
             String columnType = columns.get(prop.getKey());
@@ -676,16 +674,6 @@ public class GeoPackageAdapter extends SCDataAdapter {
         sb.append("ST_AsBinary(").append(geomColumnName).append(") AS ").append(geomColumnName);
         return sb.toString();
 
-    }
-
-    private SCGpkgFeatureSource getFeatureSourceByName(String name) {
-        SCGpkgFeatureSource scGpkgFeatureSource = null;
-        for (SCGpkgFeatureSource source : getFeatureSources()) {
-            if (source.getTableName().equals(name)) {
-                scGpkgFeatureSource = source;
-            }
-        }
-        return scGpkgFeatureSource;
     }
 
     private void saveFileToFilesystem(InputStream is) throws IOException {

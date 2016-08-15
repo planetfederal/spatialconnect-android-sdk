@@ -69,7 +69,7 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
         BriteDatabase db = new SCSqliteHelper(testContext, "Rio").db();
         SCDataStore store = sc.getDataService().getStoreById(RIO_GPKG_ID);
         Cursor cursor = null;
-        for (SCGpkgFeatureSource source : ((GeoPackageAdapter) store.getAdapter()).getFeatureSources()) {
+        for (SCGpkgFeatureSource source : ((GeoPackageAdapter) store.getAdapter()).getFeatureSources().values()) {
             try {
                  cursor = db.query(
                         "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",

@@ -66,19 +66,18 @@ public class WFSStore extends SCDataStore {
 
     @Override
     public Observable<SCSpatialFeature> query(SCQueryFilter scFilter) {
-        // set default layername if none specified
-        if (scFilter.getLayerIds().size() == 0) {
-            for (String layer : getDefaultLayers()) {
-                scFilter.addLayerId(layer);
-            }
-        }
+        // if there are no layer names supplied in the query filter, then search only on the default layers
+        final List<String> layerNames = scFilter.getLayerIds().size() > 0 ?
+                scFilter.getLayerIds() :
+                getDefaultLayers();
+
         // TODO: when implmenting version 2.0.0, "maxFeatures" has been changed to "count"
         // see: http://docs.geoserver.org/latest/en/user/services/wfs/reference.html#getfeature
         String getFeatureUrl = String.format("%s?service=WFS&version=%s&request=GetFeature&typeName=%s" +
                 "&outputFormat=application/json&srsname=EPSG:4326&maxFeatures=%d",
                 baseUrl,
                 getVersion(),
-                TextUtils.join(",", scFilter.getLayerIds()),
+                TextUtils.join(",", layerNames),
                 scFilter.getLimit()
         );
         if (scFilter.getPredicate() != null) {
