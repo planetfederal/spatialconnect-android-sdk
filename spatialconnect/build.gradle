@@ -73,6 +73,7 @@ dependencies {
     compile 'commons-io:commons-io:2.4'
     compile 'com.squareup.okhttp3:okhttp:3.3.1'
     compile 'com.facebook.react:react-native:+'
+    compile 'com.google.protobuf:protobuf-java:3.0.0'
     compile('io.jeo:jeo:0.6') {
         exclude group: 'com.vividsolutions'
         exclude group: 'io.jeo', module: 'proj4j'
