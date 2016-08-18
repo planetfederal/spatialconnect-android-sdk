@@ -246,7 +246,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (command.equals(BridgeCommand.DATASERVICE_CREATEFEATURE)) {
                 handleCreateFeature(message);
             }
-            if (command.equals(BridgeCommand.DATASERVICE_FORMSLIST)) {
+            if (command.equals(BridgeCommand.DATASERVICE_FORMLIST)) {
                 handleFormsList(message);
             }
             if (command.equals(BridgeCommand.AUTHSERVICE_AUTHENTICATE)) {
