@@ -26,6 +26,8 @@ public class SCConfig {
     @JsonProperty("forms")
     private List<SCFormConfig> forms;
     private String remote;
+    @JsonProperty("mqtt_broker_uri")
+    private String mqttBrokerUri;
 
     public SCConfig() {
     }
@@ -52,5 +54,13 @@ public class SCConfig {
 
     public void setRemote(String remote) {
         this.remote = remote;
+    }
+
+    public String getMqttBrokerUri() {
+        return mqttBrokerUri;
+    }
+
+    public void setMqttBrokerUri(String mqttBrokerUri) {
+        this.mqttBrokerUri = mqttBrokerUri;
     }
 }

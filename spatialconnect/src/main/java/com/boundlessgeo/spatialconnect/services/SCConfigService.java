@@ -24,6 +24,7 @@ import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
+import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
@@ -50,18 +51,20 @@ public class SCConfigService extends SCService {
     private ArrayList<File> localConfigFiles = new ArrayList<>();
     private SCDataService dataService;
     private SCNetworkService networkService;
-    private static SCKVPStoreService kvpStoreService;
     public static String CLIENT_ID = null;
     /**
-     * The API_URL of the spatialconnect-service api.  This will always end with a trailing slash, "/api/"
+     * The API_URL of the spatialconnect-service rest api.  This will always end with a trailing slash, "/api/"
      */
     public static String API_URL = null;
+    /**
+     * The uri of the MQTT broker. The format is "protocol://brokerHost:brokerPort" where protocol is tcp or ssl.
+     */
+    private static String MQTT_BROKER_URI = null;
 
     public SCConfigService(Context context) {
         this.context = context;
         this.dataService = SpatialConnect.getInstance().getDataService();
         this.networkService = SpatialConnect.getInstance().getNetworkService();
-        this.kvpStoreService = SpatialConnect.getInstance().getSCKVPStoreService();
     }
 
     /**
@@ -149,8 +152,40 @@ public class SCConfigService extends SCService {
             if (remoteUrl != null) {
                 // ensure the url ends with a slash
                 API_URL = remoteUrl.endsWith("/") ? remoteUrl + "api/" : remoteUrl + "/api/";
+                // todo: should this and other configuration values be stored in sharedpreferences or kvp store?
             }
         }
+        if (MQTT_BROKER_URI == null) {
+            MQTT_BROKER_URI = getMqttBrokerUri(configFiles);
+        }
+    }
+
+    /**
+     * Reads the config files and returns the first {@code mqtt_broker_uri} value it finds or null if no config file
+     * contains the mqtt_broker_uri key.
+     *
+     * @param configFiles
+     * @return the mqtt broker uri
+     */
+    private String getMqttBrokerUri(List<File> configFiles) {
+        Log.d(LOG_TAG, "Locating mqtt_broker_uri");
+        for (File file : configFiles) {
+            final SCConfig scConfig;
+            try {
+                scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
+                if(scConfig.getMqttBrokerUri() != null) {
+                    return scConfig.getMqttBrokerUri();
+                }
+                else {
+                    Log.w(LOG_TAG, "No mqtt_broker_uri key was present in the config file " + file.getPath());
+                }
+            }
+            catch (IOException e) {
+                Log.w(LOG_TAG, "Could not parse mqtt_broker_uri from config file!");
+                e.printStackTrace();
+            }
+        }
+        return null;
     }
 
     /**
@@ -249,7 +284,31 @@ public class SCConfigService extends SCService {
             loadRemoteConfig();
             registerDevice();
         }
+        if (MQTT_BROKER_URI != null) {
+            connectToMqttBroker();
+        }
         this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
+    }
+
+    private void connectToMqttBroker() {
+        Log.d(LOG_TAG, "connecting to mqtt broker.");
+        // only try to connect to mqtt broker after the user has successfully authenticated
+        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
+            @Override
+            public void call(Integer integer) {
+                if (integer == 1) {
+                    MqttHandler handler = MqttHandler.getInstance(context);
+                    handler.initialize();
+                    try {
+                        String authToken = SCAuthService.getAccessToken();
+                        handler.connect(authToken);
+                    }
+                    catch (IOException e) {
+                        Log.e(LOG_TAG, "Could not connect to mqtt broker", e);
+                    }
+                }
+            }
+        });
     }
 
     /* Checks if external storage is available for read and write */
@@ -292,7 +351,10 @@ public class SCConfigService extends SCService {
             }
         });
 
+    }
 
+    public String getMqttBrokerUri() {
+        return MQTT_BROKER_URI;
     }
 
     /**
@@ -306,6 +368,7 @@ public class SCConfigService extends SCService {
         if (CLIENT_ID != null) {
             return CLIENT_ID;
         }
+        SCKVPStoreService kvpStoreService = SpatialConnect.getInstance().getSCKVPStoreService();
         Map<String, Object> resp = kvpStoreService.getValueForKey("clientId");
         if (resp.get("clientId") != null) {
             CLIENT_ID = (String) resp.get("clientId");

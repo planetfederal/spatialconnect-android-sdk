@@ -16,6 +16,7 @@ package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
+import com.boundlessgeo.spatialconnect.services.SCConfigService;
 
 import org.junit.After;
 import org.junit.Before;
@@ -27,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
 
 public class SCConfigServiceTest extends BaseTestCase {
 
@@ -40,7 +42,8 @@ public class SCConfigServiceTest extends BaseTestCase {
         deleteDatabases();
     }
 
-    @Test @Ignore
+    @Test
+    @Ignore
     public void testSpatialConnectCanLoadNonDefaultConfigs() {
         SpatialConnect sc = SpatialConnect.getInstance();
         sc.initialize(activity);
@@ -50,7 +53,8 @@ public class SCConfigServiceTest extends BaseTestCase {
         assertEquals("The test config file has 3 stores.", 3, sc.getDataService().getAllStores().size());
     }
 
-    @Test @Ignore
+    @Test
+    @Ignore
     public void testConfigServicePersistsConfigs() {
         SpatialConnect sc = SpatialConnect.getInstance();
         sc.initialize(activity);
@@ -62,6 +66,22 @@ public class SCConfigServiceTest extends BaseTestCase {
                 2, stores.getNumberOfStores());
     }
 
+    @Test
+    public void testConfigServiceReadsMqttBrokerUri() {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        sc.initialize(activity);
+        sc.addConfig(testConfigFile);
+        sc.startAllServices();
+        sc.getAuthService().authenticate("admin@something.com", "admin");
+        SCConfigService configService = sc.getConfigService();
+        assertTrue("The mqtt broker uri should not be null b/c it is defined in the test config.",
+                null != configService.getMqttBrokerUri()
+        );
+        assertEquals("The mqtt broker uri should match the one in the config.",
+                "tcp://192.168.99.100:1883",
+                configService.getMqttBrokerUri()
+        );
+    }
 
     // TODO: test erroneous config files
 
