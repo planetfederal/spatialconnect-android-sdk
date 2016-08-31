@@ -327,6 +327,23 @@ public class SCDataService extends SCService {
         return queryresults;
     }
 
+    public Observable<SCSpatialFeature> queryStores(final List<String> storeIds, final SCQueryFilter filter) {
+        return Observable.from(getActiveStores())
+                .filter(new Func1<SCDataStore, Boolean>() {
+                    @Override
+                    public Boolean call(SCDataStore store) {
+                        return storeIds.contains(store.getStoreId());
+                    }
+                })
+                .flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
+                    @Override
+                    public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
+                        Log.d(LOG_TAG, "Querying store " + scDataStore.getName());
+                        return scDataStore.query(filter);
+                    }
+                });
+    }
+
     public Observable<SCSpatialFeature> queryAllStores(final SCQueryFilter filter) {
         return Observable.from(getActiveStores())
                 .flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {

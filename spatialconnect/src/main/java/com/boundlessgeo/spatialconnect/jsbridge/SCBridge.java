@@ -57,6 +57,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ArrayList;
 
 import rx.Subscriber;
 import rx.functions.Action1;
@@ -233,6 +234,10 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (command.equals(BridgeCommand.DATASERVICE_ACTIVESTOREBYID)) {
                 handleActiveStoreById(message);
             }
+            if (command.equals(BridgeCommand.DATASERVICE_GEOSPATIALQUERY)
+                    || command.equals(BridgeCommand.DATASERVICE_SPATIALQUERY)) {
+                handleQuery(message);
+            }
             if (command.equals(BridgeCommand.DATASERVICE_GEOSPATIALQUERYALL)
                     || command.equals(BridgeCommand.DATASERVICE_SPATIALQUERYALL)) {
                 handleQueryAll(message);
@@ -378,7 +383,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     }
 
     /**
-     * Handles the {@link BridgeCommand#DATASERVICE_FORMSLIST} command.
+     * Handles the {@link BridgeCommand#DATASERVICE_FORMLIST} command.
      */
     private void handleFormsList(ReadableMap message) {
         Log.d(LOG_TAG, "Handling DATASERVICE_FORMSLIST message");
@@ -402,6 +407,61 @@ public class SCBridge extends ReactContextBaseJavaModule {
         String storeId = message.getMap("payload").getString("storeId");
         SCDataStore store = sc.getDataService().getStoreById(storeId);
         sendEvent(message.getInt("type"), getStoreMap(store));
+    }
+
+    /**
+     * Handles the {@link BridgeCommand#DATASERVICE_GEOSPATIALQUERYALL} and
+     * {@link BridgeCommand#DATASERVICE_SPATIALQUERYALL} commands.
+     *
+     * @param message
+     */
+    private void handleQuery(final ReadableMap message) {
+        Log.d(LOG_TAG, "Handling *QUERYALL message :" + message.toString());
+        SCQueryFilter filter = getFilter(message);
+        ReadableArray readableArray = message.getMap("payload").getArray("storeId");
+        List<String> storeIds = new ArrayList<>(readableArray.size());
+        for (int index = 0; index < readableArray.size(); index++) {
+            storeIds.add(readableArray.getString(index));
+        }
+        if (filter != null) {
+            sc.getDataService().queryStores(storeIds, filter)
+                    .subscribeOn(Schedulers.io())
+//                    .onBackpressureBuffer(filter.getLimit())
+                    .subscribe(
+                            new Subscriber<SCSpatialFeature>() {
+                                @Override
+                                public void onCompleted() {
+                                    Log.d(LOG_TAG, "query observable completed");
+                                }
+
+                                @Override
+                                public void onError(Throwable e) {
+                                    e.printStackTrace();
+                                    Log.e(LOG_TAG, "Could not complete query on all stores\n" + e.getMessage());
+                                }
+
+                                @Override
+                                public void onNext(SCSpatialFeature feature) {
+                                    try {
+                                        // base64 encode id and set it before sending across wire
+                                        String encodedId = ((SCGeometry) feature).getKey().encodedCompositeKey();
+                                        feature.setId(encodedId);
+                                        sendEvent(
+                                                message.getInt("type"),
+                                                message.getString("responseId"),
+                                                convertJsonToMap(new JSONObject(feature.toJson()))
+                                        );
+                                    }
+                                    catch (UnsupportedEncodingException e) {
+                                        e.printStackTrace();
+                                    }
+                                    catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                    );
+        }
     }
 
     /**
