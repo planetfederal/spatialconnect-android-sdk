@@ -1,0 +1,51 @@
+{
+  "stores":[
+    {
+      "store_type": "geojson",
+      "version": "1",
+      "uri": "nola_polling_places.json",
+      "isMainBundle":true,
+      "id":"50402599-3ad3-439f-9c49-3c8a7579933b",
+      "name":"Simple"
+    },
+    {
+      "store_type": "wfs",
+      "version": "1.1.0",
+      "uri": "http://efc-dev.boundlessgeo.com:8080/geoserver/ows",
+      "id":"af4a0dc8-2077-4cfc-a4e0-b513d8c14a71",
+      "name":"EFC Dev GeoServer",
+      "default_layers": ["baseball_team"]
+    },
+    {
+      "id": "5729cac9-cf37-476a-997d-f9c687b4df67",
+      "store_type": "gpkg",
+      "version": "1",
+      "uri": "https://s3.amazonaws.com/test.spacon/rio.gpkg",
+      "name": "Rio",
+      "default_layers": [ ]
+    }
+  ],
+  "forms":[
+    {
+      "id":2,
+      "version":0,
+      "form_key":"baseball_team",
+      "form_label":"Baseball Team",
+      "fields":[
+        {
+          "id":13,
+          "type":"string",
+          "field_label":"Favorite?",
+          "field_key":"team","position":0
+        },
+        {
+          "id":14,
+          "type":"string",
+          "field_label":"Why?",
+          "field_key":"why",
+          "position":1
+        }
+      ]
+    }
+  ]
+}

@@ -44,7 +44,7 @@ public class SCConfigServiceTest extends BaseTestCase {
     public void testSpatialConnectCanLoadNonDefaultConfigs() {
         SpatialConnect sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        sc.addConfig(testConfigFile);
+        sc.addConfig(remoteConfigFile);
         sc.startAllServices();
         waitForStoreToStart(WHITEHORSE_GPKG_ID, sc);
         assertEquals("The test config file has 3 stores.", 3, sc.getDataService().getAllStores().size());

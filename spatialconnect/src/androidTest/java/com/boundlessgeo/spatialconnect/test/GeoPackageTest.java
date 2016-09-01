@@ -57,7 +57,7 @@ public class GeoPackageTest extends BaseTestCase {
     public static void setUp() throws Exception {
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        sc.addConfig(testConfigFile);
+        sc.addConfig(remoteConfigFile);
         sc.startAllServices();
         sc.getAuthService().authenticate("admin@something.com", "admin");
         waitForStoreToStart(RIO_GPKG_ID);
