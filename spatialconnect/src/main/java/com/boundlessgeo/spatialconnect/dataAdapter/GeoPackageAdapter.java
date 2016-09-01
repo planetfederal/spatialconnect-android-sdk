@@ -488,16 +488,19 @@ public class GeoPackageAdapter extends SCDataAdapter {
             }
         }
         if (formId != null) {
-            final String theUrl = SCConfigService.API_URL + "forms/" + formId + "/submit";
-            Log.d(LOG_TAG, "Posting created feature to " + theUrl);
+
             SCNetworkService networkService = SpatialConnect.getInstance().getNetworkService();
-            String response = null;
-            try {
-                response = networkService.post(theUrl, feature.toJson());
-                Log.d(LOG_TAG, "create new feature response " + response);
-            }
-            catch (IOException e) {
-                Log.w(LOG_TAG, "could not create new feature on backend");
+            final String theUrl = SCConfigService.API_URL + "forms/" + formId + "/submit";
+
+            if (SCConfigService.API_URL != null && networkService.isInternetAvailable()) {
+                Log.d(LOG_TAG, "Posting created feature to " + theUrl);
+                String response;
+                try {
+                    response = networkService.post(theUrl, feature.toJson());
+                    Log.d(LOG_TAG, "create new feature response " + response);
+                } catch (IOException e) {
+                    Log.w(LOG_TAG, "could not create new feature on backend");
+                }
             }
         }
         else {
