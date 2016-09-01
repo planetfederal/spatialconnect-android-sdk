@@ -382,7 +382,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
      */
     private void handleFormsList(ReadableMap message) {
         Log.d(LOG_TAG, "Handling DATASERVICE_FORMSLIST message");
-        List<SCFormConfig> formConfigs = sc.getDataService().getDefaultStore().getFormConfigs();
+        List<SCFormConfig> formConfigs = sc.getDataService().getFormStore().getFormConfigs();
         WritableMap eventPayload = Arguments.createMap();
         WritableArray formsArray = Arguments.createArray();
         for (SCFormConfig config : formConfigs) {
@@ -538,7 +538,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
             SCSpatialFeature newFeature = getNewFeature(message.getMap("payload"));
             // if no store was specified, use the default store
             if (newFeature.getKey().getStoreId() == null || newFeature.getKey().getStoreId().isEmpty()) {
-                newFeature.setStoreId(DefaultStore.NAME);
+                newFeature.setStoreId(newFeature.getKey().getStoreId());
             }
             sc.getDataService().getStoreById(newFeature.getKey().getStoreId())
                     .create(newFeature)

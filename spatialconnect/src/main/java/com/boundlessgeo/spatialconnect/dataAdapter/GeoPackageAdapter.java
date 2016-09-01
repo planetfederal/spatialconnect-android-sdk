@@ -482,7 +482,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
 
     private void postCreatedFeature(SCSpatialFeature feature) {
         String formId = "";
-        for(SCFormConfig config : SpatialConnect.getInstance().getDataService().getDefaultStore().getFormConfigs()) {
+        for(SCFormConfig config : SpatialConnect.getInstance().getDataService().getFormStore().getFormConfigs()) {
             if (config.getFormKey().equals(feature.getKey().getLayerId())) {
                 formId = config.getId();
             }

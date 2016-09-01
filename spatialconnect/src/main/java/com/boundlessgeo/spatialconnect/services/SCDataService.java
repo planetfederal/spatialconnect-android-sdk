@@ -22,6 +22,7 @@ import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.stores.DefaultStore;
+import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
@@ -81,6 +82,7 @@ public class SCDataService extends SCService {
         addDefaultStoreImpls();
         this.context = context;
         initializeDefaultStore();
+        initializeFormStore();
     }
 
     private void initializeDefaultStore() {
@@ -103,6 +105,35 @@ public class SCDataService extends SCService {
             @Override
             public void onError(Throwable e) {
                 Log.e(LOG_TAG, "Couldn't start default store", e);
+                System.exit(0);
+            }
+
+            @Override
+            public void onNext(SCStoreStatusEvent event) {
+                Log.w(LOG_TAG, "Shouldn't return onNext");
+            }
+        });
+    }
+
+    private void initializeFormStore() {
+        SCStoreConfig formStoreConfig = new SCStoreConfig();
+        formStoreConfig.setName(FormStore.NAME);
+        formStoreConfig.setUniqueID(FormStore.NAME);
+        formStoreConfig.setUri("file://" + FormStore.NAME);
+        formStoreConfig.setType("gpkg");
+        formStoreConfig.setVersion("1");
+        FormStore formStore = new FormStore(context, formStoreConfig);
+        this.stores.put(formStore.getStoreId(), formStore);
+        // block until store is started
+        formStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
+            @Override
+            public void onCompleted() {
+                Log.d(LOG_TAG, "Registered form store with SCDataService.");
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                Log.e(LOG_TAG, "Couldn't start form store", e);
                 System.exit(0);
             }
 
@@ -345,6 +376,16 @@ public class SCDataService extends SCService {
             }
         }
         Log.w(LOG_TAG, "Default store was not found!");
+        return null;
+    }
+
+    public FormStore getFormStore() {
+        for (SCDataStore store : stores.values()) {
+            if (store.getName().equals(FormStore.NAME)) {
+                return (FormStore) store;
+            }
+        }
+        Log.w(LOG_TAG, "Form store was not found!");
         return null;
     }
 

@@ -26,7 +26,7 @@ import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
-import com.boundlessgeo.spatialconnect.stores.DefaultStore;
+import com.boundlessgeo.spatialconnect.stores.FormStore;
 
 import java.io.File;
 import java.io.IOException;
@@ -190,7 +190,7 @@ public class SCConfigService extends SCService {
                 if(scConfig.getFormConfigs() != null && scConfig.getFormConfigs().size() > 0) {
                     for (SCFormConfig formConfig : scConfig.getFormConfigs()) {
                         Log.d(LOG_TAG, "Creating table for form " + formConfig.getFormKey());
-                        DefaultStore store = dataService.getDefaultStore();
+                        FormStore store = dataService.getFormStore();
                         if (store != null) {
                             store.addFormLayer(formConfig);
                         }
