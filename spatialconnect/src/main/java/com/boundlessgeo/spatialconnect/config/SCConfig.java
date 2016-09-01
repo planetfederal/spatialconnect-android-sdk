@@ -23,11 +23,12 @@ public class SCConfig {
 
     @JsonProperty("stores")
     private List<SCStoreConfig> stores;
+
     @JsonProperty("forms")
     private List<SCFormConfig> forms;
-    private String remote;
-    @JsonProperty("mqtt_broker_uri")
-    private String mqttBrokerUri;
+
+    @JsonProperty("remote")
+    private SCRemoteConfig remote;
 
     public SCConfig() {
     }
@@ -48,19 +49,11 @@ public class SCConfig {
         this.forms = forms;
     }
 
-    public String getRemote() {
+    public SCRemoteConfig getRemote() {
         return remote;
     }
 
-    public void setRemote(String remote) {
+    public void setRemote(SCRemoteConfig remote) {
         this.remote = remote;
-    }
-
-    public String getMqttBrokerUri() {
-        return mqttBrokerUri;
-    }
-
-    public void setMqttBrokerUri(String mqttBrokerUri) {
-        this.mqttBrokerUri = mqttBrokerUri;
     }
 }

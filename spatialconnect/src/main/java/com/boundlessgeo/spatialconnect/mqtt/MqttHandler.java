@@ -17,8 +17,9 @@ package com.boundlessgeo.spatialconnect.mqtt;
 import android.content.Context;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
+import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
+import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
@@ -47,6 +48,7 @@ import rx.subjects.PublishSubject;
 public class MqttHandler implements MqttCallback {
 
     private final static String LOG_TAG = MqttHandler.class.getSimpleName();
+
     private static MqttHandler instance;
     private MqttAndroidClient client;
     private Context context;
@@ -69,32 +71,57 @@ public class MqttHandler implements MqttCallback {
      * Initialize the MqttHander by creating an instance of MqttAndroidClient and registering this instance as the
      * client's callback listener.
      */
-    public void initialize() {
+    public void initialize(SCRemoteConfig config) {
         Log.d(LOG_TAG, "initializing MqttHander.");
-        // connection settings are obtained from the config service
-        String brokerUri = SpatialConnect.getInstance().getConfigService().getMqttBrokerUri();
+        String brokerUri = getMqttBrokerUri(config);
         client = new MqttAndroidClient(context, brokerUri, SCConfigService.getClientId());
         client.setCallback(this);
     }
 
     /**
-     * Connect client to the MQTT broker with authToken as the username.
+     * Reads the {@code SCRemoteConfig} and returns the formatted mqtt broker uri.  The format is
+     * "protocol://brokerHost:brokerPort" where protocol is tcp or ssl.
      *
-     * @param authToken token received from spatialconnect-server api
+     * @param config
+     * @return the mqtt broker uri
      */
-    public void connect(String authToken) {
+    private String getMqttBrokerUri(SCRemoteConfig config) {
+        return String.format("%s://%s:%s",
+                config.getMqttProtocol(),
+                config.getMqttHost(),
+                config.getMqttPort().toString()
+        );
+    }
+
+    /**
+     * Connect client to the MQTT broker with authToken as the username.
+     */
+    public void connect() {
         Log.d(LOG_TAG, "connecting to mqtt broker at " + client.getServerURI());
-        try {
-            // set the clean session to remove any previous connection the broker may have for this client
-            MqttConnectOptions options = new MqttConnectOptions();
-            options.setCleanSession(true);
-//                options.setUserName(authToken);
-//                options.setPassword("anypass".toCharArray());
-            client.connect(options, context, new ConnectActionListener());
-        }
-        catch (MqttException e) {
-            Log.e(LOG_TAG, "could not connect to mqtt broker.", e.getCause());
-        }
+        // only try to connect to mqtt broker after the user has successfully authenticated
+        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
+            @Override
+            public void call(Integer integer) {
+                if (integer == 1) {
+                    try {
+                        // set the clean session to remove any previous connection the broker may have for this client
+                        MqttConnectOptions options = new MqttConnectOptions();
+                        options.setCleanSession(true);
+//                        String authToken = SCAuthService.getAccessToken();
+//                        options.setUserName(authToken);
+//                        options.setPassword("anypass".toCharArray());
+                        client.connect(options, context, new ConnectActionListener());
+                    }
+                    catch (MqttException e) {
+                        Log.e(LOG_TAG, "could not connect to mqtt broker.", e.getCause());
+                    }
+//                    catch (IOException e) {
+//                        Log.e(LOG_TAG, "could not connect to mqtt broker.", e.getCause());
+//                    }
+                }
+            }
+        });
+
     }
 
     /**
@@ -155,10 +182,10 @@ public class MqttHandler implements MqttCallback {
 
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
-        Log.v(LOG_TAG, "received message on topic " + topic);
+        Log.d(LOG_TAG, "received message on topic " + topic);
         SCMessageOuterClass.SCMessage scMessage = SCMessageOuterClass.SCMessage.parseFrom(message.getPayload());
-        Log.v(LOG_TAG, "message payload: " + scMessage.getPayload());
-        HashMap<String, SCMessageOuterClass.SCMessage> map = new HashMap<>();
+        Log.d(LOG_TAG, "message payload: " + scMessage.getPayload());
+        HashMap<String, SCMessageOuterClass.SCMessage> map = new HashMap<>(1);
         map.put(topic, scMessage);
         scMessageSubject.onNext(map);
     }

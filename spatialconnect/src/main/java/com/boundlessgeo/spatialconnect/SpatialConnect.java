@@ -17,11 +17,12 @@ package com.boundlessgeo.spatialconnect;
 import android.content.Context;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.services.SCKVPStoreService;
-import com.boundlessgeo.spatialconnect.services.SCNetworkService;
+import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.services.SCService;
 
@@ -42,7 +43,7 @@ public class SpatialConnect {
     private SCKVPStoreService kvpStoreService;
     private SCSensorService sensorService;
     private SCConfigService configService;
-    private SCNetworkService networkService;
+    private SCBackendService backendService;
     private SCAuthService authService;
 
     private Context context;
@@ -70,7 +71,6 @@ public class SpatialConnect {
         this.dataService = new SCDataService(context);
         this.kvpStoreService = new SCKVPStoreService(context);
         this.sensorService = new SCSensorService(context);
-        this.networkService = new SCNetworkService(context);
         this.configService = new SCConfigService(context);
         this.authService = new SCAuthService(context);
         this.context = context;
@@ -85,7 +85,6 @@ public class SpatialConnect {
         addService(this.sensorService);
         addService(this.configService);
         addService(this.kvpStoreService);
-        addService(this.networkService);
         addService(this.authService);
     }
 
@@ -130,6 +129,14 @@ public class SpatialConnect {
         }
     }
 
+    public void connectBackend(SCRemoteConfig remoteConfig) {
+        if (remoteConfig != null && backendService == null) {
+            backendService = new SCBackendService(this.context);
+            backendService.initialize(remoteConfig);
+            backendService.start();
+        }
+    }
+
     public Context getContext() {
         return context;
     }
@@ -162,8 +169,8 @@ public class SpatialConnect {
         return configService;
     }
 
-    public SCNetworkService getNetworkService() {
-        return networkService;
+    public SCBackendService getBackendService() {
+        return backendService;
     }
 
     public SCAuthService getAuthService() {

@@ -24,7 +24,6 @@ import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
-import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
@@ -41,7 +40,9 @@ import rx.functions.Action1;
 
 /**
  * The SCConfigService is responsible for managing the configuration for SpatialConnect.  This includes downloading
- * remote configuration and sweeping the external storage for config files, if required.
+ * remote configuration and sweeping the external storage for config files, if required. The config service is
+ * also responsible for parsing the relevant parts of the config and invoking functions on other services using parts
+ * of the {@link SCConfig}.
  */
 public class SCConfigService extends SCService {
 
@@ -50,21 +51,13 @@ public class SCConfigService extends SCService {
     private static final String CONFIGS_DIR = "configs";
     private ArrayList<File> localConfigFiles = new ArrayList<>();
     private SCDataService dataService;
-    private SCNetworkService networkService;
+    private SCBackendService backendService;
     public static String CLIENT_ID = null;
-    /**
-     * The API_URL of the spatialconnect-service rest api.  This will always end with a trailing slash, "/api/"
-     */
-    public static String API_URL = null;
-    /**
-     * The uri of the MQTT broker. The format is "protocol://brokerHost:brokerPort" where protocol is tcp or ssl.
-     */
-    private static String MQTT_BROKER_URI = null;
 
     public SCConfigService(Context context) {
         this.context = context;
         this.dataService = SpatialConnect.getInstance().getDataService();
-        this.networkService = SpatialConnect.getInstance().getNetworkService();
+        this.backendService = SpatialConnect.getInstance().getBackendService();
     }
 
     /**
@@ -123,142 +116,48 @@ public class SCConfigService extends SCService {
         return null;
     }
 
-    /**
-     * Loads the config from the API.
-     */
-    private void loadRemoteConfig() {
-        Log.i(LOG_TAG, "Attempting to load remote config if client is authenticated.");
-        final String configUrl = API_URL + "config";
-        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
-            @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
-                    File configFile = networkService.getFileBlocking(configUrl);
-                    if (configFile != null) {
-                        loadConfigs(Arrays.asList(configFile));
-                    }
-                }
-            }
-        });
-    }
-
     // method to load the configuration from a file.
     private void loadConfigs(List<File> configFiles) {
-        registerDataStores(configFiles);
-        registerForms(configFiles);
-        // only set the API_URL one time, after reading from the config file
-        if (API_URL == null) {
-            String remoteUrl = getRemoteConfigUrl(configFiles);
-            if (remoteUrl != null) {
-                // ensure the url ends with a slash
-                API_URL = remoteUrl.endsWith("/") ? remoteUrl + "api/" : remoteUrl + "/api/";
-                // todo: should this and other configuration values be stored in sharedpreferences or kvp store?
+        if (configFiles.size() > 0) {
+            Log.d(LOG_TAG, "Loading " + configFiles.size() + " config files.");
+            for (File file : configFiles) {
+                final SCConfig scConfig;
+                try {
+                    scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
+                    loadConfig(scConfig);
+                    SpatialConnect.getInstance().connectBackend(scConfig.getRemote());
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-        }
-        if (MQTT_BROKER_URI == null) {
-            MQTT_BROKER_URI = getMqttBrokerUri(configFiles);
         }
     }
 
-    /**
-     * Reads the config files and returns the first {@code mqtt_broker_uri} value it finds or null if no config file
-     * contains the mqtt_broker_uri key.
-     *
-     * @param configFiles
-     * @return the mqtt broker uri
-     */
-    private String getMqttBrokerUri(List<File> configFiles) {
-        Log.d(LOG_TAG, "Locating mqtt_broker_uri");
-        for (File file : configFiles) {
-            final SCConfig scConfig;
-            try {
-                scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
-                if(scConfig.getMqttBrokerUri() != null) {
-                    return scConfig.getMqttBrokerUri();
-                }
-                else {
-                    Log.w(LOG_TAG, "No mqtt_broker_uri key was present in the config file " + file.getPath());
-                }
-            }
-            catch (IOException e) {
-                Log.w(LOG_TAG, "Could not parse mqtt_broker_uri from config file!");
-                e.printStackTrace();
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Returns the value of the first {@code remote} attribute defined in the config files.
-     *
-     * @param configFiles
-     * @return the api endpoint for fetching the config
-     */
-    private String getRemoteConfigUrl(List<File> configFiles) {
-        Log.d(LOG_TAG, "Locating remote url for config");
-        for (File file : configFiles) {
-            final SCConfig scConfig;
-            try {
-                scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
-                if(scConfig.getRemote() != null) {
-                    return scConfig.getRemote();
-                }
-                else {
-                    Log.w(LOG_TAG, "No remote attribute was present in the config file " + file.getPath());
-                }
-            }
-            catch (IOException e) {
-                // TODO: test for invalid configs
-                Log.w(LOG_TAG, "Could not parse api url from config file!");
-                e.printStackTrace();
-            }
-        }
-        return null;
+    public void loadConfig(SCConfig config) {
+        registerDataStores(config.getStoreConfigs());
+        registerForms(config.getFormConfigs());
     }
 
     /* Registers all the forms specified in each config file */
-    private void registerForms(List<File> configFiles) {
-        for (File file : configFiles) {
-            final SCConfig scConfig;
-            try {
-                scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
-                if(scConfig.getFormConfigs() != null && scConfig.getFormConfigs().size() > 0) {
-                    for (SCFormConfig formConfig : scConfig.getFormConfigs()) {
-                        Log.d(LOG_TAG, "Creating table for form " + formConfig.getFormKey());
-                        FormStore store = dataService.getFormStore();
-                        if (store != null) {
-                            store.addFormLayer(formConfig);
-                        }
-                    }
+    private void registerForms(List<SCFormConfig> formConfigs) {
+        if (formConfigs != null) {
+            for (SCFormConfig formConfig : formConfigs) {
+                Log.d(LOG_TAG, "Creating table for form " + formConfig.getFormKey());
+                FormStore store = dataService.getFormStore();
+                if (store != null) {
+                    store.addFormLayer(formConfig);
                 }
-                else {
-                    Log.w(LOG_TAG, "No forms were present in the config file " + file.getPath());
-                }
-            }
-            catch (IOException e) {
-                // TODO: test for invalid configs
-                e.printStackTrace();
             }
         }
     }
 
     /* Registers all the stores specified in each config file */
-    private void registerDataStores(List<File> configFiles) {
-        for (File file : configFiles) {
-            Log.d(LOG_TAG, "Looking for stores for config file " + file.getPath());
-            final SCConfig scConfig;
-            try {
-                // parse the "stores" attribute from the scconfig file
-                scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
-                if (scConfig.getStoreConfigs() != null) {
-                    for (SCStoreConfig storeConfig : scConfig.getStoreConfigs()) {
-                        dataService.addNewStore(storeConfig);
-                    }
-                }
-            }
-            catch (IOException e) {
-                // TODO: test for invalid configs
-                e.printStackTrace();
+    private void registerDataStores(List<SCStoreConfig> storeConfigs) {
+        if (storeConfigs != null) {
+            for (SCStoreConfig storeConfig : storeConfigs) {
+                Log.d(LOG_TAG, "Adding store " + storeConfig.getName() + " to data service.");
+                dataService.addNewStore(storeConfig);
             }
         }
     }
@@ -280,35 +179,7 @@ public class SCConfigService extends SCService {
     public void start() {
         Log.d(LOG_TAG, "Starting SCConfig Service.  Loading all configs");
         loadConfigs();
-        if (API_URL != null) {
-            loadRemoteConfig();
-            registerDevice();
-        }
-        if (MQTT_BROKER_URI != null) {
-            connectToMqttBroker();
-        }
         this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
-    }
-
-    private void connectToMqttBroker() {
-        Log.d(LOG_TAG, "connecting to mqtt broker.");
-        // only try to connect to mqtt broker after the user has successfully authenticated
-        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
-            @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
-                    MqttHandler handler = MqttHandler.getInstance(context);
-                    handler.initialize();
-                    try {
-                        String authToken = SCAuthService.getAccessToken();
-                        handler.connect(authToken);
-                    }
-                    catch (IOException e) {
-                        Log.e(LOG_TAG, "Could not connect to mqtt broker", e);
-                    }
-                }
-            }
-        });
     }
 
     /* Checks if external storage is available for read and write */
@@ -321,8 +192,8 @@ public class SCConfigService extends SCService {
     }
 
     private void registerDevice() {
-        final String registrationEndpoint = API_URL + "devices/register";
-        final String deviceEndpoint = API_URL + "devices/%s";
+        final String registrationEndpoint = SCBackendService.API_URL + "devices/register";
+        final String deviceEndpoint = SCBackendService.API_URL + "devices/%s";
 
         SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
             @Override
@@ -330,9 +201,9 @@ public class SCConfigService extends SCService {
                 if (integer == 1) {
                     try {
                         // first check if device is already registered
-                        String response = networkService.get(String.format(deviceEndpoint, getClientId()));
+                        String response = backendService.get(String.format(deviceEndpoint, getClientId()));
                         if (response.equals("null")) {
-                            networkService.post(registrationEndpoint,
+                            backendService.post(registrationEndpoint,
                                     String.format("{\"identifier\": \"%s\", \"device_info\": {\"os\":\"%s\"} }",
                                             getClientId(), getAndroidVersion()
                                     )
@@ -353,16 +224,12 @@ public class SCConfigService extends SCService {
 
     }
 
-    public String getMqttBrokerUri() {
-        return MQTT_BROKER_URI;
-    }
-
     /**
      * Gets the unique identifier that identifies this installation of the application.
      *
-     * @see <a href="https://developer.android.com/training/articles/user-data-ids.html">
-     *     https://developer.android.com/training/articles/user-data-ids.html</a>
      * @return The UUID string that identifies this application
+     * @see <a href="https://developer.android.com/training/articles/user-data-ids.html">
+     * https://developer.android.com/training/articles/user-data-ids.html</a>
      */
     public static String getClientId() {
         if (CLIENT_ID != null) {
@@ -383,6 +250,6 @@ public class SCConfigService extends SCService {
     public static String getAndroidVersion() {
         String release = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
-        return "Android SDK: " + sdkVersion + " (" + release +")";
+        return "Android SDK: " + sdkVersion + " (" + release + ")";
     }
 }

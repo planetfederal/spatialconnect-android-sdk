@@ -1,6 +1,12 @@
 {
-  "remote": "http://10.0.3.2:8085",
-  "mqtt_broker_uri": "tcp://192.168.99.100:1883",
+  "remote": {
+    "http_protocol": "http",
+    "http_host": "efc-dev.boundlessgeo.com",
+    "http_port": 8085,
+    "mqtt_protocol": "tcp",
+    "mqtt_host": "efc-dev.boundlessgeo.com",
+    "mqtt_port": 1883
+  },
   "stores":[
     {
       "store_type": "geojson",

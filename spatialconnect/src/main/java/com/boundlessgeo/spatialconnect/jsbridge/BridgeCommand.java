@@ -56,6 +56,10 @@ public enum BridgeCommand {
         this.actionNumber = actionNumber;
     }
 
+    public int value() {
+        return actionNumber;
+    }
+
     public static BridgeCommand fromActionNumber(int actionNumber) {
         for (BridgeCommand v : values()) {
             if (v.actionNumber == actionNumber) {

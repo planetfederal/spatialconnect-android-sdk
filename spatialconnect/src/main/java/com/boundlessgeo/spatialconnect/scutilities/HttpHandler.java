@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Boundless, http://boundlessgeo.com
+ * Copyright 2016 Boundless, http://boundlessgeo.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,19 +12,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and limitations under the License
  */
-package com.boundlessgeo.spatialconnect.services;
-
+package com.boundlessgeo.spatialconnect.scutilities;
 
 import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkInfo;
-import android.os.Build;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
-import com.boundlessgeo.spatialconnect.mqtt.QoS;
-import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
+import com.boundlessgeo.spatialconnect.services.SCAuthService;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -32,7 +25,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Map;
 import java.util.UUID;
 
 import okhttp3.Interceptor;
@@ -47,25 +39,26 @@ import okio.BufferedSource;
 import okio.ForwardingSource;
 import okio.Okio;
 import okio.Source;
-import rx.Observable;
-import rx.functions.Func1;
 
+public class HttpHandler {
 
-// TODO: consider using https://github.com/stephanenicolas/robospice as this class evolves
+    private final static String LOG_TAG = HttpHandler.class.getSimpleName();
 
-// init backend service with remote object
-
-public class SCNetworkService extends SCService {
-
-    private static final String LOG_TAG = SCNetworkService.class.getSimpleName();
-    private static Context context;
+    private static HttpHandler instance;
     private static OkHttpClient client;
+    private Context context;
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-    private static MqttHandler mqttHandler;
 
-    public SCNetworkService(final Context context) {
+
+    public static HttpHandler getInstance(Context context) {
+        if (instance == null) {
+            instance = new HttpHandler(context);
+        }
+        return instance;
+    }
+
+    private HttpHandler(Context context) {
         this.context = context;
-        this.mqttHandler = MqttHandler.getInstance(context);
         this.client = new OkHttpClient.Builder()
                 .addNetworkInterceptor(new LoggingInterceptor())
                 .addNetworkInterceptor(new SCAuthService.AuthHeaderInterceptor())
@@ -131,6 +124,17 @@ public class SCNetworkService extends SCService {
         return response.body().string();
     }
 
+    public Response getResponse(String theUrl) throws IOException {
+        Request request = new Request.Builder()
+                .url(theUrl)
+                .build();
+        return client.newCall(request).execute();
+    }
+
+    public void cancelAllRequests() {
+        client.dispatcher().cancelAll();
+    }
+
     class LoggingInterceptor implements Interceptor {
         @Override
         public Response intercept(Interceptor.Chain chain) throws IOException {
@@ -148,70 +152,6 @@ public class SCNetworkService extends SCService {
 
             return response;
         }
-    }
-
-    public Response getResponse(String theUrl) throws IOException {
-        Request request = new Request.Builder()
-                .url(theUrl)
-                .build();
-        return client.newCall(request).execute();
-    }
-
-    public void cancelAllRequests() {
-        client.dispatcher().cancelAll();
-    }
-
-
-    /**
-     * Subscribes to an MQTT topic and returns an Observable with messages received on that topic.
-     *
-     * @param topic topic to subscribe to
-     * @return Observable of {@link SCMessageOuterClass.SCMessage}s published to the topic
-     */
-    public Observable<SCMessageOuterClass.SCMessage> listenOnTopic(final String topic) {
-        mqttHandler.subscribe(topic, QoS.EXACTLY_ONCE.value());
-        // filter messages for this topic
-        return mqttHandler.scMessageSubject
-                .filter(new Func1<Map<String, SCMessageOuterClass.SCMessage>, Boolean>() {
-                    @Override
-                    public Boolean call(Map<String, SCMessageOuterClass.SCMessage> stringSCMessageMap) {
-                        return stringSCMessageMap.keySet().contains(topic);
-                    }
-                })
-                .flatMap(new Func1<Map<String, SCMessageOuterClass.SCMessage>, Observable<SCMessageOuterClass.SCMessage>>() {
-                    @Override
-                    public Observable<SCMessageOuterClass.SCMessage> call(Map<String, SCMessageOuterClass.SCMessage> stringSCMessageMap) {
-                        return Observable.just(stringSCMessageMap.get(stringSCMessageMap.keySet().iterator().next()));
-                    }
-                });
-    }
-
-    /**
-     * Publish a message on a topic and listen for the response message.
-     *
-     * @param topic   topic to publish to
-     * @param message SCMessage with the action and payload
-     * @return Observable of the {@link SCMessageOuterClass.SCMessage} filtered by the correlation id
-     */
-    public Observable<SCMessageOuterClass.SCMessage> publishReplyTo(
-            String topic,
-            final SCMessageOuterClass.SCMessage message) {
-        mqttHandler.publish(topic, message, QoS.EXACTLY_ONCE.value());
-        // filter message from reply to topic on the correlation id
-        return listenOnTopic(MqttHandler.REPLY_TO_TOPIC)
-                .filter(new Func1<SCMessageOuterClass.SCMessage, Boolean>() {
-                    @Override
-                    public Boolean call(SCMessageOuterClass.SCMessage incomingMessage) {
-                        boolean cf = incomingMessage.getCorrelationId() == message.getCorrelationId();
-                        return incomingMessage.getCorrelationId() == message.getCorrelationId();
-                    }
-                })
-                .flatMap(new Func1<SCMessageOuterClass.SCMessage, Observable<SCMessageOuterClass.SCMessage>>() {
-                    @Override
-                    public Observable<SCMessageOuterClass.SCMessage> call(SCMessageOuterClass.SCMessage message) {
-                        return Observable.just(message);
-                    }
-                });
     }
 
     // from https://github.com/square/okhttp/blob/master/samples/guide/src/main/java/okhttp3/recipes/Progress.java
@@ -258,39 +198,6 @@ public class SCNetworkService extends SCService {
                 }
             };
         }
-    }
-
-    public boolean isInternetAvailable() {
-
-        boolean haveConnectedWifi = false;
-        boolean haveConnectedMobile = false;
-
-        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            Network[] networks = cm.getAllNetworks();
-            NetworkInfo networkInfo;
-
-            for (Network ni : networks) {
-                networkInfo = cm.getNetworkInfo(ni);
-                if (networkInfo.getTypeName().equalsIgnoreCase("WIFI"))
-                    if (networkInfo.isConnected())
-                        haveConnectedWifi = true;
-                if (networkInfo.getTypeName().equalsIgnoreCase("MOBILE"))
-                    if (networkInfo.isConnected())
-                        haveConnectedMobile = true;
-            }
-        } else {
-            NetworkInfo[] netInfo = cm.getAllNetworkInfo();
-            for (NetworkInfo ni : netInfo) {
-                if (ni.getTypeName().equalsIgnoreCase("WIFI"))
-                    if (ni.isConnected())
-                        haveConnectedWifi = true;
-                if (ni.getTypeName().equalsIgnoreCase("MOBILE"))
-                    if (ni.isConnected())
-                        haveConnectedMobile = true;
-            }
-        }
-        return haveConnectedWifi || haveConnectedMobile;
     }
 
     interface ProgressListener {

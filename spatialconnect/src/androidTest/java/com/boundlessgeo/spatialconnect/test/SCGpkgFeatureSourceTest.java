@@ -43,7 +43,7 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
 
     @AfterClass
     public static void tearDown() throws Exception {
-        sc.getNetworkService().cancelAllRequests();
+        sc.getBackendService().cancelAllRequests();
         deleteDatabases();
     }
 

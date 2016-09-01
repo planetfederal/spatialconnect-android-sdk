@@ -54,7 +54,7 @@ public class GeoJsonTest extends BaseTestCase {
 
     @AfterClass
     public static void tearDown() throws Exception {
-        sc.getNetworkService().cancelAllRequests();
+        sc.getBackendService().cancelAllRequests();
         testContext.deleteFile("nola_polling_places.json");
         deleteDatabases();
     }

@@ -22,6 +22,7 @@ import android.support.test.runner.AndroidJUnit4;
 import com.boundlessgeo.spatialconnect.SpatialConnectActivity;
 import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.stores.DefaultStore;
+import com.boundlessgeo.spatialconnect.stores.FormStore;
 
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -103,6 +104,7 @@ public abstract class BaseTestCase {
        testContext.deleteDatabase("Whitehorse");
        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
        testContext.deleteDatabase(DefaultStore.NAME);
+       testContext.deleteDatabase(FormStore.NAME);
    }
 
 }

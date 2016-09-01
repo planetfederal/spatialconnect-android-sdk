@@ -3,8 +3,9 @@ package com.boundlessgeo.spatialconnect.test;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
-import com.boundlessgeo.spatialconnect.services.SCNetworkService;
+import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -14,7 +15,7 @@ import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
 
-public class SCNetworkServiceTest extends BaseTestCase {
+public class SCBackendServiceTest extends BaseTestCase {
 
     private static SpatialConnect sc;
 
@@ -22,26 +23,30 @@ public class SCNetworkServiceTest extends BaseTestCase {
     public static void setUp() throws Exception {
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        sc.addConfig(testConfigFile);
+        sc.addConfig(remoteConfigFile);
         sc.startAllServices();
         sc.getAuthService().authenticate("admin@something.com", "admin");
     }
 
+    @AfterClass
+    public static void tearDown() throws Exception {
+        sc.getBackendService().cancelAllRequests();
+        deleteDatabases();
+    }
+
     @Test
     public void testNewtworkServiceCanPublishAndSubscribe() {
-        SCNetworkService networkService = sc.getNetworkService();
+        SCBackendService networkService = sc.getBackendService();
         SCMessageOuterClass.SCMessage.Builder builder =  SCMessageOuterClass.SCMessage.newBuilder();
-        int correlationId = (int) (System.currentTimeMillis() / 1000L);
         builder.setAction(0)
                 .setPayload("testing")
-                .setCorrelationId(correlationId)
                 .setReplyTo(MqttHandler.REPLY_TO_TOPIC)
                 .build();
         SCMessageOuterClass.SCMessage message = builder.build();
         TestSubscriber<SCMessageOuterClass.SCMessage> testSubscriber = new TestSubscriber();
         networkService.publishReplyTo("/ping", message)
                 .take(1)
-                .timeout(10, TimeUnit.SECONDS)
+                .timeout(15, TimeUnit.SECONDS)
                 .subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
@@ -50,9 +55,5 @@ public class SCNetworkServiceTest extends BaseTestCase {
         assertEquals("The reply message payload should be 'pong'.",
                 "pong",
                 testSubscriber.getOnNextEvents().get(0).getPayload());
-        assertEquals("The reply message should have a matching correlation id.",
-                correlationId,
-                testSubscriber.getOnNextEvents().get(0).getCorrelationId());
-
     }
 }

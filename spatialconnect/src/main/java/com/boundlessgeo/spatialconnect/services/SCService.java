@@ -25,6 +25,7 @@ public class SCService {
         this.status = SCServiceStatus.SC_SERVICE_STOPPED;
     }
 
+    // TODO: should this return an observable?
     public void start() {
         this.status = SCServiceStatus.SC_SERVICE_STARTING;
     }
