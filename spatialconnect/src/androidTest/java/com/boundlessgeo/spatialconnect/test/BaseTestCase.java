@@ -71,8 +71,8 @@ public abstract class BaseTestCase {
                 Context.CONTEXT_IGNORE_SECURITY
         );
         try {
-            remoteConfigFile = File.createTempFile("config.scfg", null, activity.getCacheDir());
-            localConfigFile = File.createTempFile("config.scfg", null, activity.getCacheDir());
+            remoteConfigFile = File.createTempFile("config_remote.scfg", null, activity.getCacheDir());
+            localConfigFile = File.createTempFile("config_local.scfg", null, activity.getCacheDir());
 
             // read test scconfig_remote.json file from test resources directory
             //set local test config

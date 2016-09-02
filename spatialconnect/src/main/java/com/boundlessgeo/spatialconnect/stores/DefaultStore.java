@@ -32,7 +32,7 @@ public class DefaultStore extends GeoPackageStore {
     public void addFormLayer(SCFormConfig formConfig) {
         Log.d(LOG_TAG, "Saving form config " + formConfig.getFormKey());
         formConfigs.add(formConfig);
-        ((GeoPackageAdapter) getAdapter()).addFormLayer(formConfig);
+        ((GeoPackageAdapter) getAdapter()).addLayer(formConfig);
     }
 
     public void deleteFormLayer(String layerName) {
@@ -42,7 +42,7 @@ public class DefaultStore extends GeoPackageStore {
                 itr.remove();
             }
         }
-        ((GeoPackageAdapter) getAdapter()).deleteFormLayer(layerName);
+        ((GeoPackageAdapter) getAdapter()).deleteLayer(layerName);
     }
 
     public List<SCFormConfig> getFormConfigs() {

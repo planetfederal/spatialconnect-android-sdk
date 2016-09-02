@@ -3,13 +3,20 @@ package com.boundlessgeo.spatialconnect.stores;
 import android.content.Context;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
+import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
+import com.boundlessgeo.spatialconnect.services.SCConfigService;
+import com.boundlessgeo.spatialconnect.services.SCNetworkService;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import rx.Observable;
 
 /**
  * Copyright 2016 Boundless http://boundlessgeo.com
@@ -47,7 +54,7 @@ public class FormStore extends GeoPackageStore {
     public void addFormLayer(SCFormConfig formConfig) {
         Log.d(LOG_TAG, "Saving form config " + formConfig.getFormKey());
         formConfigs.add(formConfig);
-        ((GeoPackageAdapter) getAdapter()).addFormLayer(formConfig);
+        ((GeoPackageAdapter) getAdapter()).addLayer(formConfig);
     }
 
     public void deleteFormLayer(String layerName) {
@@ -57,11 +64,45 @@ public class FormStore extends GeoPackageStore {
                 itr.remove();
             }
         }
-        ((GeoPackageAdapter) getAdapter()).deleteFormLayer(layerName);
+        ((GeoPackageAdapter) getAdapter()).deleteLayer(layerName);
     }
 
     public List<SCFormConfig> getFormConfigs() {
         return formConfigs;
+    }
+
+    @Override
+    public Observable<SCSpatialFeature> create(final SCSpatialFeature scSpatialFeature) {
+
+        Observable<SCSpatialFeature> spatialFeature = ((GeoPackageAdapter) getAdapter()).create(scSpatialFeature);
+
+        String formId = "";
+        for(SCFormConfig config : formConfigs) {
+            if (config.getFormKey().equals(scSpatialFeature.getKey().getLayerId())) {
+                formId = config.getId();
+            }
+        }
+        if (formId != null) {
+
+            SCNetworkService networkService = SpatialConnect.getInstance().getNetworkService();
+            final String theUrl = SCConfigService.API_URL + "forms/" + formId + "/submit";
+
+            if (SCConfigService.API_URL != null && networkService.isInternetAvailable()) {
+                Log.d(LOG_TAG, "Posting created feature to " + theUrl);
+                String response;
+                try {
+                    response = networkService.post(theUrl, scSpatialFeature.toJson());
+                    Log.d(LOG_TAG, "create new feature response " + response);
+                } catch (IOException e) {
+                    Log.w(LOG_TAG, "could not create new feature on backend");
+                }
+            }
+        }
+        else {
+            Log.w(LOG_TAG, "Could not post feature b/c form id was null");
+        }
+
+        return spatialFeature;
     }
 
 }
