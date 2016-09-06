@@ -31,8 +31,6 @@ import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.services.SCConfigService;
-import com.boundlessgeo.spatialconnect.services.SCNetworkService;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
@@ -177,13 +175,19 @@ public class GeoPackageAdapter extends SCDataAdapter {
         });
     }
 
+    @Override
+    public void disconnect() {
+        gpkg.close();
+    }
+
+
     /**
      * Creates a new table for the form specified in the formConfig.
      *
      * @param formConfig
      */
-    public void addFormLayer(SCFormConfig formConfig) {
-        if (!formLayerExists(formConfig)) {
+    public void addLayer(SCFormConfig formConfig) {
+        if (!layerExists(formConfig)) {
             Log.d(LOG_TAG, "Creating a table for form " + formConfig.getFormKey());
             final String tableName = formConfig.getFormKey();
             Cursor cursor = null;
@@ -216,30 +220,12 @@ public class GeoPackageAdapter extends SCDataAdapter {
         }
     }
 
-    private boolean formLayerExists(SCFormConfig formConfig) {
-        boolean formLayerExists = false;
-        String formTableName = formConfig.getFormKey();
-        Cursor cursor = gpkg.query(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",
-                new String[]{formTableName}
-        );
-        try {
-            if (cursor.moveToFirst()) {
-                formLayerExists = cursor.getInt(0) > 0;
-            }
-        }
-        finally {
-            cursor.close();
-        }
-        return formLayerExists;
-    }
-
     /**
      * Deletes a form table.
      *
      * @param tableName - the name of the table/layer to remove from the DEFAULT_STORE
      */
-    public void deleteFormLayer(String tableName) {
+    public void deleteLayer(String tableName) {
         BriteDatabase.Transaction tx = gpkg.newTransaction();
         // first remove from gpkg_geometry_columns
         gpkg.removeFromGpkgGeometryColumns(tableName);
@@ -252,30 +238,24 @@ public class GeoPackageAdapter extends SCDataAdapter {
         gpkg.refreshFeatureSources();
     }
 
-    private String createFormTableSQL(SCFormConfig formConfig){
-        final String tableName = formConfig.getFormKey();
-        StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName);
-        sb.append(" (id INTEGER PRIMARY KEY AUTOINCREMENT, ");
-        boolean isFirst = true;
-        for (SCFormField field : formConfig.getFields()) {
-            if (!isFirst) {
-                sb.append(", ");
+    private boolean layerExists(SCFormConfig formConfig) {
+        boolean layerExists = false;
+        String formTableName = formConfig.getFormKey();
+        Cursor cursor = gpkg.query(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",
+                new String[]{formTableName}
+        );
+        try {
+            if (cursor.moveToFirst()) {
+                layerExists = cursor.getInt(0) > 0;
             }
-            sb.append(field.getKey().replace(" ", "_").toLowerCase());
-            sb.append(" ").append(field.getColumnType());
-            isFirst = false;
         }
-        sb.append(")");
-        return sb.toString();
+        finally {
+            cursor.close();
+        }
+        return layerExists;
     }
 
-    private String addToGpkgContentsSQL(String tableName) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("INSERT OR REPLACE INTO gpkg_contents ")
-                .append("(table_name,data_type,identifier,description,min_x,min_y,max_x,max_y,srs_id) ")
-                .append(String.format("VALUES ('%s','features','%s','form',0,0,0,0,4326)", tableName, tableName));
-        return sb.toString();
-    }
 
     /**
      * Query {@link SCDataStore}s for {@link SCSpatialFeature}s using a
@@ -361,77 +341,6 @@ public class GeoPackageAdapter extends SCDataAdapter {
     }
 
     /**
-     * Returns a function that can map all the rows from a query to stream of {@link SCSpatialFeature}s.
-     *
-     * @param source
-     * @return
-     */
-    public Func1<SqlBrite.Query, Observable<SCSpatialFeature>> getFeatureMapper(final SCGpkgFeatureSource source) {
-        return new Func1<SqlBrite.Query, Observable<SCSpatialFeature>>() {
-
-            @Override
-            public Observable<SCSpatialFeature> call(SqlBrite.Query query) {
-                return query.asRows(new Func1<Cursor, SCSpatialFeature>() {
-                    @Override
-                    public SCSpatialFeature call(final Cursor cursor) {
-                        SCSpatialFeature feature = new SCSpatialFeature();
-                        // deserialize byte[] to Geometry object
-                        byte[] wkb = SCSqliteHelper.getBlob(cursor, source.getGeomColumnName());
-                        try {
-                            if (wkb != null || wkb.length > 0) {
-                                feature = new SCGeometry(
-                                        new WKBReader(GEOMETRY_FACTORY).read(wkb)
-                                );
-                            }
-                        }
-                        catch (ParseException e) {
-                            Log.w(LOG_TAG, "Could not parse geometry");
-                        }
-                        feature.setStoreId(scStoreConfig.getUniqueID());
-                        feature.setLayerId(source.getTableName());
-                        feature.setId(SCSqliteHelper.getString(cursor, source.getPrimaryKeyName()));
-                        for (Map.Entry<String, String> column : source.getColumns().entrySet()) {
-                            if (column.getValue().equalsIgnoreCase("BLOB")
-                                    || column.getValue().equalsIgnoreCase("GEOMETRY")
-                                    || column.getValue().equalsIgnoreCase("POINT")
-                                    || column.getValue().equalsIgnoreCase("LINESTRING")
-                                    || column.getValue().equalsIgnoreCase("POLYGON")) {
-                                feature.getProperties().put(
-                                        column.getKey(),
-                                        SCSqliteHelper.getBlob(cursor, column.getKey())
-                                );
-                            }
-                            else if (column.getValue().startsWith("INTEGER")) {
-                                feature.getProperties().put(
-                                        column.getKey(),
-                                        SCSqliteHelper.getInt(cursor, column.getKey())
-                                );
-                            }
-                            else if (column.getValue().startsWith("REAL")) {
-                                feature.getProperties().put(
-                                        column.getKey(),
-                                        SCSqliteHelper.getLong(cursor, column.getKey())
-                                );
-                            }
-                            else if (column.getValue().startsWith("TEXT")) {
-                                feature.getProperties().put(
-                                        column.getKey(),
-                                        SCSqliteHelper.getString(cursor, column.getKey())
-                                );
-                            }
-                            else {
-                                Log.w(LOG_TAG, "The column type " + column.getValue() + " did not match any supported" +
-                                        " column type so it wasn't added to the feature.");
-                            }
-                        }
-                        return feature;
-                    }
-                });
-            }
-        };
-    }
-
-    /**
      * Create a new {@link SCSpatialFeature} by persisting to the db and returning the object with its newly created id.
      *
      * @param scSpatialFeature
@@ -466,8 +375,6 @@ public class GeoPackageAdapter extends SCDataAdapter {
                             cursor.moveToFirst();  // force query to execute
                             final Integer pk = cursor.getInt(0);
                             scSpatialFeature.setId(String.valueOf(pk));
-                            // queue feature to be posted to backend
-                            postCreatedFeature(scSpatialFeature);
                             subscriber.onNext(scSpatialFeature);
                             subscriber.onCompleted();
                         }
@@ -477,31 +384,6 @@ public class GeoPackageAdapter extends SCDataAdapter {
                     }
                 }
             });
-        }
-    }
-
-    private void postCreatedFeature(SCSpatialFeature feature) {
-        String formId = "";
-        for(SCFormConfig config : SpatialConnect.getInstance().getDataService().getDefaultStore().getFormConfigs()) {
-            if (config.getFormKey().equals(feature.getKey().getLayerId())) {
-                formId = config.getId();
-            }
-        }
-        if (formId != null) {
-            final String theUrl = SCConfigService.API_URL + "forms/" + formId + "/submit";
-            Log.d(LOG_TAG, "Posting created feature to " + theUrl);
-            SCNetworkService networkService = SpatialConnect.getInstance().getNetworkService();
-            String response = null;
-            try {
-                response = networkService.post(theUrl, feature.toJson());
-                Log.d(LOG_TAG, "create new feature response " + response);
-            }
-            catch (IOException e) {
-                Log.w(LOG_TAG, "could not create new feature on backend");
-            }
-        }
-        else {
-            Log.w(LOG_TAG, "Could not post feature b/c form id was null");
         }
     }
 
@@ -586,10 +468,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
         }
     }
 
-    @Override
-    public void disconnect() {
-        gpkg.close();
-    }
+
 
     public Set<GeoPackageContents> getGeoPackageContents() {
         return gpkg.getGeoPackageContents();
@@ -598,7 +477,6 @@ public class GeoPackageAdapter extends SCDataAdapter {
     public Map<String, SCGpkgFeatureSource> getFeatureSources() {
         return gpkg.getFeatureSources();
     }
-
 
     /**
      * Downloads a GeoPackage and returns a Response.
@@ -616,6 +494,78 @@ public class GeoPackageAdapter extends SCDataAdapter {
             return Observable.error(e);
         }
     }
+
+    /**
+     * Returns a function that can map all the rows from a query to stream of {@link SCSpatialFeature}s.
+     *
+     * @param source
+     * @return
+     */
+    public Func1<SqlBrite.Query, Observable<SCSpatialFeature>> getFeatureMapper(final SCGpkgFeatureSource source) {
+        return new Func1<SqlBrite.Query, Observable<SCSpatialFeature>>() {
+
+            @Override
+            public Observable<SCSpatialFeature> call(SqlBrite.Query query) {
+                return query.asRows(new Func1<Cursor, SCSpatialFeature>() {
+                    @Override
+                    public SCSpatialFeature call(final Cursor cursor) {
+                        SCSpatialFeature feature = new SCSpatialFeature();
+                        // deserialize byte[] to Geometry object
+                        byte[] wkb = SCSqliteHelper.getBlob(cursor, source.getGeomColumnName());
+                        try {
+                            if (wkb != null || wkb.length > 0) {
+                                feature = new SCGeometry(
+                                        new WKBReader(GEOMETRY_FACTORY).read(wkb)
+                                );
+                            }
+                        }
+                        catch (ParseException e) {
+                            Log.w(LOG_TAG, "Could not parse geometry");
+                        }
+                        feature.setStoreId(scStoreConfig.getUniqueID());
+                        feature.setLayerId(source.getTableName());
+                        feature.setId(SCSqliteHelper.getString(cursor, source.getPrimaryKeyName()));
+                        for (Map.Entry<String, String> column : source.getColumns().entrySet()) {
+                            if (column.getValue().equalsIgnoreCase("BLOB")
+                                    || column.getValue().equalsIgnoreCase("GEOMETRY")
+                                    || column.getValue().equalsIgnoreCase("POINT")
+                                    || column.getValue().equalsIgnoreCase("LINESTRING")
+                                    || column.getValue().equalsIgnoreCase("POLYGON")) {
+                                feature.getProperties().put(
+                                        column.getKey(),
+                                        SCSqliteHelper.getBlob(cursor, column.getKey())
+                                );
+                            }
+                            else if (column.getValue().startsWith("INTEGER")) {
+                                feature.getProperties().put(
+                                        column.getKey(),
+                                        SCSqliteHelper.getInt(cursor, column.getKey())
+                                );
+                            }
+                            else if (column.getValue().startsWith("REAL")) {
+                                feature.getProperties().put(
+                                        column.getKey(),
+                                        SCSqliteHelper.getLong(cursor, column.getKey())
+                                );
+                            }
+                            else if (column.getValue().startsWith("TEXT")) {
+                                feature.getProperties().put(
+                                        column.getKey(),
+                                        SCSqliteHelper.getString(cursor, column.getKey())
+                                );
+                            }
+                            else {
+                                Log.w(LOG_TAG, "The column type " + column.getValue() + " did not match any supported" +
+                                        " column type so it wasn't added to the feature.");
+                            }
+                        }
+                        return feature;
+                    }
+                });
+            }
+        };
+    }
+
 
     /**
      * Populate a {@link ContentValues} for all of the columns excluding the primary key and geometry columns.
@@ -687,6 +637,31 @@ public class GeoPackageAdapter extends SCDataAdapter {
         fos.close();
         Log.d(LOG_TAG, "Saved file to " + dbFile.getPath());
         Log.d(LOG_TAG, "Size of file in bytes " + dbFile.length());
+    }
+
+    private String createFormTableSQL(SCFormConfig formConfig){
+        final String tableName = formConfig.getFormKey();
+        StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName);
+        sb.append(" (id INTEGER PRIMARY KEY AUTOINCREMENT, ");
+        boolean isFirst = true;
+        for (SCFormField field : formConfig.getFields()) {
+            if (!isFirst) {
+                sb.append(", ");
+            }
+            sb.append(field.getKey().replace(" ", "_").toLowerCase());
+            sb.append(" ").append(field.getColumnType());
+            isFirst = false;
+        }
+        sb.append(")");
+        return sb.toString();
+    }
+
+    private String addToGpkgContentsSQL(String tableName) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("INSERT OR REPLACE INTO gpkg_contents ")
+                .append("(table_name,data_type,identifier,description,min_x,min_y,max_x,max_y,srs_id) ")
+                .append(String.format("VALUES ('%s','features','%s','form',0,0,0,0,4326)", tableName, tableName));
+        return sb.toString();
     }
 
 }

@@ -48,7 +48,8 @@ public abstract class BaseTestCase {
     /**
      * Test context
      */
-    protected static File testConfigFile;
+    protected static File remoteConfigFile;
+    protected static File localConfigFile;
 
     protected final static String RIO_GPKG_ID = "5729cac9-cf37-476a-997d-f9c687b4df67";
     protected final static String HAITI_GPKG_ID = "f6dcc750-1349-46b9-a324-0223764d46d1";
@@ -70,13 +71,25 @@ public abstract class BaseTestCase {
                 Context.CONTEXT_IGNORE_SECURITY
         );
         try {
-            testConfigFile = File.createTempFile("config.scfg", null, activity.getCacheDir());
-            // read test scconfig.json file from test resources directory
-            InputStream is = testContext.getResources().openRawResource(R.raw.scconfig);
-            FileOutputStream fos = new FileOutputStream(testConfigFile);
+            remoteConfigFile = File.createTempFile("config_remote.scfg", null, activity.getCacheDir());
+            localConfigFile = File.createTempFile("config_local.scfg", null, activity.getCacheDir());
+
+            // read test scconfig_remote.json file from test resources directory
+            //set local test config
+            InputStream is = testContext.getResources().openRawResource(R.raw.scconfig_local);
+            FileOutputStream fos = new FileOutputStream(localConfigFile);
             byte[] data = new byte[is.available()];
             is.read(data);
             fos.write(data);
+
+            //set remote test config
+            is = testContext.getResources().openRawResource(R.raw.scconfig_remote);
+            fos = new FileOutputStream(remoteConfigFile);
+            data = new byte[is.available()];
+
+            is.read(data);
+            fos.write(data);
+
             is.close();
             fos.close();
         } catch (IOException ex) {
