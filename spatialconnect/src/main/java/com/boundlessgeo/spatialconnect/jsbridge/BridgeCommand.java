@@ -15,6 +15,7 @@
 package com.boundlessgeo.spatialconnect.jsbridge;
 
 
+// TODO: generate this class with schema
 public enum BridgeCommand {
 
     START_ALL_SERVICES(1),
@@ -46,9 +47,10 @@ public enum BridgeCommand {
     CONFIG_UPDATE_FORM(508),
     CONFIG_REGISTER_DEVICE(509),
     NOTIFICATIONS(600),
-    NOTIFICATION_ALERT(601),
-    NOTIFICATION_INFO(602),
-    NOTIFICATION_CONTENT_AVAILABLE(602);
+    //NOTIFICATION_ALERT(601),
+    //NOTIFICATION_INFO(602),
+    //NOTIFICATION_CONTENT_AVAILABLE(602)
+    ;
 
     private final int actionNumber;
 

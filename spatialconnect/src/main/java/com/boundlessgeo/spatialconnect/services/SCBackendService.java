@@ -28,6 +28,7 @@ import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.jsbridge.BridgeCommand;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.mqtt.QoS;
+import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
@@ -41,6 +42,7 @@ import okhttp3.Response;
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
+import rx.observables.ConnectableObservable;
 import rx.subjects.BehaviorSubject;
 
 /**
@@ -52,7 +54,8 @@ public class SCBackendService extends SCService {
     private static Context context;
     private static MqttHandler mqttHandler;
     private static HttpHandler httpHandler;
-
+    private static BehaviorSubject<SCNotification> notifyTopic = BehaviorSubject.create();
+    public static ConnectableObservable<SCNotification> notifications = notifyTopic.publish();
     public static BehaviorSubject<Integer> configReceived = BehaviorSubject.create(0);
     public static BehaviorSubject<Integer> running = BehaviorSubject.create(0);
     /**
@@ -82,6 +85,7 @@ public class SCBackendService extends SCService {
             );
         }
         mqttHandler.initialize(config);
+        setupSubscriptions();
     }
 
     @Override
@@ -96,6 +100,24 @@ public class SCBackendService extends SCService {
             }
         });
         running.onNext(1);
+    }
+
+    private void setupSubscriptions() {
+        MqttHandler.clientConnected.subscribe(new Action1<Integer>() {
+            @Override
+            public void call(Integer integer) {
+                if (integer == 1) {
+                    listenOnTopic("/notify").subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
+                        @Override
+                        public void call(SCMessageOuterClass.SCMessage message) {
+                            Log.d(LOG_TAG, "received notification message: " +
+                                    new SCNotification(message).toJson().toString());
+                            notifyTopic.onNext(new SCNotification(message));
+                        }
+                    });
+                }
+            }
+        });
     }
 
     private void registerAndFetchConfig() {
