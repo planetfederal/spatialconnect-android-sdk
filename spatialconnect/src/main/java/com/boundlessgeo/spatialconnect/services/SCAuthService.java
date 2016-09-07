@@ -14,7 +14,6 @@
  */
 package com.boundlessgeo.spatialconnect.services;
 
-
 import android.content.Context;
 import android.util.Log;
 
@@ -30,8 +29,8 @@ import okhttp3.Interceptor;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.Route;
+import rx.functions.Action1;
 import rx.subjects.BehaviorSubject;
-
 
 public class SCAuthService extends SCService {
 
@@ -68,7 +67,7 @@ public class SCAuthService extends SCService {
     /**
      * Interceptor to attach the auth token to every request if it isn't present.
      */
-    static class AuthHeaderInterceptor implements Interceptor {
+    public static class AuthHeaderInterceptor implements Interceptor {
         @Override
         public Response intercept(Interceptor.Chain chain) throws IOException {
             Request originalRequest = chain.request();
@@ -92,53 +91,64 @@ public class SCAuthService extends SCService {
         }
     }
 
-
     /**
      * Authenticator to add new header to rejected request and retry it after refreshing the token.
      */
-    static class SCAuthenticator implements Authenticator {
+    public static class SCAuthenticator implements Authenticator {
         @Override
         public Request authenticate(Route route, Response response) throws IOException {
             return response.request().newBuilder()
-                    .addHeader(AUTH_HEADER_NAME, refreshToken())
+                    .addHeader(AUTH_HEADER_NAME, getAccessToken())
                     .build();
         }
     }
 
     /**
-     * Method that returns a new auth token from the api after authenticating.
+     * Method that returns refreshes auth token.
      *
      * @return
      */
-    private static String refreshToken() throws IOException {
+    private static void refreshToken() throws IOException {
         Log.d(LOG_TAG, "Refreshing auth token.");
-        final String theUrl = SCConfigService.API_URL + "authenticate";
-        SCNetworkService networkService = SpatialConnect.getInstance().getNetworkService();
-        // TODO: get the email and password from encrypted storage
-        // probably want to use the KeyStore: https://developer.android.com/training/articles/keystore.html
-        if (email != null && password != null) {
-            String response = networkService.post(
-                    theUrl,
-                    String.format("{\"email\": \"%s\", \"password\":\"%s\"}", email, password)
-            );
-            try {
-                accessToken = new JSONObject(response).getString("token");
-                if (accessToken != null) {
-                    loginStatus.onNext(1);
+        SCBackendService.running.subscribe(new Action1<Integer>() {
+            @Override
+            public void call(Integer integer) {
+                if (integer == 1) {
+                    final String theUrl = SCBackendService.API_URL + "authenticate";
+                    SCBackendService backendService = SpatialConnect.getInstance().getBackendService();
+                    // TODO: get the email and password from encrypted storage
+                    // probably want to use the KeyStore: https://developer.android.com/training/articles/keystore.html
+                    if (email != null && password != null) {
+                        String response = null;
+                        try {
+                            response = backendService.post(
+                                    theUrl,
+                                    String.format("{\"email\": \"%s\", \"password\":\"%s\"}", email, password)
+                            );
+                        }
+                        catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        try {
+                            accessToken = new JSONObject(response).getString("token");
+                            if (accessToken != null) {
+                                loginStatus.onNext(1);
+                            }
+                        }
+                        catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    else {
+                        Log.w(LOG_TAG, "Cannot refresh token b/c login credentials are not available.");
+                    }
                 }
             }
-            catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-        else {
-            Log.w(LOG_TAG, "Cannot refresh token b/c login credentials are not available.");
-        }
-        return accessToken;
+        });
     }
 
     public static String getAccessToken() throws IOException {
-        return accessToken != null ? accessToken : refreshToken();
+        return accessToken;
     }
 
 }

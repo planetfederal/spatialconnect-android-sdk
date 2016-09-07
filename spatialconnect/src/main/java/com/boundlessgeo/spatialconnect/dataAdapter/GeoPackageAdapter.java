@@ -487,7 +487,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
     public Observable<Response> downloadGeoPackage(URL theUrl) {
         Log.d(LOG_TAG, "Downloading GeoPackage from " + theUrl.toString());
         try {
-            return Observable.just(SpatialConnect.getInstance().getNetworkService().getResponse(theUrl.toString()));
+            return Observable.just(SpatialConnect.getInstance().getBackendService().getResponse(theUrl.toString()));
         }
         catch (IOException e) {
             Log.e(LOG_TAG, "Could not download GeoPackage from " + theUrl.toString());

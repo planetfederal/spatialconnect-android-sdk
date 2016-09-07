@@ -15,15 +15,15 @@
 package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
+import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
 
+import rx.functions.Func1;
 import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
@@ -40,26 +40,42 @@ public class SCConfigServiceTest extends BaseTestCase {
         deleteDatabases();
     }
 
-    @Test @Ignore
-    public void testSpatialConnectCanLoadNonDefaultConfigs() {
+    @Test
+    public void testSpatialConnectCanLoadLocalConfigs() {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        sc.initialize(activity);
+        sc.addConfig(localConfigFile);
+        sc.startAllServices();
+        waitForStoreToStart(RIO_GPKG_ID, sc);
+        assertEquals("The test config file has 5 stores (3 from the local config + form and default stores ",
+                5, sc.getDataService().getAllStores().size());
+    }
+
+    @Test
+    public void testConfigServiceCanLoadConfigsFromBackendService() {
         SpatialConnect sc = SpatialConnect.getInstance();
         sc.initialize(activity);
         sc.addConfig(remoteConfigFile);
         sc.startAllServices();
-        waitForStoreToStart(WHITEHORSE_GPKG_ID, sc);
-        assertEquals("The test config file has 3 stores.", 3, sc.getDataService().getAllStores().size());
-    }
-
-    @Test @Ignore
-    public void testConfigServicePersistsConfigs() {
-        SpatialConnect sc = SpatialConnect.getInstance();
-        sc.initialize(activity);
-        sc.startAllServices();
-        // the remote config doesn't have the whitehorse gpkg so we wait for haiti
-        waitForStoreToStart(HAITI_GPKG_ID, sc);
-        SCStoreConfigRepository stores = new SCStoreConfigRepository(testContext);
-        assertEquals("Config service should have persisted 2 stores (from the remote location).",
-                2, stores.getNumberOfStores());
+        sc.getAuthService().authenticate("admin@something.com", "admin");
+        TestSubscriber testSubscriber = new TestSubscriber();
+        SCBackendService.configReceived
+                .filter(new Func1<Integer, Boolean>() {
+                    @Override
+                    public Boolean call(Integer integer) {
+                        return integer == 1;
+                    }
+                })
+                .take(1)
+                .timeout(15, TimeUnit.SECONDS)
+                .subscribe(testSubscriber);
+        testSubscriber.awaitTerminalEvent();
+        testSubscriber.assertCompleted();
+        testSubscriber.assertValues(1);
+        waitForStoreToStart(RIO_GPKG_ID, sc);
+        assertEquals("The remote config file has 6 stores plus the form and default stores",
+                8, sc.getDataService()
+                .getAllStores().size());
     }
 
 

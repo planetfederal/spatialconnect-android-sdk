@@ -36,7 +36,7 @@ public class SCSqliteHelperTest extends BaseTestCase {
     @AfterClass
     public static void tearDown() throws Exception {
         rio.close();
-        sc.getNetworkService().cancelAllRequests();
+        sc.getBackendService().cancelAllRequests();
         deleteDatabases();
     }
 

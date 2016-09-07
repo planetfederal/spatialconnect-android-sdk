@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Boundless, http://boundlessgeo.com
+ * Copyright 2016 Boundless, http://boundlessgeo.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,15 +12,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and limitations under the License
  */
-package com.boundlessgeo.spatialconnect.services;
-
+package com.boundlessgeo.spatialconnect.scutilities;
 
 import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkInfo;
-import android.os.Build;
 import android.util.Log;
+
+import com.boundlessgeo.spatialconnect.services.SCAuthService;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -43,16 +40,24 @@ import okio.ForwardingSource;
 import okio.Okio;
 import okio.Source;
 
+public class HttpHandler {
 
-// TODO: consider using https://github.com/stephanenicolas/robospice as this class evolves
-public class SCNetworkService extends SCService {
+    private final static String LOG_TAG = HttpHandler.class.getSimpleName();
 
-    private static final String LOG_TAG = SCNetworkService.class.getSimpleName();
-    private static Context context;
+    private static HttpHandler instance;
     private static OkHttpClient client;
+    private Context context;
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
-    public SCNetworkService(Context context) {
+
+    public static HttpHandler getInstance(Context context) {
+        if (instance == null) {
+            instance = new HttpHandler(context);
+        }
+        return instance;
+    }
+
+    private HttpHandler(Context context) {
         this.context = context;
         this.client = new OkHttpClient.Builder()
                 .addNetworkInterceptor(new LoggingInterceptor())
@@ -119,6 +124,17 @@ public class SCNetworkService extends SCService {
         return response.body().string();
     }
 
+    public Response getResponse(String theUrl) throws IOException {
+        Request request = new Request.Builder()
+                .url(theUrl)
+                .build();
+        return client.newCall(request).execute();
+    }
+
+    public void cancelAllRequests() {
+        client.dispatcher().cancelAll();
+    }
+
     class LoggingInterceptor implements Interceptor {
         @Override
         public Response intercept(Interceptor.Chain chain) throws IOException {
@@ -136,17 +152,6 @@ public class SCNetworkService extends SCService {
 
             return response;
         }
-    }
-
-    public Response getResponse(String theUrl) throws IOException {
-        Request request = new Request.Builder()
-                .url(theUrl)
-                .build();
-        return client.newCall(request).execute();
-    }
-
-    public void cancelAllRequests() {
-        client.dispatcher().cancelAll();
     }
 
     // from https://github.com/square/okhttp/blob/master/samples/guide/src/main/java/okhttp3/recipes/Progress.java
@@ -193,39 +198,6 @@ public class SCNetworkService extends SCService {
                 }
             };
         }
-    }
-
-    public boolean isInternetAvailable() {
-
-        boolean haveConnectedWifi = false;
-        boolean haveConnectedMobile = false;
-
-        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            Network[] networks = cm.getAllNetworks();
-            NetworkInfo networkInfo;
-
-            for (Network ni : networks) {
-                networkInfo = cm.getNetworkInfo(ni);
-                if (networkInfo.getTypeName().equalsIgnoreCase("WIFI"))
-                    if (networkInfo.isConnected())
-                        haveConnectedWifi = true;
-                if (networkInfo.getTypeName().equalsIgnoreCase("MOBILE"))
-                    if (networkInfo.isConnected())
-                        haveConnectedMobile = true;
-            }
-        } else {
-            NetworkInfo[] netInfo = cm.getAllNetworkInfo();
-            for (NetworkInfo ni : netInfo) {
-                if (ni.getTypeName().equalsIgnoreCase("WIFI"))
-                    if (ni.isConnected())
-                        haveConnectedWifi = true;
-                if (ni.getTypeName().equalsIgnoreCase("MOBILE"))
-                    if (ni.isConnected())
-                        haveConnectedMobile = true;
-            }
-        }
-        return haveConnectedWifi || haveConnectedMobile;
     }
 
     interface ProgressListener {

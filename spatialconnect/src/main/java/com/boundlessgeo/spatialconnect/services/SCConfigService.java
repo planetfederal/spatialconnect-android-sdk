@@ -40,7 +40,9 @@ import rx.functions.Action1;
 
 /**
  * The SCConfigService is responsible for managing the configuration for SpatialConnect.  This includes downloading
- * remote configuration and sweeping the external storage for config files, if required.
+ * remote configuration and sweeping the external storage for config files, if required. The config service is
+ * also responsible for parsing the relevant parts of the config and invoking functions on other services using parts
+ * of the {@link SCConfig}.
  */
 public class SCConfigService extends SCService {
 
@@ -49,19 +51,13 @@ public class SCConfigService extends SCService {
     private static final String CONFIGS_DIR = "configs";
     private ArrayList<File> localConfigFiles = new ArrayList<>();
     private SCDataService dataService;
-    private SCNetworkService networkService;
-    private static SCKVPStoreService kvpStoreService;
+    private SCBackendService backendService;
     public static String CLIENT_ID = null;
-    /**
-     * The API_URL of the spatialconnect-service api.  This will always end with a trailing slash, "/api/"
-     */
-    public static String API_URL = null;
 
     public SCConfigService(Context context) {
         this.context = context;
         this.dataService = SpatialConnect.getInstance().getDataService();
-        this.networkService = SpatialConnect.getInstance().getNetworkService();
-        this.kvpStoreService = SpatialConnect.getInstance().getSCKVPStoreService();
+        this.backendService = SpatialConnect.getInstance().getBackendService();
     }
 
     /**
@@ -120,110 +116,48 @@ public class SCConfigService extends SCService {
         return null;
     }
 
-    /**
-     * Loads the config from the API.
-     */
-    private void loadRemoteConfig() {
-        Log.i(LOG_TAG, "Attempting to load remote config if client is authenticated.");
-        final String configUrl = API_URL + "config";
-        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
-            @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
-                    File configFile = networkService.getFileBlocking(configUrl);
-                    if (configFile != null) {
-                        loadConfigs(Arrays.asList(configFile));
-                    }
-                }
-            }
-        });
-    }
-
     // method to load the configuration from a file.
     private void loadConfigs(List<File> configFiles) {
-        registerDataStores(configFiles);
-        registerForms(configFiles);
-        // only set the API_URL one time, after reading from the config file
-        if (API_URL == null) {
-            String remoteUrl = getRemoteConfigUrl(configFiles);
-            if (remoteUrl != null) {
-                // ensure the url ends with a slash
-                API_URL = remoteUrl.endsWith("/") ? remoteUrl + "api/" : remoteUrl + "/api/";
+        if (configFiles.size() > 0) {
+            Log.d(LOG_TAG, "Loading " + configFiles.size() + " config files.");
+            for (File file : configFiles) {
+                final SCConfig scConfig;
+                try {
+                    scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
+                    loadConfig(scConfig);
+                    SpatialConnect.getInstance().connectBackend(scConfig.getRemote());
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
 
-    /**
-     * Returns the value of the first {@code remote} attribute defined in the config files.
-     *
-     * @param configFiles
-     * @return the api endpoint for fetching the config
-     */
-    private String getRemoteConfigUrl(List<File> configFiles) {
-        Log.d(LOG_TAG, "Locating remote url for config");
-        for (File file : configFiles) {
-            final SCConfig scConfig;
-            try {
-                scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
-                if(scConfig.getRemote() != null) {
-                    return scConfig.getRemote();
-                }
-                else {
-                    Log.w(LOG_TAG, "No remote attribute was present in the config file " + file.getPath());
-                }
-            }
-            catch (IOException e) {
-                // TODO: test for invalid configs
-                Log.w(LOG_TAG, "Could not parse api url from config file!");
-                e.printStackTrace();
-            }
-        }
-        return null;
+    public void loadConfig(SCConfig config) {
+        registerDataStores(config.getStoreConfigs());
+        registerForms(config.getFormConfigs());
     }
 
     /* Registers all the forms specified in each config file */
-    private void registerForms(List<File> configFiles) {
-        for (File file : configFiles) {
-            final SCConfig scConfig;
-            try {
-                scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
-                if(scConfig.getFormConfigs() != null && scConfig.getFormConfigs().size() > 0) {
-                    for (SCFormConfig formConfig : scConfig.getFormConfigs()) {
-                        Log.d(LOG_TAG, "Creating table for form " + formConfig.getFormKey());
-                        FormStore store = dataService.getFormStore();
-                        if (store != null) {
-                            store.addFormLayer(formConfig);
-                        }
-                    }
+    private void registerForms(List<SCFormConfig> formConfigs) {
+        if (formConfigs != null) {
+            for (SCFormConfig formConfig : formConfigs) {
+                Log.d(LOG_TAG, "Creating table for form " + formConfig.getFormKey());
+                FormStore store = dataService.getFormStore();
+                if (store != null) {
+                    store.addFormLayer(formConfig);
                 }
-                else {
-                    Log.w(LOG_TAG, "No forms were present in the config file " + file.getPath());
-                }
-            }
-            catch (IOException e) {
-                // TODO: test for invalid configs
-                e.printStackTrace();
             }
         }
     }
 
     /* Registers all the stores specified in each config file */
-    private void registerDataStores(List<File> configFiles) {
-        for (File file : configFiles) {
-            Log.d(LOG_TAG, "Looking for stores for config file " + file.getPath());
-            final SCConfig scConfig;
-            try {
-                // parse the "stores" attribute from the scconfig file
-                scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
-                if (scConfig.getStoreConfigs() != null) {
-                    for (SCStoreConfig storeConfig : scConfig.getStoreConfigs()) {
-                        dataService.addNewStore(storeConfig);
-                    }
-                }
-            }
-            catch (IOException e) {
-                // TODO: test for invalid configs
-                e.printStackTrace();
+    private void registerDataStores(List<SCStoreConfig> storeConfigs) {
+        if (storeConfigs != null) {
+            for (SCStoreConfig storeConfig : storeConfigs) {
+                Log.d(LOG_TAG, "Adding store " + storeConfig.getName() + " to data service.");
+                dataService.addNewStore(storeConfig);
             }
         }
     }
@@ -245,10 +179,6 @@ public class SCConfigService extends SCService {
     public void start() {
         Log.d(LOG_TAG, "Starting SCConfig Service.  Loading all configs");
         loadConfigs();
-        if (API_URL != null) {
-            loadRemoteConfig();
-            registerDevice();
-        }
         this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
     }
 
@@ -262,8 +192,8 @@ public class SCConfigService extends SCService {
     }
 
     private void registerDevice() {
-        final String registrationEndpoint = API_URL + "devices/register";
-        final String deviceEndpoint = API_URL + "devices/%s";
+        final String registrationEndpoint = SCBackendService.API_URL + "devices/register";
+        final String deviceEndpoint = SCBackendService.API_URL + "devices/%s";
 
         SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
             @Override
@@ -271,9 +201,9 @@ public class SCConfigService extends SCService {
                 if (integer == 1) {
                     try {
                         // first check if device is already registered
-                        String response = networkService.get(String.format(deviceEndpoint, getClientId()));
+                        String response = backendService.get(String.format(deviceEndpoint, getClientId()));
                         if (response.equals("null")) {
-                            networkService.post(registrationEndpoint,
+                            backendService.post(registrationEndpoint,
                                     String.format("{\"identifier\": \"%s\", \"device_info\": {\"os\":\"%s\"} }",
                                             getClientId(), getAndroidVersion()
                                     )
@@ -292,20 +222,20 @@ public class SCConfigService extends SCService {
             }
         });
 
-
     }
 
     /**
      * Gets the unique identifier that identifies this installation of the application.
      *
-     * @see <a href="https://developer.android.com/training/articles/user-data-ids.html">
-     *     https://developer.android.com/training/articles/user-data-ids.html</a>
      * @return The UUID string that identifies this application
+     * @see <a href="https://developer.android.com/training/articles/user-data-ids.html">
+     * https://developer.android.com/training/articles/user-data-ids.html</a>
      */
     public static String getClientId() {
         if (CLIENT_ID != null) {
             return CLIENT_ID;
         }
+        SCKVPStoreService kvpStoreService = SpatialConnect.getInstance().getSCKVPStoreService();
         Map<String, Object> resp = kvpStoreService.getValueForKey("clientId");
         if (resp.get("clientId") != null) {
             CLIENT_ID = (String) resp.get("clientId");
@@ -320,6 +250,6 @@ public class SCConfigService extends SCService {
     public static String getAndroidVersion() {
         String release = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
-        return "Android SDK: " + sdkVersion + " (" + release +")";
+        return "Android SDK: " + sdkVersion + " (" + release + ")";
     }
 }

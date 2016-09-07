@@ -25,7 +25,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCGeometryCollection;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.services.SCNetworkService;
+import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -92,7 +92,7 @@ public class WFSStore extends SCDataStore {
         Log.d(LOG_TAG, String.format("Making WFS GetFeature request:\n%s", getFeatureUrl));
         SCGeometryFactory factory = new SCGeometryFactory();
         try {
-            String response = SpatialConnect.getInstance().getNetworkService().get(getFeatureUrl);
+            String response = SpatialConnect.getInstance().getBackendService().get(getFeatureUrl);
             Log.d(LOG_TAG, String.format("Received response:\n%s", response));
             SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(response);
             for (SCSpatialFeature feature : collection.getFeatures()) {
@@ -139,8 +139,8 @@ public class WFSStore extends SCDataStore {
             public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
                 // try to connect to WFS store to get the layers from the capabilities documents
                 try {
-                    SCNetworkService networkService = SpatialConnect.getInstance().getNetworkService();
-                    layerNames = getLayerNames(networkService.getResponseAsInputStream(getGetCapabilitiesUrl()));
+                    SCBackendService backendService = SpatialConnect.getInstance().getBackendService();
+                    layerNames = getLayerNames(backendService.getResponseAsInputStream(getGetCapabilitiesUrl()));
                     if (layerNames != null) {
                         storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
                         subscriber.onNext(

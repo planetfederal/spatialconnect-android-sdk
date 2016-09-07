@@ -23,9 +23,12 @@ public class SCConfig {
 
     @JsonProperty("stores")
     private List<SCStoreConfig> stores;
+
     @JsonProperty("forms")
     private List<SCFormConfig> forms;
-    private String remote;
+
+    @JsonProperty("remote")
+    private SCRemoteConfig remote;
 
     public SCConfig() {
     }
@@ -46,11 +49,11 @@ public class SCConfig {
         this.forms = forms;
     }
 
-    public String getRemote() {
+    public SCRemoteConfig getRemote() {
         return remote;
     }
 
-    public void setRemote(String remote) {
+    public void setRemote(SCRemoteConfig remote) {
         this.remote = remote;
     }
 }
