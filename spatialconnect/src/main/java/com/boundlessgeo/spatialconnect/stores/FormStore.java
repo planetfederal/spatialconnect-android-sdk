@@ -21,6 +21,7 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
+import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -29,8 +30,10 @@ import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import rx.Observable;
 import rx.functions.Action0;
@@ -55,7 +58,12 @@ public class FormStore extends GeoPackageStore {
     public void addFormLayer(SCFormConfig formConfig) {
         Log.d(LOG_TAG, "Saving form config " + formConfig.getFormKey());
         formConfigs.add(formConfig);
-        ((GeoPackageAdapter) getAdapter()).addLayer(formConfig);
+        final String tableName = formConfig.getFormKey();
+        Map<String, String> typeDefs = new HashMap<>();
+        for (SCFormField field : formConfig.getFields()) {
+            typeDefs.put(field.getKey().replace(" ", "_").toLowerCase(), field.getColumnType());
+        }
+        super.addLayer(tableName, typeDefs);
     }
 
     public void deleteFormLayer(String layerName) {

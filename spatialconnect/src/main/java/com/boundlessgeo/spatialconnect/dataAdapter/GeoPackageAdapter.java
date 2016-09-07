@@ -20,8 +20,6 @@ import android.database.Cursor;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.config.SCFormConfig;
-import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.db.GeoPackageContents;
@@ -180,33 +178,25 @@ public class GeoPackageAdapter extends SCDataAdapter {
         gpkg.close();
     }
 
-
-    /**
-     * Creates a new table for the form specified in the formConfig.
-     *
-     * @param formConfig
-     */
-    public void addLayer(SCFormConfig formConfig) {
-        if (!layerExists(formConfig)) {
-            Log.d(LOG_TAG, "Creating a table for form " + formConfig.getFormKey());
-            final String tableName = formConfig.getFormKey();
+    public void addLayer(String layer, Map<String,String> typeDefs) {
+        if (!layerExists(layer)) {
+            final String tableName = layer;
             Cursor cursor = null;
             BriteDatabase.Transaction tx = gpkg.newTransaction();
             try {
-                // first create the table for this form
-                cursor = gpkg.query(createFormTableSQL(formConfig));
+                // first create the table 
+                cursor = gpkg.query(createTableSQL(layer, typeDefs));
                 cursor.moveToFirst(); // force query to execute
-                // then add it to gpkg_contents and any other tables (gpkg_metadata, ,etc)
+                // then add it to gpkg_contents and any other tables (gpkg_metadata, ,etc) 
                 cursor = gpkg.query(addToGpkgContentsSQL(tableName));
                 cursor.moveToFirst(); // force query to execute
-                // add a geometry column to the table b/c we want to store where the form was submitted (if needed).
-                // also, note that this function will add the geometry to gpkg_geometry_columns, which has a foreign key
-                // constraint on the table name, which requires the table to exist in gpkg_contents
+                // add a geometry column to the table b/c we want to store where the package was submitted (if needed). 
+                // also, note that this function will add the geometry to gpkg_geometry_columns, which has a foreign key 
+                // constraint on the table name, which requires the table to exist in gpkg_contents 
                 cursor = gpkg.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
                 cursor.moveToFirst(); // force query to execute
                 tx.markSuccessful();
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 ex.printStackTrace();
                 Log.w(LOG_TAG, "Could not create table b/c " + ex.getMessage());
             }
@@ -221,7 +211,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
     }
 
     /**
-     * Deletes a form table.
+     * Deletes layer
      *
      * @param tableName - the name of the table/layer to remove from the DEFAULT_STORE
      */
@@ -238,13 +228,10 @@ public class GeoPackageAdapter extends SCDataAdapter {
         gpkg.refreshFeatureSources();
     }
 
-    private boolean layerExists(SCFormConfig formConfig) {
+    private boolean layerExists(String layer) {
         boolean layerExists = false;
-        String formTableName = formConfig.getFormKey();
-        Cursor cursor = gpkg.query(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",
-                new String[]{formTableName}
-        );
+        String table = layer;
+        Cursor cursor = gpkg.query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",new String[]{table});
         try {
             if (cursor.moveToFirst()) {
                 layerExists = cursor.getInt(0) > 0;
@@ -253,7 +240,8 @@ public class GeoPackageAdapter extends SCDataAdapter {
         finally {
             cursor.close();
         }
-        return layerExists;
+
+        return  layerExists;
     }
 
 
@@ -639,20 +627,21 @@ public class GeoPackageAdapter extends SCDataAdapter {
         Log.d(LOG_TAG, "Size of file in bytes " + dbFile.length());
     }
 
-    private String createFormTableSQL(SCFormConfig formConfig){
-        final String tableName = formConfig.getFormKey();
+    private String createTableSQL(String layer, Map<String, String> typeDefs){
+        final String tableName = layer;
         StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName);
         sb.append(" (id INTEGER PRIMARY KEY AUTOINCREMENT, ");
         boolean isFirst = true;
-        for (SCFormField field : formConfig.getFields()) {
+        for (String key : typeDefs.keySet()) {
             if (!isFirst) {
                 sb.append(", ");
             }
-            sb.append(field.getKey().replace(" ", "_").toLowerCase());
-            sb.append(" ").append(field.getColumnType());
+            sb.append(key.replace(" ", "_").toLowerCase());
+            sb.append(" ").append(typeDefs.get(key));
             isFirst = false;
         }
         sb.append(")");
+        Log.e(LOG_TAG, "query: " + sb.toString());
         return sb.toString();
     }
 
@@ -660,7 +649,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
         StringBuilder sb = new StringBuilder();
         sb.append("INSERT OR REPLACE INTO gpkg_contents ")
                 .append("(table_name,data_type,identifier,description,min_x,min_y,max_x,max_y,srs_id) ")
-                .append(String.format("VALUES ('%s','features','%s','form',0,0,0,0,4326)", tableName, tableName));
+                .append(String.format("VALUES ('%s','features','%s','%s',0,0,0,0,4326)", tableName, tableName, tableName));
         return sb.toString();
     }
 

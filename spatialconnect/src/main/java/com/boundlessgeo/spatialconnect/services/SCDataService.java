@@ -25,6 +25,7 @@ import com.boundlessgeo.spatialconnect.stores.DefaultStore;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
+import com.boundlessgeo.spatialconnect.stores.LocationStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
@@ -83,6 +84,7 @@ public class SCDataService extends SCService {
         this.context = context;
         initializeDefaultStore();
         initializeFormStore();
+        initializeLocationStore();
     }
 
     private void initializeDefaultStore() {
@@ -129,6 +131,35 @@ public class SCDataService extends SCService {
             @Override
             public void onCompleted() {
                 Log.d(LOG_TAG, "Registered form store with SCDataService.");
+            }
+
+            @Override
+            public void onError(Throwable e) {
+                Log.e(LOG_TAG, "Couldn't start form store", e);
+                System.exit(0);
+            }
+
+            @Override
+            public void onNext(SCStoreStatusEvent event) {
+                Log.w(LOG_TAG, "Shouldn't return onNext");
+            }
+        });
+    }
+
+    private void initializeLocationStore() {
+        SCStoreConfig locationStoreConfig = new SCStoreConfig();
+        locationStoreConfig.setName(LocationStore.NAME);
+        locationStoreConfig.setUniqueID(LocationStore.NAME);
+        locationStoreConfig.setUri("file://" + LocationStore.NAME);
+        locationStoreConfig.setType("gpkg");
+        locationStoreConfig.setVersion("1");
+        LocationStore locationStore = new LocationStore(context, locationStoreConfig);
+        this.stores.put(locationStore.getStoreId(), locationStore);
+        // block until store is started
+        locationStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
+            @Override
+            public void onCompleted() {
+                Log.d(LOG_TAG, "Registered location store with SCDataService.");
             }
 
             @Override
@@ -403,6 +434,16 @@ public class SCDataService extends SCService {
             }
         }
         Log.w(LOG_TAG, "Form store was not found!");
+        return null;
+    }
+
+    public LocationStore getLocationStore() {
+        for (SCDataStore store : stores.values()) {
+            if (store.getName().equals(LocationStore.NAME)) {
+                return (LocationStore) store;
+            }
+        }
+        Log.w(LOG_TAG, "Location store was not found!");
         return null;
     }
 
