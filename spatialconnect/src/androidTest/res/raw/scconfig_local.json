@@ -7,22 +7,6 @@
       "isMainBundle":true,
       "id":"50402599-3ad3-439f-9c49-3c8a7579933b",
       "name":"Simple"
-    },
-    {
-      "store_type": "wfs",
-      "version": "1.1.0",
-      "uri": "http://efc-dev.boundlessgeo.com:8080/geoserver/ows",
-      "id":"af4a0dc8-2077-4cfc-a4e0-b513d8c14a71",
-      "name":"EFC Dev GeoServer",
-      "default_layers": ["baseball_team"]
-    },
-    {
-      "id": "5729cac9-cf37-476a-997d-f9c687b4df67",
-      "store_type": "gpkg",
-      "version": "1",
-      "uri": "https://s3.amazonaws.com/test.spacon/rio.gpkg",
-      "name": "Rio",
-      "default_layers": [ ]
     }
   ],
   "forms":[

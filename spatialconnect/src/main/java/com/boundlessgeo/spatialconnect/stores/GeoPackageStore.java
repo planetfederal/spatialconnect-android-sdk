@@ -23,6 +23,8 @@ import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 
+import java.util.Map;
+
 import rx.Observable;
 import rx.Subscriber;
 
@@ -51,11 +53,19 @@ public class GeoPackageStore extends SCDataStore {
         this.setAdapter(new GeoPackageAdapter(context, scStoreConfig));
     }
 
+
+    public void addLayer(String layer, Map<String,String>  fields) {
+        ((GeoPackageAdapter) getAdapter()).addLayer(layer, fields);
+    }
+
+    public void deleteLayer(String layer) {
+        ((GeoPackageAdapter) getAdapter()).deleteLayer(layer);
+    }
+
     @Override
     public DataStorePermissionEnum getAuthorization() {
         return DataStorePermissionEnum.READ_WRITE;
     }
-
 
     @Override
     public Observable<SCSpatialFeature> query(final SCQueryFilter scFilter) {
