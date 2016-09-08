@@ -22,6 +22,7 @@ import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCPoint;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
+import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 
@@ -74,13 +75,15 @@ public class LocationStore extends GeoPackageStore {
         return spatialFeature.doOnCompleted(new Action0() {
             @Override
             public void call() {
-                SCMessageOuterClass.SCMessage.Builder builder =  SCMessageOuterClass.SCMessage.newBuilder();
+                SCMessageOuterClass.SCMessage.Builder builder =
+                        SCMessageOuterClass.SCMessage.newBuilder();
                 builder.setAction(100)
                         .setPayload(point.toJson())
                         .build();
                 SCMessageOuterClass.SCMessage message = builder.build();
 
-                SpatialConnect.getInstance().getBackendService().publishReplyTo("/store/tracking",message);
+                SpatialConnect.getInstance()
+                        .getBackendService().publish("/store/tracking",message, QoS.AT_MOST_ONCE);
             }
         });
 
