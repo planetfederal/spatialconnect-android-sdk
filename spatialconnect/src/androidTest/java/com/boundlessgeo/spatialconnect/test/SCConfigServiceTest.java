@@ -37,6 +37,7 @@ public class SCConfigServiceTest extends BaseTestCase {
 
     @After
     public void afterTest() throws Exception {
+        SpatialConnect.getInstance().stopAllServices();
         deleteDatabases();
     }
 
@@ -73,8 +74,11 @@ public class SCConfigServiceTest extends BaseTestCase {
         testSubscriber.assertCompleted();
         testSubscriber.assertValues(1);
         waitForStoreToStart(RIO_GPKG_ID, sc);
-        assertEquals("The remote config file has 6 stores plus the form and default stores",
-                8, sc.getDataService().getAllStores().size());
+        assertEquals(
+            "The remote config file has 6 stores plus the form, location, and default stores",
+            9,
+            sc.getDataService().getAllStores().size()
+        );
     }
 
 

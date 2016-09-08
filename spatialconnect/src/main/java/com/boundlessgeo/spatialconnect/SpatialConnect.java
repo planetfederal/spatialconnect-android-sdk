@@ -68,9 +68,9 @@ public class SpatialConnect {
     public void initialize(Context context) {
         Log.d(LOG_TAG, "Initializing SpatialConnect");
         this.services = new HashMap<>();
+        this.sensorService = new SCSensorService(context);
         this.dataService = new SCDataService(context);
         this.kvpStoreService = new SCKVPStoreService(context);
-        this.sensorService = new SCSensorService(context);
         this.configService = new SCConfigService(context);
         this.authService = new SCAuthService(context);
         this.context = context;

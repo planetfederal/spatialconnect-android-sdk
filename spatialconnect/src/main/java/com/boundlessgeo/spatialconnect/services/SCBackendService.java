@@ -25,7 +25,7 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
-import com.boundlessgeo.spatialconnect.jsbridge.BridgeCommand;
+import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
@@ -136,7 +136,7 @@ public class SCBackendService extends SCService {
     private void fetchConfig() {
         Log.d(LOG_TAG, "fetching config from mqtt config topic");
         SCMessageOuterClass.SCMessage getConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
-                .setAction(BridgeCommand.CONFIG_FULL.value()).build();
+                .setAction(SCCommand.CONFIG_FULL.value()).build();
         publishReplyTo("/config", getConfigMsg)
                 .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
                     @Override
@@ -158,7 +158,7 @@ public class SCBackendService extends SCService {
 
     private void registerDevice() {
         SCMessageOuterClass.SCMessage registerConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
-                .setAction(BridgeCommand.CONFIG_REGISTER_DEVICE.value())
+                .setAction(SCCommand.CONFIG_REGISTER_DEVICE.value())
                 .setPayload(
                         String.format("{\"identifier\": \"%s\", \"device_info\": \"%s\"}",
                                 SCConfigService.getClientId(),

@@ -266,6 +266,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                     queryFilter.getLayerIds() :
                     new ArrayList<>(layers.keySet());
             final int queryLimit = queryFilter.getLimit() / featureTableNames.size();
+            Log.d(LOG_TAG, "querying on feature tables: " + featureTableNames.toString());
             return Observable.from(featureTableNames)
                     .filter(new Func1<String, Boolean>() {
                         @Override

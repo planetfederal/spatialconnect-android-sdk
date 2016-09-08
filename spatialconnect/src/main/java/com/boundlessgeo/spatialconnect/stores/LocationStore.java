@@ -17,24 +17,31 @@
 package com.boundlessgeo.spatialconnect.stores;
 
 import android.content.Context;
-
+import android.location.Location;
+import android.util.Log;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
+import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCPoint;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
-
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.PrecisionModel;
 import java.util.HashMap;
 import java.util.Map;
-
 import rx.Observable;
 import rx.functions.Action0;
+import rx.functions.Action1;
 
 public class LocationStore extends GeoPackageStore {
 
     public static final String NAME = "LOCATION_STORE";
+    private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 0);
 
     public LocationStore(Context context, SCStoreConfig scStoreConfig) {
         super(context, scStoreConfig);
@@ -43,7 +50,6 @@ public class LocationStore extends GeoPackageStore {
     public Observable<SCStoreStatusEvent> start() {
         Observable<SCStoreStatusEvent> storeStatusEvent;
         storeStatusEvent = super.start();
-
         return storeStatusEvent.doOnCompleted(new Action0() {
             @Override
             public void call() {
@@ -51,8 +57,20 @@ public class LocationStore extends GeoPackageStore {
                 Map<String, String> typeDefs = new HashMap<>();
                 typeDefs.put("accuracy","TEXT");
                 typeDefs.put("timestamp","INTEGER");
-
                 addLayer("last_known_location", typeDefs);
+                // setup subscription to write location updates to last_known_location
+                SpatialConnect.getInstance()
+                    .getSensorService()
+                    .getLastKnownLocation()
+                    .subscribe(new Action1<Location>() {
+                        @Override public void call(Location location) {
+                            Geometry point = geometryFactory.createPoint(
+                                new Coordinate(location.getLongitude(), location.getLatitude()));
+                            SCGeometry newLocation = new SCGeometry(point);
+                            Log.d("LocationStore", "writing new location " + newLocation.toJson());
+                            create(newLocation);
+                        }
+                    });
             }
         });
     }
@@ -77,7 +95,7 @@ public class LocationStore extends GeoPackageStore {
             public void call() {
                 SCMessageOuterClass.SCMessage.Builder builder =
                         SCMessageOuterClass.SCMessage.newBuilder();
-                builder.setAction(100)
+                builder.setAction(SCCommand.NO_ACTION.value())
                         .setPayload(point.toJson())
                         .build();
                 SCMessageOuterClass.SCMessage message = builder.build();
