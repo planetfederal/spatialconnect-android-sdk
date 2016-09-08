@@ -641,7 +641,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
             isFirst = false;
         }
         sb.append(")");
-        Log.e(LOG_TAG, "query: " + sb.toString());
+
         return sb.toString();
     }
 
