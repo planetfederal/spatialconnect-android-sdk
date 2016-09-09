@@ -25,9 +25,10 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
-import com.boundlessgeo.spatialconnect.jsbridge.BridgeCommand;
+import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.mqtt.QoS;
+import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
@@ -39,8 +40,10 @@ import java.util.Map;
 
 import okhttp3.Response;
 import rx.Observable;
+import rx.Subscriber;
 import rx.functions.Action1;
 import rx.functions.Func1;
+import rx.observables.ConnectableObservable;
 import rx.subjects.BehaviorSubject;
 
 /**
@@ -52,7 +55,7 @@ public class SCBackendService extends SCService {
     private static Context context;
     private static MqttHandler mqttHandler;
     private static HttpHandler httpHandler;
-
+    private  Observable<SCNotification> notifications;
     public static BehaviorSubject<Integer> configReceived = BehaviorSubject.create(0);
     public static BehaviorSubject<Integer> running = BehaviorSubject.create(0);
     /**
@@ -82,6 +85,7 @@ public class SCBackendService extends SCService {
             );
         }
         mqttHandler.initialize(config);
+        setupSubscriptions();
     }
 
     @Override
@@ -96,6 +100,22 @@ public class SCBackendService extends SCService {
             }
         });
         running.onNext(1);
+    }
+
+    private void setupSubscriptions() {
+        notifications = listenOnTopic("/notify")
+                .flatMap(new Func1<SCMessageOuterClass.SCMessage, Observable<SCNotification>>() {
+                    @Override
+                    public Observable<SCNotification> call(SCMessageOuterClass.SCMessage message) {
+                        SCNotification notification =  new SCNotification(message);
+                        Log.d(LOG_TAG, "received notification message:" + notification.toJson().toString());
+                        return Observable.just(notification);
+                    }
+                });
+    }
+
+    public Observable<SCNotification> getNotifications() {
+        return notifications;
     }
 
     private void registerAndFetchConfig() {
@@ -114,7 +134,7 @@ public class SCBackendService extends SCService {
     private void fetchConfig() {
         Log.d(LOG_TAG, "fetching config from mqtt config topic");
         SCMessageOuterClass.SCMessage getConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
-                .setAction(BridgeCommand.CONFIG_FULL.value()).build();
+                .setAction(SCCommand.CONFIG_FULL.value()).build();
         publishReplyTo("/config", getConfigMsg)
                 .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
                     @Override
@@ -136,7 +156,7 @@ public class SCBackendService extends SCService {
 
     private void registerDevice() {
         SCMessageOuterClass.SCMessage registerConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
-                .setAction(BridgeCommand.CONFIG_REGISTER_DEVICE.value())
+                .setAction(SCCommand.CONFIG_REGISTER_DEVICE.value())
                 .setPayload(
                         String.format("{\"identifier\": \"%s\", \"device_info\": \"%s\"}",
                                 SCConfigService.getClientId(),

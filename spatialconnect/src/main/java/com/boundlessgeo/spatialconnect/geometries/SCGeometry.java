@@ -87,7 +87,6 @@ import java.io.File;
     public SCGeometry(Geometry geometry)
     {
         super();
-
         this.exportType = "Feature";
         this.geometry = geometry;
         this.jtsGeometryType = this.geometry.getGeometryType();

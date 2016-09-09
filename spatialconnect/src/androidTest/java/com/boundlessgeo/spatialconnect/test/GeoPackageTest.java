@@ -36,6 +36,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -92,6 +94,21 @@ public class GeoPackageTest extends BaseTestCase {
     }
 
     @Test
+    public void testGeoPackageQueryStore() {
+        // bbox around part of rio
+        SCBoundingBox bbox = new SCBoundingBox(-43.413848877, -23.0077002267, -43.150177002, -22.7951732956);
+        SCQueryFilter filter = new SCQueryFilter(
+                new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
+        );
+        TestSubscriber testSubscriber = new TestSubscriber();
+        sc.getDataService().queryStores(Arrays.asList(RIO_GPKG_ID), filter)
+                .timeout(5, TimeUnit.SECONDS)
+                .subscribe(testSubscriber);
+        testSubscriber.awaitTerminalEvent();
+        assertTrue("The query should have returned some features.", testSubscriber.getOnNextEvents().size() > 0);
+    }
+
+    @Test
     public void testGeoPackageQueryWithin() {
         // this is the geopackage located at https://s3.amazonaws.com/test.spacon/rio.gpkg
         SCDataStore gpkgStore = sc.getDataService().getStoreById(RIO_GPKG_ID);
@@ -105,8 +122,8 @@ public class GeoPackageTest extends BaseTestCase {
         TestSubscriber testSubscriber = new TestSubscriber();
         gpkgStore.query(filter).timeout(5, TimeUnit.SECONDS).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
-//        testSubscriber.assertCompleted();  // it never completes, only times out
-//        testSubscriber.assertNoErrors();  // it will throw a timeout error b/c it never completes
+        //testSubscriber.assertCompleted();
+        //testSubscriber.assertNoErrors();
         assertEquals("The query should have the first 100 features, b/c we specify a layer without a limit.",
                 (Integer) 100,
                 (Integer) testSubscriber.getOnNextEvents().size()

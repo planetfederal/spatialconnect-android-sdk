@@ -37,12 +37,15 @@ public class SCSpatialFeature
     protected Date created;
     protected Date modified;
     protected Map<String, Object> properties;
+    protected Map<String, Object> metadata;
 
-    public SCSpatialFeature()
-    {
+    public SCSpatialFeature() {
         this.id = UUID.randomUUID().toString();
         this.created = new Date();
         this.properties = new HashMap<>();
+        this.metadata = new HashMap<>();
+        this.metadata.put("layerId", layerId);
+        this.metadata.put("storeId", storeId);
     }
 
     public String getId()

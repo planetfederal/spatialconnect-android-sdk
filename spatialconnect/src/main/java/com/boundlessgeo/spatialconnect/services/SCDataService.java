@@ -362,38 +362,11 @@ public class SCDataService extends SCService {
         return null;
     }
 
-
-    /*
-     * StoreQueryDAO is an inner class
-     */
-    public Observable<SCSpatialFeature> queryStore(String id, SCQueryFilter filter) {
-        StoreQueryDAO dao = new StoreQueryDAO(id, filter);
-        Observable<SCSpatialFeature> queryresults =
-                Observable
-                        .just(dao)
-                        .flatMap(new Func1<StoreQueryDAO, Observable<SCSpatialFeature>>() {
-                            @Override
-                            public Observable<SCSpatialFeature> call(StoreQueryDAO dao) {
-                                Observable<SCSpatialFeature> results;
-                                SCDataStore ds = stores.get(dao.getId());
-                                if (ds != null && ds.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING) {
-                                    SCSpatialStore sp = ds;
-                                    results = sp.query(dao.filter);
-                                }
-                                else {
-                                    results = Observable.empty();
-                                }
-                                return results;
-                            }
-                        });
-        return queryresults;
-    }
-
     public Observable<SCSpatialFeature> queryStores(final List<String> storeIds, final SCQueryFilter filter) {
         return Observable.from(getActiveStores())
                 .filter(new Func1<SCDataStore, Boolean>() {
                     @Override
-                    public Boolean call(SCDataStore store) {
+                    public Boolean call(final SCDataStore store) {
                         return storeIds.contains(store.getStoreId());
                     }
                 })
@@ -445,24 +418,6 @@ public class SCDataService extends SCService {
         }
         Log.w(LOG_TAG, "Location store was not found!");
         return null;
-    }
-
-    class StoreQueryDAO {
-        private String id;
-        private SCQueryFilter filter;
-
-        public StoreQueryDAO(String id, SCQueryFilter filter) {
-            this.id = id;
-            this.filter = filter;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public SCQueryFilter getFilter() {
-            return filter;
-        }
     }
 
     public Context getContext() {

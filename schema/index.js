@@ -40,7 +40,28 @@ if (arg === 'objc') {
     );
 
 } else if (arg === 'java') {
-  var javahead = 'package com.boundlessgeo.spatialconnect.bridge;\n\n';
+  var javahead = 'package com.boundlessgeo.spatialconnect.schema;\n\n';
+  var javabody = `\n    private final int actionNumber;
+
+    SCCommand(int actionNumber) {
+        this.actionNumber = actionNumber;
+    }
+
+    public int value() {
+        return actionNumber;
+    }
+
+    public static SCCommand fromActionNumber(int actionNumber) {
+        for (SCCommand v : values()) {
+            if (v.actionNumber == actionNumber) {
+                return v;
+            }
+        }
+        throw new IllegalArgumentException(
+            String.valueOf(actionNumber) + " is not an action number associated with a SCCommand."
+        );
+    }
+    \n`;
   first = true;
   Rx.Observable.create((sub) => {
     _.mapKeys(actions,(v,k) => {
@@ -55,10 +76,10 @@ if (arg === 'objc') {
     sub.onCompleted();
   }).reduce((acc,v) => {
     return acc + v;
-  },javahead+'public enum SCCommand {\n')
+  },javahead+'public enum SCCommand {\n\n')
     .subscribe(
       (d) => {
-        fs.writeFileSync('Commands.java',d+';\n};\n');
+        fs.writeFileSync('SCCommand.java',d+';\n'+ javabody +'};\n');
       }
     );
 }

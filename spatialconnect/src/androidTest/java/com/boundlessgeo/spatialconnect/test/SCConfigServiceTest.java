@@ -37,6 +37,7 @@ public class SCConfigServiceTest extends BaseTestCase {
 
     @After
     public void afterTest() throws Exception {
+        SpatialConnect.getInstance().stopAllServices();
         deleteDatabases();
     }
 
@@ -46,9 +47,10 @@ public class SCConfigServiceTest extends BaseTestCase {
         sc.initialize(activity);
         sc.addConfig(localConfigFile);
         sc.startAllServices();
-        waitForStoreToStart(RIO_GPKG_ID, sc);
-        assertEquals("The test config file has 5 stores (3 from the local config + form and default stores ",
-                5, sc.getDataService().getAllStores().size());
+        waitForStoreToStart(GEOJSON_STORE_ID, sc);
+        assertEquals("The test config file has 4 stores (1 from the local config plus form, default, and location " +
+                "stores.",
+                4, sc.getDataService().getAllStores().size());
     }
 
     @Test
@@ -73,9 +75,9 @@ public class SCConfigServiceTest extends BaseTestCase {
         testSubscriber.assertCompleted();
         testSubscriber.assertValues(1);
         waitForStoreToStart(RIO_GPKG_ID, sc);
-        assertEquals("The remote config file has 6 stores plus the form and default stores",
-                8, sc.getDataService()
-                .getAllStores().size());
+        assertEquals("The remote config file defines 3 stores; plus 5 from the remote config; plus the form, default," +
+                " and location stores",
+                11, sc.getDataService().getAllStores().size());
     }
 
 

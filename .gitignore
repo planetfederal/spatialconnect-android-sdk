@@ -18,6 +18,7 @@
 # Generated files
 bin/
 gen/
+schema/SCCommand.java
 
 # Gradle files
 .gradle/

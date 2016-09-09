@@ -25,12 +25,14 @@ import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
+import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
+import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
-import com.boundlessgeo.spatialconnect.stores.DefaultStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
@@ -55,9 +57,9 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ArrayList;
 
 import rx.Subscriber;
 import rx.functions.Action1;
@@ -221,52 +223,77 @@ public class SCBridge extends ReactContextBaseJavaModule {
         else {
             // parse bridge message to determine command
             Integer actionNumber = message.getInt("type");
-            BridgeCommand command = BridgeCommand.fromActionNumber(actionNumber);
-            if (command.equals(BridgeCommand.START_ALL_SERVICES)) {
+            SCCommand command = SCCommand.fromActionNumber(actionNumber);
+            if (command.equals(SCCommand.START_ALL_SERVICES)) {
                 handleStartAllServices();
             }
-            if (command.equals(BridgeCommand.SENSORSERVICE_GPS)) {
+            if (command.equals(SCCommand.SENSORSERVICE_GPS)) {
                 handleSensorServiceGps(message);
             }
-            if (command.equals(BridgeCommand.DATASERVICE_ACTIVESTORESLIST)) {
+            if (command.equals(SCCommand.DATASERVICE_ACTIVESTORESLIST)) {
                 handleActiveStoresList(message);
             }
-            if (command.equals(BridgeCommand.DATASERVICE_ACTIVESTOREBYID)) {
+            if (command.equals(SCCommand.DATASERVICE_ACTIVESTOREBYID)) {
                 handleActiveStoreById(message);
             }
-            if (command.equals(BridgeCommand.DATASERVICE_GEOSPATIALQUERY)
-                    || command.equals(BridgeCommand.DATASERVICE_SPATIALQUERY)) {
+            if (command.equals(SCCommand.DATASERVICE_GEOSPATIALQUERY)
+                    || command.equals(SCCommand.DATASERVICE_SPATIALQUERY)) {
                 handleQuery(message);
             }
-            if (command.equals(BridgeCommand.DATASERVICE_GEOSPATIALQUERYALL)
-                    || command.equals(BridgeCommand.DATASERVICE_SPATIALQUERYALL)) {
-                handleQueryAll(message);
-            }
-            if (command.equals(BridgeCommand.DATASERVICE_UPDATEFEATURE)) {
+            if (command.equals(SCCommand.DATASERVICE_UPDATEFEATURE)) {
                 handleUpdateFeature(message);
             }
-            if (command.equals(BridgeCommand.DATASERVICE_DELETEFEATURE)) {
+            if (command.equals(SCCommand.DATASERVICE_DELETEFEATURE)) {
                 handleDeleteFeature(message);
             }
-            if (command.equals(BridgeCommand.DATASERVICE_CREATEFEATURE)) {
+            if (command.equals(SCCommand.DATASERVICE_CREATEFEATURE)) {
                 handleCreateFeature(message);
             }
-            if (command.equals(BridgeCommand.DATASERVICE_FORMLIST)) {
+            if (command.equals(SCCommand.DATASERVICE_FORMLIST)) {
                 handleFormsList(message);
             }
-            if (command.equals(BridgeCommand.AUTHSERVICE_AUTHENTICATE)) {
+            if (command.equals(SCCommand.AUTHSERVICE_AUTHENTICATE)) {
                 handleAuthenticate(message);
             }
-            if (command.equals(BridgeCommand.AUTHSERVICE_ACCESS_TOKEN)) {
+            if (command.equals(SCCommand.AUTHSERVICE_ACCESS_TOKEN)) {
                 handleAccessToken(message);
             }
-            if (command.equals(BridgeCommand.AUTHSERVICE_LOGIN_STATUS)) {
+            if (command.equals(SCCommand.AUTHSERVICE_LOGIN_STATUS)) {
                 handleLoginStatus(message);
             }
-            if (command.equals(BridgeCommand.AUTHSERVICE_LOGOUT)) {
+            if (command.equals(SCCommand.AUTHSERVICE_LOGOUT)) {
                 handleLogout(message);
             }
+            if (command.equals(SCCommand.NOTIFICATIONS)) {
+                handleNotificationSubscribe(message);
+            }
         }
+    }
+
+    private void handleNotificationSubscribe(final ReadableMap message) {
+        Log.d(LOG_TAG, "Subscribing to notifications");
+        SCBackendService.running.subscribe(new Action1<Integer>() {
+            @Override
+            public void call(Integer integer) {
+                if (integer == 1) {
+                    SpatialConnect.getInstance()
+                            .getBackendService()
+                            .getNotifications()
+                            .subscribe(new Action1<SCNotification>() {
+                                @Override
+                                public void call(SCNotification scNotification) {
+                                    try {
+                                        sendEvent(message.getInt("type"), convertJsonToMap(scNotification.toJson()));
+                                    }
+                                    catch (JSONException e) {
+                                        Log.w(LOG_TAG, "Could not parse notification");
+                                    }
+                                }
+                            });
+                }
+            }
+        });
+
     }
 
     private void handleLogout(ReadableMap message) {
@@ -275,7 +302,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     }
 
     /**
-     * Handles the {@link BridgeCommand#AUTHSERVICE_LOGIN_STATUS} command.
+     * Handles the {@link SCCommand#AUTHSERVICE_LOGIN_STATUS} command.
      *
      * @param message
      */
@@ -313,7 +340,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
 
     /**
-     * Handles the {@link BridgeCommand#START_ALL_SERVICES} command.
+     * Handles the {@link SCCommand#START_ALL_SERVICES} command.
      */
     private void handleStartAllServices() {
         Log.d(LOG_TAG, "Handling START_ALL_SERVICES message");
@@ -321,7 +348,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     }
 
     /**
-     * Handles all the {@link BridgeCommand#SENSORSERVICE_GPS} commands.
+     * Handles all the {@link SCCommand#SENSORSERVICE_GPS} commands.
      *
      * @param message
      */
@@ -349,7 +376,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     }
 
     /**
-     * Handles the {@link BridgeCommand#DATASERVICE_ACTIVESTORESLIST} command.
+     * Handles the {@link SCCommand#DATASERVICE_ACTIVESTORESLIST} command.
      */
     private void handleActiveStoresList(final ReadableMap message) {
         Log.d(LOG_TAG, "Handling DATASERVICE_ACTIVESTORESLIST message");
@@ -383,7 +410,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     }
 
     /**
-     * Handles the {@link BridgeCommand#DATASERVICE_FORMLIST} command.
+     * Handles the {@link SCCommand#DATASERVICE_FORMLIST} command.
      */
     private void handleFormsList(ReadableMap message) {
         Log.d(LOG_TAG, "Handling DATASERVICE_FORMSLIST message");
@@ -398,7 +425,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     }
 
     /**
-     * Handles all the {@link BridgeCommand#DATASERVICE_ACTIVESTOREBYID} commands.
+     * Handles all the {@link SCCommand#DATASERVICE_ACTIVESTOREBYID} commands.
      *
      * @param message
      */
@@ -410,8 +437,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
     }
 
     /**
-     * Handles the {@link BridgeCommand#DATASERVICE_GEOSPATIALQUERYALL} and
-     * {@link BridgeCommand#DATASERVICE_SPATIALQUERYALL} commands.
+     * Handles the {@link SCCommand#DATASERVICE_GEOSPATIALQUERYALL} and
+     * {@link SCCommand#DATASERVICE_SPATIALQUERYALL} commands.
      *
      * @param message
      */
@@ -432,16 +459,19 @@ public class SCBridge extends ReactContextBaseJavaModule {
                                 @Override
                                 public void onCompleted() {
                                     Log.d(LOG_TAG, "query observable completed");
+                                    this.onCompleted();
                                 }
 
                                 @Override
                                 public void onError(Throwable e) {
-                                    e.printStackTrace();
                                     Log.e(LOG_TAG, "Could not complete query on all stores\n" + e.getMessage());
+                                    this.onError(e);
+                                    e.printStackTrace();
                                 }
 
                                 @Override
                                 public void onNext(SCSpatialFeature feature) {
+                                    Log.d(LOG_TAG, "query returned new feature " + feature.toJson());
                                     try {
                                         // base64 encode id and set it before sending across wire
                                         String encodedId = ((SCGeometry) feature).getKey().encodedCompositeKey();
@@ -465,57 +495,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     }
 
     /**
-     * Handles the {@link BridgeCommand#DATASERVICE_GEOSPATIALQUERYALL} and
-     * {@link BridgeCommand#DATASERVICE_SPATIALQUERYALL} commands.
-     *
-     * @param message
-     */
-    private void handleQueryAll(final ReadableMap message) {
-        Log.d(LOG_TAG, "Handling *QUERYALL message :" + message.toString());
-        SCQueryFilter filter = getFilter(message);
-        if (filter != null) {
-            sc.getDataService().queryAllStores(filter)
-                    .subscribeOn(Schedulers.io())
-//                    .onBackpressureBuffer(filter.getLimit())
-                    .subscribe(
-                            new Subscriber<SCSpatialFeature>() {
-                                @Override
-                                public void onCompleted() {
-                                    Log.d(LOG_TAG, "query observable completed");
-                                }
-
-                                @Override
-                                public void onError(Throwable e) {
-                                    e.printStackTrace();
-                                    Log.e(LOG_TAG, "Could not complete query on all stores\n" + e.getMessage());
-                                }
-
-                                @Override
-                                public void onNext(SCSpatialFeature feature) {
-                                    try {
-                                        // base64 encode id and set it before sending across wire
-                                        String encodedId = ((SCGeometry) feature).getKey().encodedCompositeKey();
-                                        feature.setId(encodedId);
-                                        sendEvent(
-                                                message.getInt("type"),
-                                                message.getString("responseId"),
-                                                convertJsonToMap(new JSONObject(feature.toJson()))
-                                        );
-                                    }
-                                    catch (UnsupportedEncodingException e) {
-                                        e.printStackTrace();
-                                    }
-                                    catch (JSONException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            }
-                    );
-        }
-    }
-
-    /**
-     * Handles the {@link BridgeCommand#DATASERVICE_UPDATEFEATURE} command.
+     * Handles the {@link SCCommand#DATASERVICE_UPDATEFEATURE} command.
      *
      * @param message
      */
@@ -553,7 +533,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     }
 
     /**
-     * Handles the {@link BridgeCommand#DATASERVICE_DELETEFEATURE} command.
+     * Handles the {@link SCCommand#DATASERVICE_DELETEFEATURE} command.
      *
      * @param message
      */
@@ -590,7 +570,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
 
     /**
-     * Handles the {@link BridgeCommand#DATASERVICE_CREATEFEATURE} command.
+     * Handles the {@link SCCommand#DATASERVICE_CREATEFEATURE} command.
      *
      * @param message
      */
