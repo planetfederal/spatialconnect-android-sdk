@@ -75,10 +75,9 @@ public class SCConfigServiceTest extends BaseTestCase {
         testSubscriber.assertCompleted();
         testSubscriber.assertValues(1);
         waitForStoreToStart(RIO_GPKG_ID, sc);
-        assertEquals("The remote config file defines 3 stores; plus the other 4 distinct from the remote config; plus" +
-                " the form, default, and location stores",
-                9, sc.getDataService()
-                .getAllStores().size());
+        assertEquals("The remote config file defines 3 stores; plus 5 from the remote config; plus the form, default," +
+                " and location stores",
+                11, sc.getDataService().getAllStores().size());
     }
 
 
