@@ -522,7 +522,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
     private void handleUpdateFeature(ReadableMap message) {
         Log.d(LOG_TAG, "Handling UPDATEFEATURE message :" + message.toString());
         try {
-            SCSpatialFeature featureToUpdate = getFeatureToUpdate(message.getMap("payload").getString("feature"));
+            SCSpatialFeature featureToUpdate = getFeatureToUpdate(
+                    convertMapToJson(message.getMap("payload").getMap("feature")).toString()
+            );
             sc.getDataService().getStoreById(featureToUpdate.getKey().getStoreId())
                     .update(featureToUpdate)
                     .subscribeOn(Schedulers.io())
