@@ -17,6 +17,7 @@ package com.boundlessgeo.spatialconnect.jsbridge;
 import android.location.Location;
 import android.support.annotation.Nullable;
 import android.util.Log;
+
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
@@ -49,14 +50,17 @@ import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.bridge.WritableNativeMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+
 import rx.Subscriber;
 import rx.functions.Action1;
 import rx.functions.Func1;
@@ -268,18 +272,28 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
     private void handleNotificationSubscribe(final ReadableMap message) {
         Log.d(LOG_TAG, "Subscribing to notifications");
-        SCBackendService.notifications.subscribe(new Action1<SCNotification>() {
+        SCBackendService.running.subscribe(new Action1<Integer>() {
             @Override
-            public void call(SCNotification scNotification) {
-                try {
-                    sendEvent(message.getInt("type"), convertJsonToMap(scNotification.toJson()));
-                }
-                catch (JSONException e) {
-                    Log.w(LOG_TAG, "Could not parse notification");
+            public void call(Integer integer) {
+                if (integer == 1) {
+                    SpatialConnect.getInstance()
+                            .getBackendService()
+                            .getNotifications()
+                            .subscribe(new Action1<SCNotification>() {
+                                @Override
+                                public void call(SCNotification scNotification) {
+                                    try {
+                                        sendEvent(message.getInt("type"), convertJsonToMap(scNotification.toJson()));
+                                    }
+                                    catch (JSONException e) {
+                                        Log.w(LOG_TAG, "Could not parse notification");
+                                    }
+                                }
+                            });
                 }
             }
         });
-        SCBackendService.notifications.connect();
+
     }
 
     private void handleLogout(ReadableMap message) {

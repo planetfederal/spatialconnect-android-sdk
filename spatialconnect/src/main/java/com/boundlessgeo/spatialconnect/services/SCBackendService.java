@@ -40,6 +40,7 @@ import java.util.Map;
 
 import okhttp3.Response;
 import rx.Observable;
+import rx.Subscriber;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.observables.ConnectableObservable;
@@ -54,8 +55,7 @@ public class SCBackendService extends SCService {
     private static Context context;
     private static MqttHandler mqttHandler;
     private static HttpHandler httpHandler;
-    private static BehaviorSubject<SCNotification> notifyTopic = BehaviorSubject.create();
-    public static ConnectableObservable<SCNotification> notifications = notifyTopic.publish();
+    private  Observable<SCNotification> notifications;
     public static BehaviorSubject<Integer> configReceived = BehaviorSubject.create(0);
     public static BehaviorSubject<Integer> running = BehaviorSubject.create(0);
     /**
@@ -103,21 +103,19 @@ public class SCBackendService extends SCService {
     }
 
     private void setupSubscriptions() {
-        MqttHandler.clientConnected.subscribe(new Action1<Integer>() {
-            @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
-                    listenOnTopic("/notify").subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
-                        @Override
-                        public void call(SCMessageOuterClass.SCMessage message) {
-                            Log.d(LOG_TAG, "received notification message: " +
-                                    new SCNotification(message).toJson().toString());
-                            notifyTopic.onNext(new SCNotification(message));
-                        }
-                    });
-                }
-            }
-        });
+        notifications = listenOnTopic("/notify")
+                .flatMap(new Func1<SCMessageOuterClass.SCMessage, Observable<SCNotification>>() {
+                    @Override
+                    public Observable<SCNotification> call(SCMessageOuterClass.SCMessage message) {
+                        SCNotification notification =  new SCNotification(message);
+                        Log.d(LOG_TAG, "received notification message:" + notification.toJson().toString());
+                        return Observable.just(notification);
+                    }
+                });
+    }
+
+    public Observable<SCNotification> getNotifications() {
+        return notifications;
     }
 
     private void registerAndFetchConfig() {
