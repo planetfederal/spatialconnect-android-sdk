@@ -414,6 +414,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
      */
     private void handleFormsList(ReadableMap message) {
         Log.d(LOG_TAG, "Handling DATASERVICE_FORMSLIST message");
+        // should this be an observable?
         List<SCFormConfig> formConfigs = sc.getDataService().getFormStore().getFormConfigs();
         WritableMap eventPayload = Arguments.createMap();
         WritableArray formsArray = Arguments.createArray();
@@ -459,19 +460,17 @@ public class SCBridge extends ReactContextBaseJavaModule {
                                 @Override
                                 public void onCompleted() {
                                     Log.d(LOG_TAG, "query observable completed");
-                                    this.onCompleted();
                                 }
 
                                 @Override
                                 public void onError(Throwable e) {
                                     Log.e(LOG_TAG, "Could not complete query on all stores\n" + e.getMessage());
-                                    this.onError(e);
                                     e.printStackTrace();
                                 }
 
                                 @Override
                                 public void onNext(SCSpatialFeature feature) {
-                                    Log.d(LOG_TAG, "query returned new feature " + feature.toJson());
+//                                    Log.d(LOG_TAG, "query returned new feature " + feature.toJson());
                                     try {
                                         // base64 encode id and set it before sending across wire
                                         String encodedId = ((SCGeometry) feature).getKey().encodedCompositeKey();

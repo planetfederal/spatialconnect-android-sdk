@@ -181,6 +181,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
 
     public void addLayer(String layer, Map<String,String> typeDefs) {
         if (!layerExists(layer)) {
+            Log.d(LOG_TAG, "Adding layer " + layer + " to " + gpkg.getName());
             final String tableName = layer;
             Cursor cursor = null;
             BriteDatabase.Transaction tx = gpkg.newTransaction();
@@ -266,6 +267,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
             final List<String> featureTableNames = queryFilter.getLayerIds().size() > 0 ?
                     queryFilter.getLayerIds() :
                     new ArrayList<>(layers.keySet());
+            // TODO: decide on what to do if queryLimit division is 0
             final int queryLimit = queryFilter.getLimit() / featureTableNames.size();
             Log.d(LOG_TAG, "querying on feature tables: " + featureTableNames.toString());
             return Observable.from(featureTableNames)

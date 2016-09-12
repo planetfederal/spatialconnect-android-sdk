@@ -145,6 +145,7 @@ public class SCBackendService extends SCService {
                                     SCConfig.class
                             );
                             configReceived.onNext(1);
+                            Log.d(LOG_TAG, "Loading config received from mqtt broker");
                             SpatialConnect.getInstance().getConfigService().loadConfig(config);
                         }
                         catch (IOException e) {
