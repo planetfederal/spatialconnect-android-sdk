@@ -135,13 +135,14 @@ public class SCConfigService extends SCService {
     }
 
     public void loadConfig(SCConfig config) {
-        registerDataStores(config.getStoreConfigs());
         registerForms(config.getFormConfigs());
+        registerDataStores(config.getStoreConfigs());
     }
 
     /* Registers all the forms specified in each config file */
     private void registerForms(List<SCFormConfig> formConfigs) {
         if (formConfigs != null) {
+            Log.d(LOG_TAG, "Loading "+ formConfigs.size() +" form configs");
             for (SCFormConfig formConfig : formConfigs) {
                 Log.d(LOG_TAG, "Creating table for form " + formConfig.getFormKey());
                 FormStore store = dataService.getFormStore();
@@ -155,6 +156,7 @@ public class SCConfigService extends SCService {
     /* Registers all the stores specified in each config file */
     private void registerDataStores(List<SCStoreConfig> storeConfigs) {
         if (storeConfigs != null) {
+            Log.d(LOG_TAG, "Loading "+ storeConfigs.size() +" store configs");
             for (SCStoreConfig storeConfig : storeConfigs) {
                 Log.d(LOG_TAG, "Adding store " + storeConfig.getName() + " to data service.");
                 dataService.addNewStore(storeConfig);
