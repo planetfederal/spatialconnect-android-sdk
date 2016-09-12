@@ -23,6 +23,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 
@@ -54,7 +55,7 @@ public class GeoJsonTest extends BaseTestCase {
 
     @AfterClass
     public static void tearDown() throws Exception {
-        sc.getBackendService().cancelAllRequests();
+        HttpHandler.getInstance().cancelAllRequests();
         testContext.deleteFile("nola_polling_places.json");
         deleteDatabases();
     }

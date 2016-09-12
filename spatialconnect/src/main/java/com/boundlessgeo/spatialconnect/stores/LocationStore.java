@@ -29,8 +29,7 @@ import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
-import com.facebook.react.bridge.Arguments;
-import com.facebook.react.bridge.WritableMap;
+import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -39,24 +38,23 @@ import com.vividsolutions.jts.geom.PrecisionModel;
 import java.util.HashMap;
 import java.util.Map;
 
-import rx.Notification;
 import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Action1;
-import rx.schedulers.Schedulers;
 
 public class LocationStore extends GeoPackageStore {
 
     private static final String LOG_TAG = LocationStore.class.getSimpleName();
+    private final String LAST_KNOWN_TABLE = "last_known_location";
+    private final String ACCURACY_COLUMN = "accuracy";
+    private final String TIMESTAMP_COLUMN = "timestamp";
     public static final String NAME = "LOCATION_STORE";
-    private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 0);
 
     public LocationStore(Context context, SCStoreConfig scStoreConfig) {
         super(context, scStoreConfig);
     }
 
     public Observable<SCStoreStatusEvent> start() {
-        final LocationStore instance = this;
         Observable<SCStoreStatusEvent> storeStatusEvent;
         storeStatusEvent = super.start();
         return storeStatusEvent.doOnCompleted(new Action0() {
@@ -64,23 +62,45 @@ public class LocationStore extends GeoPackageStore {
             public void call() {
                 //when store started add default config
                 Map<String, String> typeDefs = new HashMap<>();
-                typeDefs.put("accuracy","TEXT");
-                typeDefs.put("timestamp","INTEGER");
-                addLayer("last_known_location", typeDefs);
-                // setup subscription to write location updates to last_known_location
-                SpatialConnect.getInstance()
-                    .getSensorService()
-                    .getLastKnownLocation()
-                    .subscribe(new Action1<Location>() {
-                        @Override public void call(Location location) {
-                            Log.d(LOG_TAG, "received new location");
-                            Geometry point = geometryFactory.createPoint(
-                                new Coordinate(location.getLongitude(), location.getLatitude()));
-                            SCPoint newLocation = new SCPoint(point);
-                            instance.create(newLocation);
-                            publishLocation(newLocation);
-                        }
-                    });
+                typeDefs.put(ACCURACY_COLUMN,"TEXT");
+                typeDefs.put(TIMESTAMP_COLUMN,"INTEGER");
+
+                addLayer(LAST_KNOWN_TABLE, typeDefs);
+
+                listenForLocationUpdate();
+            }
+        });
+    }
+
+    private void listenForLocationUpdate() {
+        SCSensorService.running.subscribe(new Action1<Integer>() {
+            @Override
+            public void call(Integer integer) {
+                if (integer == 1) {
+                    SpatialConnect sc = SpatialConnect.getInstance();
+                    if (sc.getSensorService() != null) {
+                        SpatialConnect.getInstance()
+                                .getSensorService()
+                                .getLastKnownLocation()
+                                .subscribe(new Action1<Location>() {
+                                    @Override
+                                    public void call(Location location) {
+                                        GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 0);
+                                        Geometry point = geometryFactory.createPoint(
+                                                new Coordinate(location.getLongitude(), location.getLatitude()));
+                                        SCGeometry scFeatureLocationUpdate = new SCGeometry(point);
+                                        scFeatureLocationUpdate.setLayerId(LAST_KNOWN_TABLE);
+                                        scFeatureLocationUpdate.getProperties().put(TIMESTAMP_COLUMN, System.currentTimeMillis());
+                                        scFeatureLocationUpdate.getProperties().put(ACCURACY_COLUMN, "GPS");
+
+                                        publishLocation(new SCPoint(point));
+
+                                        LocationStore locationStore = SpatialConnect.getInstance().getDataService().getLocationStore();
+                                        locationStore.create(scFeatureLocationUpdate).subscribe();
+                                    }
+                                });
+                    }
+                }
             }
         });
     }

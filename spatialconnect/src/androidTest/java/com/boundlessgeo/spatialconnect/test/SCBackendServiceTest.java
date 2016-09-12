@@ -3,6 +3,7 @@ package com.boundlessgeo.spatialconnect.test;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
 import org.junit.AfterClass;
@@ -30,7 +31,7 @@ public class SCBackendServiceTest extends BaseTestCase {
 
     @AfterClass
     public static void tearDown() throws Exception {
-        sc.getBackendService().cancelAllRequests();
+        HttpHandler.getInstance().cancelAllRequests();
         deleteDatabases();
     }
 

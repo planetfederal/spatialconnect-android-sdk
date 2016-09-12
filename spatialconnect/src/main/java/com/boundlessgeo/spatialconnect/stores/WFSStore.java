@@ -19,13 +19,12 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.util.Xml;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryCollection;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -35,8 +34,10 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import okhttp3.Response;
 import rx.Observable;
 import rx.Subscriber;
+import rx.functions.Action1;
 
 /**
  * Provides capabilities to interact with a server implementing
@@ -89,24 +90,30 @@ public class WFSStore extends SCDataStore {
                     scFilter.getPredicate().getBoundingBox().getMaxY()
             );
         }
-        Log.d(LOG_TAG, String.format("Making WFS GetFeature request:\n%s", getFeatureUrl));
-        SCGeometryFactory factory = new SCGeometryFactory();
-        try {
-            String response = SpatialConnect.getInstance().getBackendService().get(getFeatureUrl);
-            Log.d(LOG_TAG, String.format("Received response:\n%s", response));
-            SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(response);
-            for (SCSpatialFeature feature : collection.getFeatures()) {
-                feature.setLayerId(feature.getId().split("\\.")[0]);  // the first part of the id is the layer name
-                feature.setStoreId(getStoreId());
+        final String featureUrl = getFeatureUrl;
+        return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>(){
+            @Override
+            public void call(final Subscriber<? super SCSpatialFeature> subscriber) {
+                final SCGeometryFactory factory = new SCGeometryFactory();
+                try {
+                    HttpHandler.getInstance().get(featureUrl).subscribe(new Action1<Response>() {
+                        @Override
+                        public void call(Response res) {
+                            String response = res.body().toString();
+                            SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(response);
+                            for (SCSpatialFeature feature : collection.getFeatures()) {
+                                feature.setLayerId(feature.getId().split("\\.")[0]);  // the first part of the id is the layer name
+                                feature.setStoreId(getStoreId());
+                                subscriber.onNext(feature);
+                            }
+                            subscriber.onCompleted();
+                        }
+                    });
+                } catch (IOException ioe) {
+                    subscriber.onError(ioe);
+                }
             }
-            Log.d(LOG_TAG, String.format("Returning %d features", collection.getFeatures().size()));
-
-            return Observable.from(collection.getFeatures());
-        }
-        catch (IOException e) {
-            Log.d(LOG_TAG, "Could not query WFS store.");
-            return Observable.error(e);
-        }
+        });
     }
 
     @Override
@@ -139,18 +146,23 @@ public class WFSStore extends SCDataStore {
             public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
                 // try to connect to WFS store to get the layers from the capabilities documents
                 try {
-                    SCBackendService backendService = SpatialConnect.getInstance().getBackendService();
-                    layerNames = getLayerNames(backendService.getResponseAsInputStream(getGetCapabilitiesUrl()));
-                    if (layerNames != null) {
-                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                        subscriber.onNext(
-                                new SCStoreStatusEvent(
-                                        SCDataStoreStatus.SC_DATA_STORE_RUNNING,
-                                        storeInstance.getStoreId()
-                                )
-                        );
-                        subscriber.onCompleted();
-                    }
+                    HttpHandler.getInstance().get(getGetCapabilitiesUrl())
+                            .subscribe(new Action1<Response>() {
+                                @Override
+                                public void call(Response response) {
+                                    layerNames = getLayerNames(response.body().byteStream());
+                                    if (layerNames != null) {
+                                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                        subscriber.onNext(
+                                                new SCStoreStatusEvent(
+                                                        SCDataStoreStatus.SC_DATA_STORE_RUNNING,
+                                                        storeInstance.getStoreId()
+                                                )
+                                        );
+                                        subscriber.onCompleted();
+                                    }
+                                }
+                            });
                 }
                 catch (IOException e) {
                     Log.e(LOG_TAG, "Could not start store with url" + baseUrl);

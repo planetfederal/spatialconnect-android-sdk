@@ -17,7 +17,7 @@ package com.boundlessgeo.spatialconnect.services;
 import android.content.Context;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -115,27 +115,31 @@ public class SCAuthService extends SCService {
             public void call(Integer integer) {
                 if (integer == 1) {
                     final String theUrl = SCBackendService.API_URL + "authenticate";
-                    SCBackendService backendService = SpatialConnect.getInstance().getBackendService();
                     // TODO: get the email and password from encrypted storage
                     // probably want to use the KeyStore: https://developer.android.com/training/articles/keystore.html
                     if (email != null && password != null) {
-                        String response = null;
                         try {
-                            response = backendService.post(
-                                    theUrl,
-                                    String.format("{\"email\": \"%s\", \"password\":\"%s\"}", email, password)
-                            );
-                        }
-                        catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        try {
-                            accessToken = new JSONObject(response).getString("token");
-                            if (accessToken != null) {
-                                loginStatus.onNext(1);
-                            }
-                        }
-                        catch (JSONException e) {
+                            HttpHandler.getInstance()
+                                    .post(theUrl,
+                                            String.format("{\"email\": \"%s\", \"password\":\"%s\"}",
+                                                    email, password))
+                                    .subscribe(new Action1<Response>() {
+                                        @Override
+                                        public void call(Response response) {
+                                            try {
+                                                accessToken = new JSONObject(response.body().string()).getString("token");
+                                                if (accessToken != null) {
+                                                    loginStatus.onNext(1);
+                                                }
+                                            }
+                                            catch (JSONException e) {
+                                                e.printStackTrace();
+                                            } catch (IOException ee) {
+
+                                            }
+                                        }
+                                    });
+                        } catch (IOException e) {
                             e.printStackTrace();
                         }
                     }

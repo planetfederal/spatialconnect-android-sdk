@@ -14,18 +14,12 @@
  */
 package com.boundlessgeo.spatialconnect.scutilities;
 
-import android.content.Context;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.UUID;
 
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -39,6 +33,10 @@ import okio.BufferedSource;
 import okio.ForwardingSource;
 import okio.Okio;
 import okio.Source;
+import rx.Observable;
+import rx.Subscriber;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
 
 public class HttpHandler {
 
@@ -46,19 +44,17 @@ public class HttpHandler {
 
     private static HttpHandler instance;
     private static OkHttpClient client;
-    private Context context;
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
 
 
-    public static HttpHandler getInstance(Context context) {
+    public static HttpHandler getInstance() {
         if (instance == null) {
-            instance = new HttpHandler(context);
+            instance = new HttpHandler();
         }
         return instance;
     }
 
-    private HttpHandler(Context context) {
-        this.context = context;
+    private HttpHandler() {
         this.client = new OkHttpClient.Builder()
                 .addNetworkInterceptor(new LoggingInterceptor())
                 .addNetworkInterceptor(new SCAuthService.AuthHeaderInterceptor())
@@ -66,43 +62,57 @@ public class HttpHandler {
                 .build();
     }
 
-    public File getFileBlocking(final String theUrl) {
-        Log.d(LOG_TAG, "Fetching remote config from " + theUrl);
-        Request request = new Request.Builder()
-                .url(theUrl)
-                .build();
+//    public File getFileBlocking(final String theUrl) {
+//        Log.d(LOG_TAG, "Fetching remote config from " + theUrl);
+//        Request request = new Request.Builder()
+//                .url(theUrl)
+//                .build();
+//
+//        Response response;
+//        File scConfigFile = null;
+//        try {
+//            response = client.newCall(request).execute();
+//            if (response.isSuccessful()) {
+//                BufferedInputStream is = new BufferedInputStream(response.body().byteStream());
+//                scConfigFile = File.createTempFile(UUID.randomUUID().toString(), null, context.getCacheDir());
+//                OutputStream os = new FileOutputStream(scConfigFile);
+//                byte[] buffer = new byte[1024];
+//                int bytesRead;
+//                while ((bytesRead = is.read(buffer)) != -1) {
+//                    os.write(buffer, 0, bytesRead);
+//                }
+//                os.flush();
+//                os.close();
+//                is.close();
+//            }
+//        }
+//        catch (IOException e) {
+//            Log.e(LOG_TAG, "Could not download file");
+//            e.printStackTrace();
+//        }
+//        return scConfigFile;
+//    }
 
-        Response response;
-        File scConfigFile = null;
-        try {
-            response = client.newCall(request).execute();
-            if (response.isSuccessful()) {
-                BufferedInputStream is = new BufferedInputStream(response.body().byteStream());
-                scConfigFile = File.createTempFile(UUID.randomUUID().toString(), null, context.getCacheDir());
-                OutputStream os = new FileOutputStream(scConfigFile);
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = is.read(buffer)) != -1) {
-                    os.write(buffer, 0, bytesRead);
+    public Observable<Response> get(final String url) throws IOException {
+        return Observable.create(new Observable.OnSubscribe<Response>() {
+            OkHttpClient client = new OkHttpClient();
+            @Override
+            public void call(Subscriber<? super Response> subscriber) {
+                try {
+                    Request request = new Request.Builder()
+                            .url(url)
+                            .build();
+                    Response response = client.newCall(request).execute();
+                    subscriber.onNext(response);
+                    subscriber.onCompleted();
+                    if (!response.isSuccessful()) subscriber.onError(new Exception("error"));
+                } catch (IOException e) {
+                    subscriber.onError(e);
                 }
-                os.flush();
-                os.close();
-                is.close();
             }
-        }
-        catch (IOException e) {
-            Log.e(LOG_TAG, "Could not download file");
-            e.printStackTrace();
-        }
-        return scConfigFile;
-    }
-
-    public String get(String url) throws IOException {
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-        Response response = client.newCall(request).execute();
-        return response.body().string();
+        })
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread());
     }
 
     public InputStream getResponseAsInputStream(String url) throws IOException {
@@ -113,15 +123,28 @@ public class HttpHandler {
         return response.body().byteStream();
     }
 
-    public String post(String url, String json) throws IOException {
-        Log.d(LOG_TAG, "POST " + url + "\n" + json);
-        RequestBody body = RequestBody.create(JSON, json);
-        Request request = new Request.Builder()
-                .url(url)
-                .post(body)
-                .build();
-        Response response = client.newCall(request).execute();
-        return response.body().string();
+    public Observable<Response> post(final String url, final String json) throws IOException {
+        return Observable.create(new Observable.OnSubscribe<Response>() {
+            OkHttpClient client = new OkHttpClient();
+            @Override
+            public void call(Subscriber<? super Response> subscriber) {
+                try {
+                    RequestBody body = RequestBody.create(JSON, json);
+                    Request request = new Request.Builder()
+                            .url(url)
+                            .post(body)
+                            .build();
+                    Response response = client.newCall(request).execute();
+                    subscriber.onNext(response);
+                    subscriber.onCompleted();
+                    if (!response.isSuccessful()) subscriber.onError(new Exception("error"));
+                } catch (IOException e) {
+                    subscriber.onError(e);
+                }
+            }
+        })
+        .subscribeOn(Schedulers.io())
+        .observeOn(AndroidSchedulers.mainThread());
     }
 
     public Response getResponse(String theUrl) throws IOException {

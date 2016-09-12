@@ -25,25 +25,19 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
-import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
+import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
-import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Map;
 
-import okhttp3.Response;
 import rx.Observable;
-import rx.Subscriber;
 import rx.functions.Action1;
 import rx.functions.Func1;
-import rx.observables.ConnectableObservable;
 import rx.subjects.BehaviorSubject;
 
 /**
@@ -54,7 +48,6 @@ public class SCBackendService extends SCService {
     private static final String LOG_TAG = SCBackendService.class.getSimpleName();
     private static Context context;
     private static MqttHandler mqttHandler;
-    private static HttpHandler httpHandler;
     private  Observable<SCNotification> notifications;
     public static BehaviorSubject<Integer> configReceived = BehaviorSubject.create(0);
     public static BehaviorSubject<Integer> running = BehaviorSubject.create(0);
@@ -66,7 +59,6 @@ public class SCBackendService extends SCService {
     public SCBackendService(final Context context) {
         this.context = context;
         this.mqttHandler = MqttHandler.getInstance(context);
-        this.httpHandler = HttpHandler.getInstance(context);
     }
 
     /**
@@ -262,29 +254,5 @@ public class SCBackendService extends SCService {
 
     public void publish(String topic, SCMessageOuterClass.SCMessage message, QoS qos) {
         mqttHandler.publish(topic, message, qos.value());
-    }
-
-    public String post(String theUrl, String format) throws IOException {
-        return httpHandler.post(theUrl, format);
-    }
-
-    public File getFileBlocking(String configUrl) {
-        return httpHandler.getFileBlocking(configUrl);
-    }
-
-    public String get(String theUrl) throws IOException {
-        return httpHandler.get(theUrl);
-    }
-
-    public void cancelAllRequests() {
-        httpHandler.cancelAllRequests();
-    }
-
-    public Response getResponse(String theUrl) throws IOException {
-        return httpHandler.getResponse(theUrl);
-    }
-
-    public InputStream getResponseAsInputStream(String theUrl) throws IOException {
-        return httpHandler.getResponseAsInputStream(theUrl);
     }
 }
