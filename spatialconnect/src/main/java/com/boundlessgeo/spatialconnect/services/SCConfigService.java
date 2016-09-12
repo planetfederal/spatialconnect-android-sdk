@@ -24,7 +24,6 @@ import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
-import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
@@ -36,9 +35,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import okhttp3.Response;
-import rx.functions.Action1;
 
 /**
  * The SCConfigService is responsible for managing the configuration for SpatialConnect.  This includes downloading
@@ -193,47 +189,6 @@ public class SCConfigService extends SCService {
             return true;
         }
         return false;
-    }
-
-    private void registerDevice() {
-        final String registrationEndpoint = SCBackendService.API_URL + "devices/register";
-        final String deviceEndpoint = SCBackendService.API_URL + "devices/%s";
-
-        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
-            @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
-                    try {
-                        HttpHandler.getInstance().get(String.format(deviceEndpoint, getClientId()))
-                                .subscribe(new Action1<Response>() {
-                                    @Override
-                                    public void call(Response res) {
-                                        try {
-                                            String response = res.body().toString();
-                                            String json = String.format("{\"identifier\": \"%s\", \"device_info\": {\"os\":\"%s\"} }",
-                                                    getClientId(), getAndroidVersion());
-                                            if (response.equals("null")) {
-                                                HttpHandler.getInstance()
-                                                        .post(registrationEndpoint, json)
-                                                        .subscribe();
-                                            } else {
-                                                Log.d(LOG_TAG, "Device is already registered.");
-                                            }
-                                        } catch (IOException ioe) {
-
-                                        }
-                                    }
-                                });
-                    }
-                    catch (IOException e) {
-                        e.printStackTrace();
-                        Log.e(LOG_TAG, "Couldn't register device");
-                        System.exit(0);
-                    }
-                }
-            }
-        });
-
     }
 
     /**

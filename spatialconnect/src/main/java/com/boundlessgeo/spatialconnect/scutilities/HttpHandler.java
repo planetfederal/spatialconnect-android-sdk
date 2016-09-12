@@ -62,37 +62,6 @@ public class HttpHandler {
                 .build();
     }
 
-//    public File getFileBlocking(final String theUrl) {
-//        Log.d(LOG_TAG, "Fetching remote config from " + theUrl);
-//        Request request = new Request.Builder()
-//                .url(theUrl)
-//                .build();
-//
-//        Response response;
-//        File scConfigFile = null;
-//        try {
-//            response = client.newCall(request).execute();
-//            if (response.isSuccessful()) {
-//                BufferedInputStream is = new BufferedInputStream(response.body().byteStream());
-//                scConfigFile = File.createTempFile(UUID.randomUUID().toString(), null, context.getCacheDir());
-//                OutputStream os = new FileOutputStream(scConfigFile);
-//                byte[] buffer = new byte[1024];
-//                int bytesRead;
-//                while ((bytesRead = is.read(buffer)) != -1) {
-//                    os.write(buffer, 0, bytesRead);
-//                }
-//                os.flush();
-//                os.close();
-//                is.close();
-//            }
-//        }
-//        catch (IOException e) {
-//            Log.e(LOG_TAG, "Could not download file");
-//            e.printStackTrace();
-//        }
-//        return scConfigFile;
-//    }
-
     public Observable<Response> get(final String url) throws IOException {
         return Observable.create(new Observable.OnSubscribe<Response>() {
             OkHttpClient client = new OkHttpClient();
