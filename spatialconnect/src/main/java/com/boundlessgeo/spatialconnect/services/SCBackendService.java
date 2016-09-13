@@ -50,8 +50,7 @@ public class SCBackendService extends SCService {
     private static Context context;
     private static MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
-    public static BehaviorSubject<Integer> configReceived = BehaviorSubject.create(0);
-    public static BehaviorSubject<Integer> running = BehaviorSubject.create(0);
+    public static BehaviorSubject<Boolean> configReceived = BehaviorSubject.create(false);
     public static BehaviorSubject<Boolean> networkConnected = BehaviorSubject.create(false);
     /**
      * The API_URL of the spatialconnect-service rest api.  This will always end with a trailing slash, "/api/"
@@ -85,15 +84,14 @@ public class SCBackendService extends SCService {
     @Override
     public void start() {
         mqttHandler.connect();
-        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
+        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
             @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
+            public void call(Boolean authenticated) {
+                if (authenticated) {
                     registerAndFetchConfig();
                 }
             }
         });
-        running.onNext(1);
         ReactiveNetwork.observeNetworkConnectivity(context)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -124,10 +122,10 @@ public class SCBackendService extends SCService {
 
     private void registerAndFetchConfig() {
         Log.i(LOG_TAG, "Attempting to load remote config if client is authenticated.");
-        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
+        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
             @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
+            public void call(Boolean authenticated) {
+                if (authenticated) {
                     registerDevice();
                     fetchConfig();
                 }
@@ -148,7 +146,7 @@ public class SCBackendService extends SCService {
                                     scMessage.getPayload(),
                                     SCConfig.class
                             );
-                            configReceived.onNext(1);
+                            configReceived.onNext(true);
                             Log.d(LOG_TAG, "Loading config received from mqtt broker");
                             SpatialConnect.getInstance().getConfigService().loadConfig(config);
                         }

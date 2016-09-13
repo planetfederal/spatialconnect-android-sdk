@@ -99,10 +99,10 @@ public class MqttHandler implements MqttCallback {
     public void connect() {
         Log.d(LOG_TAG, "connecting to mqtt broker at " + client.getServerURI());
         // only try to connect to mqtt broker after the user has successfully authenticated
-        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
+        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
             @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
+            public void call(Boolean authenticated) {
+                if (authenticated) {
                     try {
                         // set the clean session to remove any previous connection the broker may have for this client
                         MqttConnectOptions options = new MqttConnectOptions();

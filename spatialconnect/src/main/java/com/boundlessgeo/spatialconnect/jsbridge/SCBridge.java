@@ -272,10 +272,10 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
     private void handleNotificationSubscribe(final ReadableMap message) {
         Log.d(LOG_TAG, "Subscribing to notifications");
-        SCBackendService.running.subscribe(new Action1<Integer>() {
+        SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
             @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
+            public void call(Boolean connected) {
+                if (connected) {
                     SpatialConnect.getInstance()
                             .getBackendService()
                             .getNotifications()
@@ -308,10 +308,11 @@ public class SCBridge extends ReactContextBaseJavaModule {
      */
     private void handleLoginStatus(final ReadableMap message) {
         Log.d(LOG_TAG, "Handling AUTHSERVICE_LOGIN_STATUS message " + message.toString());
-        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
+        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
             @Override
-            public void call(Integer integer) {
-                sendEvent(message.getInt("type"), integer);
+            public void call(Boolean authenticated) {
+                int loginStatus = authenticated ? 1 : 0;
+                sendEvent(message.getInt("type"), loginStatus);
             }
         });
     }

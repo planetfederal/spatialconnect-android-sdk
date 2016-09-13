@@ -49,13 +49,11 @@ public class SCConfigService extends SCService {
     private static final String CONFIGS_DIR = "configs";
     private ArrayList<File> localConfigFiles = new ArrayList<>();
     private SCDataService dataService;
-    private SCBackendService backendService;
     public static String CLIENT_ID = null;
 
     public SCConfigService(Context context) {
         this.context = context;
         this.dataService = SpatialConnect.getInstance().getDataService();
-        this.backendService = SpatialConnect.getInstance().getBackendService();
     }
 
     /**
