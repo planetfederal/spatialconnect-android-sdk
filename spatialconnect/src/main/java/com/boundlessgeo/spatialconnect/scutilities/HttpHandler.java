@@ -35,7 +35,6 @@ import okio.Okio;
 import okio.Source;
 import rx.Observable;
 import rx.Subscriber;
-import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
 public class HttpHandler {
@@ -64,7 +63,6 @@ public class HttpHandler {
 
     public Observable<Response> get(final String url) throws IOException {
         return Observable.create(new Observable.OnSubscribe<Response>() {
-            OkHttpClient client = new OkHttpClient();
             @Override
             public void call(Subscriber<? super Response> subscriber) {
                 try {
@@ -80,8 +78,7 @@ public class HttpHandler {
                 }
             }
         })
-        .subscribeOn(Schedulers.io())
-        .observeOn(AndroidSchedulers.mainThread());
+        .subscribeOn(Schedulers.io());
     }
 
     public InputStream getResponseAsInputStream(String url) throws IOException {
@@ -112,8 +109,7 @@ public class HttpHandler {
                 }
             }
         })
-        .subscribeOn(Schedulers.io())
-        .observeOn(AndroidSchedulers.mainThread());
+        .subscribeOn(Schedulers.io());
     }
 
     public Response getResponse(String theUrl) throws IOException {
