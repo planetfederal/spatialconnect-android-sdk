@@ -44,7 +44,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
     private static final int VERSION = 1;
     public static final String DEFAULTLAYER = "default";
     private Context context;
-    private static final String LOG_TAG = GeoPackageAdapter.class.getSimpleName();
+    private static final String LOG_TAG = GeoJsonAdapter.class.getSimpleName();
 
     public GeoJsonAdapter(Context context, SCStoreConfig scStoreConfig) {
         super(NAME, TYPE, VERSION);
