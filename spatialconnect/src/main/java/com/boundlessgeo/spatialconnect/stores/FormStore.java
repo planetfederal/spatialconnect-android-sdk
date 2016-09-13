@@ -19,7 +19,6 @@ package com.boundlessgeo.spatialconnect.stores;
 import android.content.Context;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
@@ -38,6 +37,7 @@ import java.util.Map;
 
 import rx.Observable;
 import rx.functions.Action0;
+import rx.functions.Action1;
 
 public class FormStore extends GeoPackageStore {
 
@@ -96,19 +96,21 @@ public class FormStore extends GeoPackageStore {
                     }
                 }
                 if (formId != null) {
-
-                    SCBackendService backendService = SpatialConnect.getInstance().getBackendService();
                     final String theUrl = SCBackendService.API_URL + "forms/" + formId + "/submit";
-
-                    if (SCBackendService.API_URL != null && backendService.isInternetAvailable()) {
-                        Log.d(LOG_TAG, "Posting created feature to " + theUrl);
-                        try {
-                            HttpHandler.getInstance()
-                                    .post(theUrl, scSpatialFeature.toJson())
-                                    .subscribe();
-                        } catch (IOException e) {
-                            Log.w(LOG_TAG, "could not create new feature on backend");
-                        }
+                    if (SCBackendService.API_URL != null) {
+                        SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
+                            @Override
+                            public void call(Boolean connected) {
+                                if (connected) {
+                                    Log.d(LOG_TAG, "Posting created feature to " + theUrl);
+                                    try {
+                                        HttpHandler.getInstance().post(theUrl, scSpatialFeature.toJson()).subscribe();
+                                    } catch (IOException e) {
+                                        Log.w(LOG_TAG, "could not create new feature on backend");
+                                    }
+                                }
+                            }
+                        });
                     }
                 }
                 else {

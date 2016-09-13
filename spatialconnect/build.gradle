@@ -78,6 +78,7 @@ dependencies {
     compile ('org.eclipse.paho:org.eclipse.paho.android.service:1.0.2') {
         exclude module: 'support-v4'
     }
+    compile 'com.github.pwittchen:reactivenetwork:0.5.2'
     compile('io.jeo:jeo:0.6') {
         exclude group: 'com.vividsolutions'
         exclude group: 'io.jeo', module: 'proj4j'
