@@ -16,10 +16,7 @@ package com.boundlessgeo.spatialconnect.services;
 
 
 import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.Network;
 import android.net.NetworkInfo;
-import android.os.Build;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
@@ -31,13 +28,17 @@ import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
+import com.github.pwittchen.reactivenetwork.library.Connectivity;
+import com.github.pwittchen.reactivenetwork.library.ReactiveNetwork;
 
 import java.io.IOException;
 import java.util.Map;
 
 import rx.Observable;
+import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
 import rx.functions.Func1;
+import rx.schedulers.Schedulers;
 import rx.subjects.BehaviorSubject;
 
 /**
@@ -48,9 +49,10 @@ public class SCBackendService extends SCService {
     private static final String LOG_TAG = SCBackendService.class.getSimpleName();
     private static Context context;
     private static MqttHandler mqttHandler;
-    private  Observable<SCNotification> notifications;
+    private Observable<SCNotification> notifications;
     public static BehaviorSubject<Integer> configReceived = BehaviorSubject.create(0);
     public static BehaviorSubject<Integer> running = BehaviorSubject.create(0);
+    public static BehaviorSubject<Boolean> networkConnected = BehaviorSubject.create(false);
     /**
      * The API_URL of the spatialconnect-service rest api.  This will always end with a trailing slash, "/api/"
      */
@@ -92,6 +94,16 @@ public class SCBackendService extends SCService {
             }
         });
         running.onNext(1);
+        ReactiveNetwork.observeNetworkConnectivity(context)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Action1<Connectivity>() {
+                    @Override
+                    public void call(Connectivity connectivity) {
+                        Log.d(LOG_TAG, "Connectivity is " + connectivity.getState().name());
+                        networkConnected.onNext(connectivity.getState().equals(NetworkInfo.State.CONNECTED));
+                    }
+                });
     }
 
     private void setupSubscriptions() {
@@ -157,40 +169,6 @@ public class SCBackendService extends SCService {
                 )
                 .build();
         publish("/config/register", registerConfigMsg, QoS.EXACTLY_ONCE);
-    }
-
-    public boolean isInternetAvailable() {
-
-        boolean haveConnectedWifi = false;
-        boolean haveConnectedMobile = false;
-
-        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            Network[] networks = cm.getAllNetworks();
-            NetworkInfo networkInfo;
-
-            for (Network ni : networks) {
-                networkInfo = cm.getNetworkInfo(ni);
-                if (networkInfo.getTypeName().equalsIgnoreCase("WIFI"))
-                    if (networkInfo.isConnected())
-                        haveConnectedWifi = true;
-                if (networkInfo.getTypeName().equalsIgnoreCase("MOBILE"))
-                    if (networkInfo.isConnected())
-                        haveConnectedMobile = true;
-            }
-        }
-        else {
-            NetworkInfo[] netInfo = cm.getAllNetworkInfo();
-            for (NetworkInfo ni : netInfo) {
-                if (ni.getTypeName().equalsIgnoreCase("WIFI"))
-                    if (ni.isConnected())
-                        haveConnectedWifi = true;
-                if (ni.getTypeName().equalsIgnoreCase("MOBILE"))
-                    if (ni.isConnected())
-                        haveConnectedMobile = true;
-            }
-        }
-        return haveConnectedWifi || haveConnectedMobile;
     }
 
     /**

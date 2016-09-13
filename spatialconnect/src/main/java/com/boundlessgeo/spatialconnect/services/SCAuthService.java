@@ -109,11 +109,11 @@ public class SCAuthService extends SCService {
      * @return
      */
     private static void refreshToken() throws IOException {
-        Log.d(LOG_TAG, "Refreshing auth token.");
-        SCBackendService.running.subscribe(new Action1<Integer>() {
+        Log.d(LOG_TAG, "Refreshing auth token when network is available.");
+        SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
             @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
+            public void call(Boolean connected) {
+                if (connected) {
                     final String theUrl = SCBackendService.API_URL + "authenticate";
                     // TODO: get the email and password from encrypted storage
                     // probably want to use the KeyStore: https://developer.android.com/training/articles/keystore.html

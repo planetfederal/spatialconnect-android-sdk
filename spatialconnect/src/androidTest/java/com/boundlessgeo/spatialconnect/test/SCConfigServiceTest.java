@@ -16,6 +16,7 @@ package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 
 import org.junit.After;
 import org.junit.Before;
@@ -78,6 +79,8 @@ public class SCConfigServiceTest extends BaseTestCase {
         assertEquals("The remote config file defines 3 stores; plus 5 from the remote config; plus the form, default," +
                 " and location stores",
                 11, sc.getDataService().getAllStores().size());
+        assertEquals("The stores from the remote config are running.",
+                SCDataStoreStatus.SC_DATA_STORE_RUNNING, sc.getDataService().getStoreById(RIO_GPKG_ID).getStatus());
     }
 
 
