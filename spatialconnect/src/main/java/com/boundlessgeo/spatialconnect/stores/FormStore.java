@@ -28,7 +28,6 @@ import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -103,11 +102,7 @@ public class FormStore extends GeoPackageStore {
                             public void call(Boolean connected) {
                                 if (connected) {
                                     Log.d(LOG_TAG, "Posting created feature to " + theUrl);
-                                    try {
-                                        HttpHandler.getInstance().post(theUrl, scSpatialFeature.toJson()).subscribe();
-                                    } catch (IOException e) {
-                                        Log.w(LOG_TAG, "could not create new feature on backend");
-                                    }
+                                    HttpHandler.getInstance().post(theUrl, scSpatialFeature.toJson()).subscribe();
                                 }
                             }
                         });

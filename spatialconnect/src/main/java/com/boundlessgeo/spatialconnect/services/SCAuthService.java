@@ -36,7 +36,7 @@ public class SCAuthService extends SCService {
 
     private static final String LOG_TAG = SCAuthService.class.getSimpleName();
     private static Context context;
-    public static BehaviorSubject<Integer> loginStatus = BehaviorSubject.create(0);
+    public static BehaviorSubject<Boolean> loginStatus = BehaviorSubject.create(false);
     public static final String AUTH_HEADER_NAME = "x-access-token";
     public static String accessToken;
     public static String email;
@@ -61,7 +61,7 @@ public class SCAuthService extends SCService {
 
     public static void logout() {
         // TODO: post to the API to logout and invalidate the auth token when it's implemented in the api
-        SCAuthService.loginStatus.onNext(0);
+        SCAuthService.loginStatus.onNext(false);
     }
 
     /**
@@ -118,33 +118,26 @@ public class SCAuthService extends SCService {
                     // TODO: get the email and password from encrypted storage
                     // probably want to use the KeyStore: https://developer.android.com/training/articles/keystore.html
                     if (email != null && password != null) {
-                        try {
-                            HttpHandler.getInstance()
-                                    .post(theUrl,
-                                            String.format("{\"email\": \"%s\", \"password\":\"%s\"}",
-                                                    email, password))
-                                    .subscribe(new Action1<Response>() {
-                                        @Override
-                                        public void call(Response response) {
-                                            try {
-                                                accessToken = new JSONObject(response.body().string()).getString("token");
-                                                if (accessToken != null) {
-                                                    loginStatus.onNext(1);
-                                                }
-                                            }
-                                            catch (JSONException e) {
-                                                e.printStackTrace();
-                                            } catch (IOException ee) {
-
-                                            }
+                        HttpHandler.getInstance()
+                            .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", email, password))
+                            .subscribe(new Action1<Response>() {
+                                @Override
+                                public void call(Response response) {
+                                    try {
+                                        accessToken = new JSONObject(response.body().string())
+                                                .getJSONObject("result").getString("token");
+                                        if (accessToken != null) {
+                                            loginStatus.onNext(true);
                                         }
-                                    });
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    else {
-                        Log.w(LOG_TAG, "Cannot refresh token b/c login credentials are not available.");
+                                    }
+                                    catch (JSONException e) {
+                                        e.printStackTrace();
+                                    }
+                                    catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                                });
                     }
                 }
             }
@@ -154,5 +147,6 @@ public class SCAuthService extends SCService {
     public static String getAccessToken() throws IOException {
         return accessToken;
     }
+
 
 }

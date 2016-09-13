@@ -89,7 +89,7 @@ public class HttpHandler {
         return response.body().byteStream();
     }
 
-    public Observable<Response> post(final String url, final String json) throws IOException {
+    public Observable<Response> post(final String url, final String json) {
         return Observable.create(new Observable.OnSubscribe<Response>() {
             OkHttpClient client = new OkHttpClient();
             @Override
