@@ -4,6 +4,7 @@ import android.database.Cursor;
 
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.squareup.sqlbrite.BriteDatabase;
 
 import org.junit.AfterClass;
@@ -36,7 +37,7 @@ public class SCSqliteHelperTest extends BaseTestCase {
     @AfterClass
     public static void tearDown() throws Exception {
         rio.close();
-        sc.getBackendService().cancelAllRequests();
+        HttpHandler.getInstance().cancelAllRequests();
         deleteDatabases();
     }
 

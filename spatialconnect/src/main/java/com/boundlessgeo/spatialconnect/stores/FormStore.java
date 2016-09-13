@@ -26,6 +26,7 @@ import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
 import java.io.IOException;
@@ -101,10 +102,10 @@ public class FormStore extends GeoPackageStore {
 
                     if (SCBackendService.API_URL != null && backendService.isInternetAvailable()) {
                         Log.d(LOG_TAG, "Posting created feature to " + theUrl);
-                        String response;
                         try {
-                            response = backendService.post(theUrl, scSpatialFeature.toJson());
-                            Log.d(LOG_TAG, "create new feature response " + response);
+                            HttpHandler.getInstance()
+                                    .post(theUrl, scSpatialFeature.toJson())
+                                    .subscribe();
                         } catch (IOException e) {
                             Log.w(LOG_TAG, "could not create new feature on backend");
                         }

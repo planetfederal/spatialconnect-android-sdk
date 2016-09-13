@@ -19,7 +19,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.db.GeoPackageContents;
@@ -29,7 +28,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
@@ -478,28 +477,13 @@ public class GeoPackageAdapter extends SCDataAdapter {
      */
     public Observable<Response> downloadGeoPackage(final URL theUrl) {
         Log.d(LOG_TAG, "Downloading GeoPackage from " + theUrl.toString());
-        return Observable.create(new Observable.OnSubscribe<Response>() {
-            @Override
-            public void call(final Subscriber<? super Response> subscriber) {
-                SCBackendService.running.subscribe(new Action1<Integer>() {
-                    @Override
-                    public void call(Integer integer) {
-                        if (integer == 1) {
-                            try {
-                                subscriber.onNext(SpatialConnect.getInstance().getBackendService()
-                                        .getResponse(theUrl.toString())
-                                );
-                                subscriber.onCompleted();
-                            }
-                            catch (IOException e) {
-                                Log.e(LOG_TAG, "Could not download GeoPackage from " + theUrl.toString());
-                                subscriber.onError(e);
-                            }
-                        }
-                    }
-                });
-            }
-        });
+        try {
+            return HttpHandler.getInstance().get(theUrl.toString());
+        }
+        catch (IOException e) {
+            Log.e(LOG_TAG, "Could not download GeoPackage from " + theUrl.toString());
+            return Observable.error(e);
+        }
     }
 
     /**

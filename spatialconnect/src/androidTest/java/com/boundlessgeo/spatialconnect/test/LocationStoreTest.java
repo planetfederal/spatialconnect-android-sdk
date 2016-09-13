@@ -5,6 +5,7 @@ import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.geometries.SCPoint;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.stores.LocationStore;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
@@ -37,7 +38,7 @@ public class LocationStoreTest extends BaseTestCase {
 
     @AfterClass
     public static void tearDown() throws Exception {
-        sc.getBackendService().cancelAllRequests();
+        HttpHandler.getInstance().cancelAllRequests();
         testContext.deleteDatabase(LocationStore.NAME);
     }
 

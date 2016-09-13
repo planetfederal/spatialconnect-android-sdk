@@ -23,6 +23,7 @@ import com.boundlessgeo.spatialconnect.scutilities.LocationHelper;
 
 import rx.Observable;
 import rx.functions.Action1;
+import rx.subjects.BehaviorSubject;
 
 /**
  * The SCSensorService provides access to various sensors inputs that can be captured by the mobile device.  This
@@ -34,6 +35,7 @@ public class SCSensorService extends SCService {
     private LocationHelper locationHelper;
     private boolean gpsListenerStarted;
     private final String LOG_TAG = SCSensorService.class.getSimpleName();
+    public static BehaviorSubject<Integer> running = BehaviorSubject.create(0);
 
 
     public SCSensorService(Context context) {
@@ -46,6 +48,7 @@ public class SCSensorService extends SCService {
      */
     public void start() {
         super.start();
+        running.onNext(1);
     }
 
     /**

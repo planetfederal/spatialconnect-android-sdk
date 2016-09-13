@@ -14,6 +14,7 @@
  */
 package com.boundlessgeo.spatialconnect.test;
 
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
@@ -28,7 +29,7 @@ public class ServicesTest extends BaseTestCase {
 
     @AfterClass
     public static void tearDown() throws Exception {
-        SpatialConnect.getInstance().getBackendService().cancelAllRequests();
+        HttpHandler.getInstance().cancelAllRequests();
         deleteDatabases();
     }
 

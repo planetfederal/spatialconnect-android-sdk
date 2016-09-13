@@ -5,6 +5,7 @@ import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 
@@ -46,7 +47,7 @@ public class FormStoreTest extends BaseTestCase {
 
     @AfterClass
     public static void tearDown() throws Exception {
-        sc.getBackendService().cancelAllRequests();
+        HttpHandler.getInstance().cancelAllRequests();
         deleteDatabases();
     }
 

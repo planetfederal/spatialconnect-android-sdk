@@ -36,8 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import rx.functions.Action1;
-
 /**
  * The SCConfigService is responsible for managing the configuration for SpatialConnect.  This includes downloading
  * remote configuration and sweeping the external storage for config files, if required. The config service is
@@ -191,39 +189,6 @@ public class SCConfigService extends SCService {
             return true;
         }
         return false;
-    }
-
-    private void registerDevice() {
-        final String registrationEndpoint = SCBackendService.API_URL + "devices/register";
-        final String deviceEndpoint = SCBackendService.API_URL + "devices/%s";
-
-        SCAuthService.loginStatus.subscribe(new Action1<Integer>() {
-            @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
-                    try {
-                        // first check if device is already registered
-                        String response = backendService.get(String.format(deviceEndpoint, getClientId()));
-                        if (response.equals("null")) {
-                            backendService.post(registrationEndpoint,
-                                    String.format("{\"identifier\": \"%s\", \"device_info\": {\"os\":\"%s\"} }",
-                                            getClientId(), getAndroidVersion()
-                                    )
-                            );
-                        }
-                        else {
-                            Log.d(LOG_TAG, "Device is already registered.");
-                        }
-                    }
-                    catch (IOException e) {
-                        e.printStackTrace();
-                        Log.e(LOG_TAG, "Couldn't register device");
-                        System.exit(0);
-                    }
-                }
-            }
-        });
-
     }
 
     /**
