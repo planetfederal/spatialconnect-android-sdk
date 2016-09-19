@@ -99,14 +99,18 @@ public class WFSStore extends SCDataStore {
                     HttpHandler.getInstance().get(featureUrl).subscribe(new Action1<Response>() {
                         @Override
                         public void call(Response res) {
-                            String response = res.body().toString();
-                            SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(response);
-                            for (SCSpatialFeature feature : collection.getFeatures()) {
-                                feature.setLayerId(feature.getId().split("\\.")[0]);  // the first part of the id is the layer name
-                                feature.setStoreId(getStoreId());
-                                subscriber.onNext(feature);
+                            try {
+                                String response = res.body().string();
+                                SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(response);
+                                for (SCSpatialFeature feature : collection.getFeatures()) {
+                                    feature.setLayerId(feature.getId().split("\\.")[0]);  // the first part of the id is the layer name
+                                    feature.setStoreId(getStoreId());
+                                    subscriber.onNext(feature);
+                                }
+                                subscriber.onCompleted();
+                            } catch (IOException ioe) {
+                                subscriber.onError(ioe);
                             }
-                            subscriber.onCompleted();
                         }
                     });
                 } catch (IOException ioe) {
