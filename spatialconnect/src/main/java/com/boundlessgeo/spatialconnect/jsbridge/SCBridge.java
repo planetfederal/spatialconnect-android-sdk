@@ -413,17 +413,28 @@ public class SCBridge extends ReactContextBaseJavaModule {
     /**
      * Handles the {@link SCCommand#DATASERVICE_FORMLIST} command.
      */
-    private void handleFormsList(ReadableMap message) {
+    private void handleFormsList(final ReadableMap message) {
         Log.d(LOG_TAG, "Handling DATASERVICE_FORMSLIST message");
-        // should this be an observable?
-        List<SCFormConfig> formConfigs = sc.getDataService().getFormStore().getFormConfigs();
-        WritableMap eventPayload = Arguments.createMap();
-        WritableArray formsArray = Arguments.createArray();
-        for (SCFormConfig config : formConfigs) {
-            formsArray.pushMap(getFormMap(config));
-        }
-        eventPayload.putArray("forms", formsArray);
-        sendEvent(message.getInt("type"), message.getString("responseId"), eventPayload);
+        sc.getDataService()
+                .getFormStore()
+                .hasForms
+                .subscribe(new Action1<Boolean>() {
+                      @Override
+                      public void call(Boolean hasForms) {
+                         if (hasForms)  {
+                             List < SCFormConfig > formConfigs =
+                                     sc.getDataService().getFormStore().getFormConfigs();
+                             WritableMap eventPayload = Arguments.createMap();
+                             WritableArray formsArray = Arguments.createArray();
+                             for (SCFormConfig config : formConfigs) {
+                                 formsArray.pushMap(getFormMap(config));
+                             }
+                             eventPayload.putArray("forms", formsArray);
+                             sendEvent(message.getInt("type"), message.getString("responseId"), eventPayload);
+                         }
+                      }
+                  });
+
     }
 
     /**

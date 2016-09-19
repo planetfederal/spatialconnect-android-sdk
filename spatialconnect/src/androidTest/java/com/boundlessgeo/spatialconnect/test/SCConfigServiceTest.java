@@ -63,10 +63,10 @@ public class SCConfigServiceTest extends BaseTestCase {
         sc.getAuthService().authenticate("admin@something.com", "admin");
         TestSubscriber testSubscriber = new TestSubscriber();
         SCBackendService.configReceived
-                .filter(new Func1<Integer, Boolean>() {
+                .filter(new Func1<Boolean, Boolean>() {
                     @Override
-                    public Boolean call(Integer integer) {
-                        return integer == 1;
+                    public Boolean call(Boolean integer) {
+                        return integer;
                     }
                 })
                 .take(1)
