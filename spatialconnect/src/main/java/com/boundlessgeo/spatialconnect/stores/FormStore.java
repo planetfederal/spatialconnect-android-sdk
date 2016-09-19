@@ -37,12 +37,14 @@ import java.util.Map;
 import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Action1;
+import rx.subjects.BehaviorSubject;
 
 public class FormStore extends GeoPackageStore {
 
     private final String LOG_TAG = FormStore.class.getSimpleName();
     public static final String NAME = "FORM_STORE";
     private ArrayList<SCFormConfig> formConfigs = new ArrayList<>();
+    public BehaviorSubject<Boolean> hasForms = BehaviorSubject.create(false);
 
     /**
      * Constructor for FormStore that initializes the data store
@@ -64,6 +66,8 @@ public class FormStore extends GeoPackageStore {
             typeDefs.put(field.getKey().replace(" ", "_").toLowerCase(), field.getColumnType());
         }
         super.addLayer(tableName, typeDefs);
+
+        hasForms.onNext(true);
     }
 
     public void deleteFormLayer(String layerName) {
