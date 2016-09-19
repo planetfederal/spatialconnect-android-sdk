@@ -65,8 +65,8 @@ public class SCConfigServiceTest extends BaseTestCase {
         SCBackendService.configReceived
                 .filter(new Func1<Boolean, Boolean>() {
                     @Override
-                    public Boolean call(Boolean integer) {
-                        return integer;
+                    public Boolean call(Boolean b) {
+                        return b;
                     }
                 })
                 .take(1)
