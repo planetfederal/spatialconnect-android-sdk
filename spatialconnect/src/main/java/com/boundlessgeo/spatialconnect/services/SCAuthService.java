@@ -120,23 +120,28 @@ public class SCAuthService extends SCService {
                     if (email != null && password != null) {
                         HttpHandler.getInstance()
                             .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", email, password))
-                            .subscribe(new Action1<Response>() {
-                                @Override
-                                public void call(Response response) {
-                                    try {
-                                        accessToken = new JSONObject(response.body().string())
-                                                .getJSONObject("result").getString("token");
-                                        if (accessToken != null) {
-                                            loginStatus.onNext(true);
+                                .subscribe(
+                                    new Action1<Response>() {
+                                        @Override
+                                        public void call(Response response) {
+                                            try {
+                                                accessToken = new JSONObject(response.body().string())
+                                                        .getJSONObject("result").getString("token");
+                                                if (accessToken != null) {
+                                                    loginStatus.onNext(true);
+                                                }
+                                            } catch (JSONException e) {
+                                                e.printStackTrace();
+                                            } catch (IOException e) {
+                                                e.printStackTrace();
+                                            }
                                         }
-                                    }
-                                    catch (JSONException e) {
-                                        e.printStackTrace();
-                                    }
-                                    catch (IOException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
+                                },
+                                    new Action1<Throwable>() {
+                                        @Override
+                                        public void call(Throwable throwable) {
+                                            Log.e(LOG_TAG,"something went wrong refreshing token: " + throwable.getMessage());
+                                        }
                                 });
                     }
                 }
