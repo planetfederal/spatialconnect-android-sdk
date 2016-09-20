@@ -24,7 +24,6 @@ import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
-import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
@@ -125,11 +124,6 @@ public class FormStore extends GeoPackageStore {
     }
 
     public Observable<SCSpatialFeature> update(final SCSpatialFeature scSpatialFeature) {
-        return Observable.empty();
-    }
-
-    @Override
-    public Observable<SCSpatialFeature> query(final SCQueryFilter scFilter) {
         return Observable.empty();
     }
 
