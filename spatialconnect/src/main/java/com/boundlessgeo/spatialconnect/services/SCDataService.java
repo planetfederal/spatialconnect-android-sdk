@@ -40,6 +40,7 @@ import java.util.Set;
 
 import rx.Observable;
 import rx.Subscriber;
+import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
@@ -185,7 +186,9 @@ public class SCDataService extends SCService {
     public void startStore(final SCDataStore store) {
         if (!store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
             Log.d(LOG_TAG, "Starting store " + store.getName() + " " + store.getStoreId());
-            store.start().subscribe(new Action1<SCStoreStatusEvent>() {
+            store.start()
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new Action1<SCStoreStatusEvent>() {
                 @Override
                 public void call(SCStoreStatusEvent s) {
                 }
@@ -263,7 +266,6 @@ public class SCDataService extends SCService {
     }
 
     public void addNewStore(SCStoreConfig scStoreConfig) {
-        Log.d(LOG_TAG, "Registering new store " + scStoreConfig.getName());
         String key = scStoreConfig.getType() + "." + scStoreConfig.getVersion();
         if (isStoreSupported(key)) {
             if (key.startsWith(GeoJsonStore.TYPE)) {

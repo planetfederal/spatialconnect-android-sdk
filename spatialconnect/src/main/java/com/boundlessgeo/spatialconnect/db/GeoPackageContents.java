@@ -41,6 +41,38 @@ public class GeoPackageContents {
         return tableName;
     }
 
+    public String getIdentifier() {
+        return identifier;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getLastChange() {
+        return lastChange;
+    }
+
+    public Double getMinX() {
+        return minX;
+    }
+
+    public Double getMinY() {
+        return minY;
+    }
+
+    public Double getMaxX() {
+        return maxX;
+    }
+
+    public Double getMaxY() {
+        return maxY;
+    }
+
+    public Integer getSrsId() {
+        return srsId;
+    }
+
     @Override
     public String toString() {
         return "GeoPackageContents{" +

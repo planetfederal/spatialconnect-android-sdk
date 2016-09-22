@@ -23,6 +23,7 @@ import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.db.GeoPackageContents;
 import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
+import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
@@ -57,7 +58,6 @@ import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Action1;
 import rx.functions.Func1;
-import rx.schedulers.Schedulers;
 
 /**
  * This adpater connects to a specific GeoPackage defined by a {@link SCStoreConfig}.  The adapter will check to see if
@@ -117,7 +117,6 @@ public class GeoPackageAdapter extends SCDataAdapter {
                         try {
                             theUrl = new URL(scStoreConfig.getUri());
                             downloadGeoPackage(theUrl)
-                                    .subscribeOn(Schedulers.io())
                                     .subscribe(new Action1<Response>() {
                                         @Override
                                         public void call(Response response) {
@@ -469,6 +468,10 @@ public class GeoPackageAdapter extends SCDataAdapter {
         return gpkg.getFeatureSources();
     }
 
+    public Map<String, SCGpkgTileSource> getTileSources() {
+        return gpkg.getTileSources();
+    }
+
     /**
      * Downloads a GeoPackage and returns a Response.
      *
@@ -476,7 +479,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
      * @return
      */
     public Observable<Response> downloadGeoPackage(final URL theUrl) {
-        Log.d(LOG_TAG, "Downloading GeoPackage from " + theUrl.toString());
+        Log.d(LOG_TAG, "Attempting to download GeoPackage from " + theUrl.toString());
         try {
             return HttpHandler.getInstance().get(theUrl.toString());
         }
