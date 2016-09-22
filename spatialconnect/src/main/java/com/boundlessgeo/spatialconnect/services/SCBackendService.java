@@ -92,9 +92,8 @@ public class SCBackendService extends SCService {
                 }
             }
         });
+        Log.d(LOG_TAG, "Subscribing to network connectivity updates.");
         ReactiveNetwork.observeNetworkConnectivity(context)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Action1<Connectivity>() {
                     @Override
                     public void call(Connectivity connectivity) {
@@ -109,7 +108,7 @@ public class SCBackendService extends SCService {
                 .flatMap(new Func1<SCMessageOuterClass.SCMessage, Observable<SCNotification>>() {
                     @Override
                     public Observable<SCNotification> call(SCMessageOuterClass.SCMessage message) {
-                        SCNotification notification =  new SCNotification(message);
+                        SCNotification notification = new SCNotification(message);
                         Log.d(LOG_TAG, "received notification message:" + notification.toJson().toString());
                         return Observable.just(notification);
                     }
@@ -121,16 +120,8 @@ public class SCBackendService extends SCService {
     }
 
     private void registerAndFetchConfig() {
-        Log.i(LOG_TAG, "Attempting to load remote config if client is authenticated.");
-        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
-            @Override
-            public void call(Boolean authenticated) {
-                if (authenticated) {
-                    registerDevice();
-                    fetchConfig();
-                }
-            }
-        });
+        registerDevice();
+        fetchConfig();
     }
 
     private void fetchConfig() {
@@ -141,18 +132,7 @@ public class SCBackendService extends SCService {
                 .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
                     @Override
                     public void call(SCMessageOuterClass.SCMessage scMessage) {
-                        try {
-                            SCConfig config = ObjectMappers.getMapper().readValue(
-                                    scMessage.getPayload(),
-                                    SCConfig.class
-                            );
-                            configReceived.onNext(true);
-                            Log.d(LOG_TAG, "Loading config received from mqtt broker");
-                            SpatialConnect.getInstance().getConfigService().loadConfig(config);
-                        }
-                        catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                       loadConfig(scMessage);
                     }
                 });
     }
@@ -230,5 +210,21 @@ public class SCBackendService extends SCService {
 
     public void publish(String topic, SCMessageOuterClass.SCMessage message, QoS qos) {
         mqttHandler.publish(topic, message, qos.value());
+    }
+
+    private void loadConfig(SCMessageOuterClass.SCMessage message) {
+        Log.d(LOG_TAG, "mqtt message received on thread " + Thread.currentThread().getName());
+        try {
+            SCConfig config = ObjectMappers.getMapper().readValue(
+                    message.getPayload(),
+                    SCConfig.class
+            );
+            configReceived.onNext(true);
+            Log.d(LOG_TAG, "Loading config received from mqtt broker");
+            SpatialConnect.getInstance().getConfigService().loadConfig(config);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

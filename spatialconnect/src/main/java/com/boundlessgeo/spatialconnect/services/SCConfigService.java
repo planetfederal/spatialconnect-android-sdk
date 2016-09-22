@@ -121,7 +121,6 @@ public class SCConfigService extends SCService {
                 try {
                     scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
                     loadConfig(scConfig);
-                    SpatialConnect.getInstance().connectBackend(scConfig.getRemote());
                 }
                 catch (IOException e) {
                     e.printStackTrace();
@@ -133,6 +132,9 @@ public class SCConfigService extends SCService {
     public void loadConfig(SCConfig config) {
         registerForms(config.getFormConfigs());
         registerDataStores(config.getStoreConfigs());
+        if (config.getRemote() != null) {
+            SpatialConnect.getInstance().connectBackend(config.getRemote());
+        }
     }
 
     /* Registers all the forms specified in each config file */

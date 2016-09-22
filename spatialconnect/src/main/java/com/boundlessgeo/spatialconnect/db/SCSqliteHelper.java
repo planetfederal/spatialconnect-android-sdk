@@ -135,6 +135,10 @@ public class SCSqliteHelper extends SQLiteOpenHelper {
         return cursor.getInt(cursor.getColumnIndexOrThrow(columnName));
     }
 
+    public static double getDouble(Cursor cursor, String columnName) {
+        return cursor.getDouble(cursor.getColumnIndexOrThrow(columnName));
+    }
+
     public static byte[] getBlob(Cursor cursor, String columnName) {
         return cursor.getBlob(cursor.getColumnIndexOrThrow(columnName));
     }

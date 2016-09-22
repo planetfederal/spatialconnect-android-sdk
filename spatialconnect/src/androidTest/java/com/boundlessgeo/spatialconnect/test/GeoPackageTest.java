@@ -16,6 +16,7 @@ package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
+import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -24,6 +25,7 @@ import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
+import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
@@ -320,9 +322,27 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testInvalidGeoPackageIsNotStarted() {
-        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        final TestSubscriber testSubscriber = new TestSubscriber();
+        Observable.create(new Observable.OnSubscribe<Void>() {
+            @Override
+            public void call(final Subscriber<? super Void> subscriber) {
+                sc.getDataService().storeEvents.autoConnect()
+                        .timeout(5, TimeUnit.MINUTES)
+                        .subscribe(new Action1<SCStoreStatusEvent>() {
+                            @Override
+                            public void call(SCStoreStatusEvent event) {
+                                if (event.getStoreId().equals(HAITI_GPKG_ID) &&
+                                        event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_STOPPED)) {
+                                    subscriber.onCompleted();
+                                }
+                            }
+                        });
+            }}).subscribe(testSubscriber);
+        testSubscriber.awaitTerminalEvent();
+        testSubscriber.assertCompleted();
+        GeoPackageStore gpkgStore = (GeoPackageStore) sc.getDataService().getStoreById(HAITI_GPKG_ID);
         assertTrue("The geopackage should not be running b/c it is not valid.  The status was " +
-                        gpkgStore.getStatus().name(),
+                gpkgStore.getStatus().name(),
                 gpkgStore.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_STOPPED)
         );
     }

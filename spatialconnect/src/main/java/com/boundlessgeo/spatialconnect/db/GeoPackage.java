@@ -4,6 +4,9 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
+import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
+import com.boundlessgeo.spatialconnect.tiles.SCTileMatrixRow;
 import com.squareup.sqlbrite.BriteDatabase;
 import com.squareup.sqlbrite.QueryObservable;
 
@@ -20,7 +23,7 @@ import rx.functions.Action1;
 import rx.functions.Func1;
 
 /**
- * Represents a GeoPackage database connection.
+ * Represents a single GeoPackage and provides methods for interacting with its features and tiles.
  */
 public class GeoPackage {
 
@@ -55,10 +58,16 @@ public class GeoPackage {
     private HashSet<GeoPackageContents> contents = new HashSet<>();
 
     /**
-     * A map of the {@link SCGpkgFeatureSource} which represent vector feature tables in a GeoPackage.  The key is the
-     * name of the table which is unique in a GeoPackage
+     * A map of the {@link SCGpkgFeatureSource} which represent vector feature tables in this GeoPackage.  The key is
+     * the name of the table, which is unique in a GeoPackage.
      */
     private HashMap<String, SCGpkgFeatureSource> featureSources = new HashMap();
+
+    /**
+     * A map of the {@link SCGpkgTileSource}s in this GeoPackage where the key is the name of the
+     * <a href="http://www.geopackage.org/spec/#tiles_user_tables">tile pyramid user data table</a>.
+     */
+    private HashMap<String, SCGpkgTileSource> tileSources = new HashMap();
 
     /**
      * Creates an instance of a {@link GeoPackage}. After creating a {@link BriteDatabase} for the GeoPackage, it will
@@ -75,6 +84,7 @@ public class GeoPackage {
             db = new SCSqliteHelper(context, name).db();
             if (initializeSpatialMetadata() && validateGeoPackageSchema()) {
                 initializeFeatureSources();
+                getTileSources();
                 isValid = true;
             }
         }
@@ -197,6 +207,90 @@ public class GeoPackage {
                 });
     }
 
+    // returns an array of int values where the first is the min and the second is the max zoom level for the table
+    public int[] getMinMax(String tableName) {
+        Log.d(LOG_TAG, "Retrieving min/max zoom levels for table " + tableName);
+        Cursor cursor = null;
+        int[] minMax = new int[2];
+        try {
+            cursor = db.query(
+                    String.format("SELECT MIN(zoom_level) AS min, MAX(zoom_level) AS max FROM '%s'", tableName)
+            );
+            if (cursor.moveToFirst()) {
+                minMax[0] = cursor.getInt(0);
+                minMax[1] = cursor.getInt(1);
+            }
+        }
+        catch (SQLException ex) {
+            ex.printStackTrace();
+            Log.w(LOG_TAG, "Could not retrieving min/max zoom levels b/c " + ex.getMessage());
+        }
+        finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return minMax;
+    }
+
+    // gets the organization_coordsys_id from the gpkg_spatial_ref_sys table (eg 4326 or 3857)
+    public Integer getOrganizationCoordSysId(Integer srsId) {
+        Cursor cursor = null;
+        Integer coordSysId = -1;
+        try {
+            cursor = db.query(
+                    String.format("SELECT organization_coordsys_id FROM gpkg_spatial_ref_sys WHERE srs_id = %d", srsId)
+            );
+            if (cursor.moveToFirst()) {
+                coordSysId = cursor.getInt(0);
+            }
+        }
+        catch (SQLException ex) {
+            ex.printStackTrace();
+            Log.w(LOG_TAG, "Could not retrieve organization_coordsys_id b/c " + ex.getMessage());
+        }
+        finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return coordSysId;
+    }
+
+    public HashMap<Integer,SCTileMatrixRow> getTileRowMatrix(String tableName) {
+        Log.d(LOG_TAG, "Building tile matrix for table " + tableName);
+        Cursor cursor = null;
+        HashMap<Integer, SCTileMatrixRow> matrix = new HashMap<>();
+        try {
+            cursor = db.query(
+                    String.format("SELECT * FROM gpkg_tile_matrix WHERE table_name = '%s'", tableName)
+            );
+            while (cursor.moveToNext()) {
+                int zoomLevel = SCSqliteHelper.getInt(cursor, "zoom_level");
+                matrix.put(zoomLevel,
+                        new SCTileMatrixRow(tableName, zoomLevel,
+                                SCSqliteHelper.getInt(cursor, "matrix_width"),
+                                SCSqliteHelper.getInt(cursor, "matrix_height"),
+                                SCSqliteHelper.getInt(cursor, "tile_width"),
+                                SCSqliteHelper.getInt(cursor, "tile_height"),
+                                SCSqliteHelper.getDouble(cursor, "pixel_x_size"),
+                                SCSqliteHelper.getDouble(cursor, "pixel_y_size")
+                        )
+                );
+            }
+        }
+        catch (SQLException ex) {
+            ex.printStackTrace();
+            Log.w(LOG_TAG, "Could not build tile matrix b/c " + ex.getMessage());
+        }
+        finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return matrix;
+    }
+
     // build a GeoPackageContents object from a Cursor instance
     private GeoPackageContents createGeoPackageContents(Cursor cursor) {
         return new GeoPackageContents(
@@ -265,10 +359,35 @@ public class GeoPackage {
                 .toList();
     }
 
+
+    public Observable<List<SCGpkgTileSource>> getTileTables() {
+        return Observable.from(getGeoPackageContents())
+                .filter(new Func1<GeoPackageContents, Boolean>() {
+                    @Override
+                    public Boolean call(GeoPackageContents geoPackageContents) {
+                        return geoPackageContents.getTableType().equals(GeoPackageContents.DataType.TILES);
+                    }
+                })
+                .flatMap(new Func1<GeoPackageContents, Observable<SCGpkgTileSource>>() {
+                    @Override
+                    public Observable<SCGpkgTileSource> call(GeoPackageContents geoPackageContents) {
+                        SCGpkgTileSource source = createTileSource(geoPackageContents);
+                        return Observable.just(source);
+                    }
+                })
+                .toList();
+    }
+
+
     // helper method to create a SCGpkgFeatureSource for this GeoPackage.
     private SCGpkgFeatureSource createFeatureSource(String tableName) {
         return new SCGpkgFeatureSource(this, tableName);
     }
+
+    private SCGpkgTileSource createTileSource(GeoPackageContents contents) {
+        return new SCGpkgTileSource(this, contents);
+    }
+
 
     public Set<GeoPackageContents> getGeoPackageContents() {
         if (this.contents.size() == 0) {
@@ -284,6 +403,16 @@ public class GeoPackage {
         return this.featureSources;
     }
 
+    public Map<String, SCGpkgTileSource> getTileSources() {
+        if (this.tileSources.size() == 0) {
+            List<SCGpkgTileSource> tileSources = getTileTables().toBlocking().first();
+            for (SCGpkgTileSource source : tileSources) {
+                this.tileSources.put(source.getTableName(), source);
+            }
+        }
+        return this.tileSources;
+    }
+
     public void refreshGeoPackageContents() {
         List<GeoPackageContents> contents = getGpkgContents().toBlocking().first();
         this.contents = new HashSet<>(contents);
@@ -297,6 +426,7 @@ public class GeoPackage {
         }
     }
 
+
     public SCGpkgFeatureSource getFeatureSourceByName(String name) {
         return this.featureSources.get(name);
     }
@@ -304,8 +434,6 @@ public class GeoPackage {
     public Set<String> getFeatureSourceNames() {
         return this.featureSources.keySet();
     }
-
-    // TODO: getTileSources
 
     /**
      * Close the db connection.

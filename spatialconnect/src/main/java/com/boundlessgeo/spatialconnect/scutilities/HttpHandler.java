@@ -70,9 +70,12 @@ public class HttpHandler {
                             .url(url)
                             .build();
                     Response response = client.newCall(request).execute();
-                    subscriber.onNext(response);
-                    subscriber.onCompleted();
-                    if (!response.isSuccessful()) subscriber.onError(new Exception("error"));
+                    if (!response.isSuccessful()) {
+                        subscriber.onError(new Exception("error"));
+                    } else {
+                        subscriber.onNext(response);
+                        subscriber.onCompleted();
+                    }
                 } catch (IOException e) {
                     subscriber.onError(e);
                 }
@@ -91,7 +94,6 @@ public class HttpHandler {
 
     public Observable<Response> post(final String url, final String json) {
         return Observable.create(new Observable.OnSubscribe<Response>() {
-            OkHttpClient client = new OkHttpClient();
             @Override
             public void call(Subscriber<? super Response> subscriber) {
                 try {
@@ -101,9 +103,12 @@ public class HttpHandler {
                             .post(body)
                             .build();
                     Response response = client.newCall(request).execute();
-                    subscriber.onNext(response);
-                    subscriber.onCompleted();
-                    if (!response.isSuccessful()) subscriber.onError(new Exception("error"));
+                    if (!response.isSuccessful()) {
+                        subscriber.onError(new Exception("error"));
+                    } else {
+                        subscriber.onNext(response);
+                        subscriber.onCompleted();
+                    }
                 } catch (IOException e) {
                     subscriber.onError(e);
                 }

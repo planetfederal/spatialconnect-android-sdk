@@ -53,7 +53,7 @@ public abstract class BaseTestCase {
     protected static File localConfigFile;
 
     protected final static String RIO_GPKG_ID = "5729cac9-cf37-476a-997d-f9c687b4df67";
-    protected final static String HAITI_GPKG_ID = "f6dcc750-1349-46b9-a324-0223764d46d1";
+    protected final static String HAITI_GPKG_ID = "27ed943c-8fc9-4d18-a7f0-4dfc03a460d6";
     protected final static String WHITEHORSE_GPKG_ID = "fad33ae1-f529-4c79-affc-befc37c104ae";
     protected final static String GEOJSON_STORE_ID = "50402599-3ad3-439f-9c49-3c8a7579933b";
 

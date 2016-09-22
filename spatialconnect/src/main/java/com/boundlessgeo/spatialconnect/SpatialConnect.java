@@ -131,7 +131,8 @@ public class SpatialConnect {
 
     public void connectBackend(SCRemoteConfig remoteConfig) {
         if (remoteConfig != null && backendService == null) {
-            backendService = new SCBackendService(this.context);
+            Log.d(LOG_TAG, "connecting backend");
+            backendService = new SCBackendService(context);
             backendService.initialize(remoteConfig);
             backendService.start();
         }
