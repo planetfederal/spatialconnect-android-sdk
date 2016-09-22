@@ -636,15 +636,12 @@ public class GeoPackageAdapter extends SCDataAdapter {
     private String createTableSQL(String layer, Map<String, String> typeDefs){
         final String tableName = layer;
         StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName);
-        sb.append(" (id INTEGER PRIMARY KEY AUTOINCREMENT, ");
-        boolean isFirst = true;
+        sb.append(" (id INTEGER PRIMARY KEY AUTOINCREMENT ");
         for (String key : typeDefs.keySet()) {
-            if (!isFirst) {
-                sb.append(", ");
-            }
-            sb.append(key.replace(" ", "_").toLowerCase());
-            sb.append(" ").append(typeDefs.get(key));
-            isFirst = false;
+            sb.append(", ");
+            sb.append(key);
+            sb.append(" ");
+            sb.append(typeDefs.get(key));
         }
         sb.append(")");
 
