@@ -22,12 +22,14 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
+import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
+import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.github.pwittchen.reactivenetwork.library.Connectivity;
 import com.github.pwittchen.reactivenetwork.library.ReactiveNetwork;
 
@@ -35,10 +37,8 @@ import java.io.IOException;
 import java.util.Map;
 
 import rx.Observable;
-import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
 import rx.functions.Func1;
-import rx.schedulers.Schedulers;
 import rx.subjects.BehaviorSubject;
 
 /**
@@ -122,6 +122,7 @@ public class SCBackendService extends SCService {
     private void registerAndFetchConfig() {
         registerDevice();
         fetchConfig();
+        listenForUpdates();
     }
 
     private void fetchConfig() {
@@ -147,6 +148,51 @@ public class SCBackendService extends SCService {
                 )
                 .build();
         publish("/config/register", registerConfigMsg, QoS.EXACTLY_ONCE);
+    }
+
+    private void listenForUpdates() {
+        listenOnTopic("/config/update").subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
+            @Override
+            public void call(SCMessageOuterClass.SCMessage scMessage) {
+                switch (SCCommand.fromActionNumber(scMessage.getAction())) {
+                    case CONFIG_ADD_STORE:
+                        try {
+                            SCStoreConfig config = ObjectMappers.getMapper()
+                                    .readValue(scMessage.getPayload(), SCStoreConfig.class);
+                            SpatialConnect.getInstance().getDataService()
+                                    .registerAndStartStoreByConfig(config);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        break;
+                    case CONFIG_UPDATE_STORE:
+                        try {
+                            SCStoreConfig config = ObjectMappers.getMapper()
+                                    .readValue(scMessage.getPayload(), SCStoreConfig.class);
+                            SpatialConnect.getInstance().getDataService()
+                                    .updateStoresByConfig(config);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        break;
+                    case CONFIG_REMOVE_STORE:
+                        SCDataStore store = SpatialConnect.getInstance().getDataService().getStoreById(scMessage.getPayload());
+                        SpatialConnect.getInstance().getDataService()
+                                .unregisterStore(store);
+                        break;
+                    case CONFIG_ADD_FORM:
+                        //do something
+                        break;
+                    case CONFIG_UPDATE_FORM:
+                        //do something
+                        break;
+                    case CONFIG_REMOVE_FORM:
+                        //do something
+                        break;
+
+                }
+            }
+        });
     }
 
     /**

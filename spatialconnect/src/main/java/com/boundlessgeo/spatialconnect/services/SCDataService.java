@@ -56,6 +56,7 @@ public class SCDataService extends SCService {
     private static final String LOG_TAG = SCDataService.class.getSimpleName();
     private Set<String> supportedStores; // the strings are store keys: type.version
     private Map<String, SCDataStore> stores;
+    public BehaviorSubject<Boolean> hasStores = BehaviorSubject.create(false);
     private Context context;
 
     /**
@@ -208,8 +209,22 @@ public class SCDataService extends SCService {
                     storeEventSubject.onNext(
                             new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, store.getStoreId())
                     );
+
+                    hasStores.onNext(true);
                 }
             });
+        }
+    }
+
+    public void stopStore(final SCDataStore store) {
+        if (store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+            Log.d(LOG_TAG, "Stopping store " + store.getName() + " " + store.getStoreId());
+            store.stop();
+            storeEventSubject.onNext(
+                    new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, store.getStoreId()));
+            if (stores.size() > 0) {
+                hasStores.onNext(true);
+            }
         }
     }
 
@@ -265,7 +280,16 @@ public class SCDataService extends SCService {
         this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
     }
 
-    public void addNewStore(SCStoreConfig scStoreConfig) {
+    public void registerAndStartStoreByConfig(SCStoreConfig config) {
+        if (registerStoreByConfig(config)) {
+            SCDataStore store = stores.get(config.getUniqueID());
+            if (store != null) {
+                store.start();
+            }
+        }
+    }
+
+    public boolean registerStoreByConfig(SCStoreConfig scStoreConfig) {
         String key = scStoreConfig.getType() + "." + scStoreConfig.getVersion();
         if (isStoreSupported(key)) {
             if (key.startsWith(GeoJsonStore.TYPE)) {
@@ -280,14 +304,69 @@ public class SCDataService extends SCService {
                 Log.d(LOG_TAG, "Registering wfs store " + scStoreConfig.getName() + " with SCDataService.");
                 registerStore(new WFSStore(context, scStoreConfig));
             }
+
+            // now persist the store's properties
+            SCStoreConfigRepository storeConfigRepository = new SCStoreConfigRepository(context);
+            storeConfigRepository.addStoreConfig(scStoreConfig);
+            Log.d(LOG_TAG,"returning true from register store by config");
+            return true;
         }
         else {
             Log.w(LOG_TAG, "Cannot register new store b/c it's unsupported. The unsupported store key was " + key);
+            return false;
         }
-        // now persist the store's properties
-        SCStoreConfigRepository storeConfigRepository = new SCStoreConfigRepository(context);
-        storeConfigRepository.addStoreConfig(scStoreConfig);
+
     }
+
+    private void updateStore(SCDataStore store) {
+        stopStore(store);
+        stores.put(store.getStoreId(), store);
+        startStore(store);
+    }
+
+    public boolean updateStoresByConfig(SCStoreConfig scStoreConfig) {
+        String key  = String.format("%s.%s", scStoreConfig.getType(), scStoreConfig.getVersion());
+        if (isStoreSupported(key)) {
+
+            SCDataStore currentStore = stores.get(scStoreConfig.getUniqueID());
+            SCDataStore updatedStore = null;
+
+            if (key.startsWith(GeoJsonStore.TYPE)) {
+                Log.d(LOG_TAG, "Updating geojson store " + scStoreConfig.getName() + " with SCDataService.");
+                updatedStore = new GeoJsonStore(context, scStoreConfig);
+            }
+            else if (key.startsWith(GeoPackageStore.TYPE)) {
+                Log.d(LOG_TAG, "Updating gpkg store " + scStoreConfig.getName() + " with SCDataService.");
+                updatedStore = new GeoPackageStore(context, scStoreConfig);
+            }
+            else if (key.startsWith(WFSStore.TYPE)) {
+                Log.d(LOG_TAG, "Updating wfs store " + scStoreConfig.getName() + " with SCDataService.");
+                updatedStore = new WFSStore(context, scStoreConfig);
+            }
+
+            // now persist the store's properties
+            SCStoreConfigRepository storeConfigRepository = new SCStoreConfigRepository(context);
+            storeConfigRepository.addStoreConfig(scStoreConfig);
+
+            if (currentStore == null) {
+                Log.e(LOG_TAG, String.format("Store %s does not exists", scStoreConfig.getUniqueID()));
+                return false;
+            } else {
+                if (updatedStore != null) {
+                    updateStore(updatedStore);
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        } else {
+            Log.e(LOG_TAG,
+                    String.format("The store you tried to start:%s doesn't have a support implementation"
+                            , key));
+            return false;
+        }
+    }
+
 
     public void addSupportedStoreKey(String key) {
         this.supportedStores.add(key);
@@ -311,7 +390,7 @@ public class SCDataService extends SCService {
         // if data service is started, and a store is unregister, then we want to stop the store
         if (getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING)) {
             Log.d(LOG_TAG, "Stopping store " + store.getName());
-            store.stop();
+            stopStore(store);
         }
     }
 

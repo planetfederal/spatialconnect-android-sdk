@@ -34,9 +34,7 @@ import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
-import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
-import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
@@ -63,7 +61,6 @@ import java.util.List;
 
 import rx.Subscriber;
 import rx.functions.Action1;
-import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 /**
@@ -381,20 +378,14 @@ public class SCBridge extends ReactContextBaseJavaModule {
      */
     private void handleActiveStoresList(final ReadableMap message) {
         Log.d(LOG_TAG, "Handling DATASERVICE_ACTIVESTORESLIST message");
-        sendEvent(message.getInt("type"), message.getString("responseId"), getActiveStoresPayload());
-        // send a message
-        SpatialConnect.getInstance().getDataService().storeEvents
-                .filter(new Func1<SCStoreStatusEvent, Boolean>() {
+        sc.getDataService()
+                .hasStores
+                .subscribe(new Action1<Boolean>() {
                     @Override
-                    public Boolean call(SCStoreStatusEvent event) {
-                        return event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_STARTED)
-                                || event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-                    }
-                })
-                .subscribe(new Action1<SCStoreStatusEvent> () {
-                    @Override
-                    public void call(SCStoreStatusEvent event) {
-                        sendEvent(message.getInt("type"), message.getString("responseId"), getActiveStoresPayload());
+                    public void call(Boolean hasStores) {
+                        if (hasStores) {
+                            sendEvent(message.getInt("type"), message.getString("responseId"), getActiveStoresPayload());
+                        }
                     }
                 });
     }
