@@ -158,7 +158,7 @@ public class SCConfigService extends SCService {
             for (SCStoreConfig storeConfig : storeConfigs) {
                 Log.d(LOG_TAG, "Adding store " + storeConfig.getName() + " to data service.");
                 try {
-                    dataService.addNewStore(storeConfig);
+                    dataService.registerStoreByConfig(storeConfig);
                 } catch (Exception ex) {
                     Log.w(LOG_TAG, "Exception adding store to data service ", ex);
                 }

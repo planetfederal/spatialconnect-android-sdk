@@ -381,20 +381,29 @@ public class SCBridge extends ReactContextBaseJavaModule {
      */
     private void handleActiveStoresList(final ReadableMap message) {
         Log.d(LOG_TAG, "Handling DATASERVICE_ACTIVESTORESLIST message");
-        sendEvent(message.getInt("type"), message.getString("responseId"), getActiveStoresPayload());
-        // send a message
-        SpatialConnect.getInstance().getDataService().storeEvents
-                .filter(new Func1<SCStoreStatusEvent, Boolean>() {
+        sc.getDataService()
+                .hasStores
+                .subscribe(new Action1<Boolean>() {
                     @Override
-                    public Boolean call(SCStoreStatusEvent event) {
-                        return event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_STARTED)
-                                || event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-                    }
-                })
-                .subscribe(new Action1<SCStoreStatusEvent> () {
-                    @Override
-                    public void call(SCStoreStatusEvent event) {
-                        sendEvent(message.getInt("type"), message.getString("responseId"), getActiveStoresPayload());
+                    public void call(Boolean hasStores) {
+                        if (hasStores) {
+                            sendEvent(message.getInt("type"), message.getString("responseId"), getActiveStoresPayload());
+                            // send a message
+                            SpatialConnect.getInstance().getDataService().storeEvents
+                                    .filter(new Func1<SCStoreStatusEvent, Boolean>() {
+                                        @Override
+                                        public Boolean call(SCStoreStatusEvent event) {
+                                            return event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_STARTED)
+                                                    || event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+                                        }
+                                    })
+                                    .subscribe(new Action1<SCStoreStatusEvent> () {
+                                        @Override
+                                        public void call(SCStoreStatusEvent event) {
+                                            sendEvent(message.getInt("type"), message.getString("responseId"), getActiveStoresPayload());
+                                        }
+                                    });
+                        }
                     }
                 });
     }
