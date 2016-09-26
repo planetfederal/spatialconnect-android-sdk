@@ -16,7 +16,6 @@ package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
-import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -37,6 +36,7 @@ import com.vividsolutions.jts.io.WKTReader;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -320,7 +320,7 @@ public class GeoPackageTest extends BaseTestCase {
         );
     }
 
-    @Test
+    @Ignore
     public void testInvalidGeoPackageIsNotStarted() {
         final TestSubscriber testSubscriber = new TestSubscriber();
         Observable.create(new Observable.OnSubscribe<Void>() {
