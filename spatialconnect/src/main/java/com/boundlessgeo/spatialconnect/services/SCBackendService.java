@@ -21,6 +21,7 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
+import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
@@ -154,6 +155,7 @@ public class SCBackendService extends SCService {
         listenOnTopic("/config/update").subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
             @Override
             public void call(SCMessageOuterClass.SCMessage scMessage) {
+                Log.e("FormStore","action: " + scMessage.getAction());
                 switch (SCCommand.fromActionNumber(scMessage.getAction())) {
                     case CONFIG_ADD_STORE:
                         try {
@@ -181,13 +183,32 @@ public class SCBackendService extends SCService {
                                 .unregisterStore(store);
                         break;
                     case CONFIG_ADD_FORM:
-                        //do something
+                        try {
+                            SCFormConfig config = ObjectMappers.getMapper()
+                                    .readValue(scMessage.getPayload(), SCFormConfig.class);
+                            SpatialConnect.getInstance()
+                                    .getDataService()
+                                    .getFormStore().registerFormByConfig(config);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                         break;
                     case CONFIG_UPDATE_FORM:
-                        //do something
+                        try {
+                            SCFormConfig config = ObjectMappers.getMapper()
+                                    .readValue(scMessage.getPayload(), SCFormConfig.class);
+                            SpatialConnect.getInstance()
+                                    .getDataService()
+                                    .getFormStore().updateFormByConfig(config);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                         break;
                     case CONFIG_REMOVE_FORM:
-                        //do something
+                            SpatialConnect.getInstance()
+                                    .getDataService()
+                                    .getFormStore()
+                                    .unregisterFormByKey(scMessage.getPayload().toString());
                         break;
 
                 }

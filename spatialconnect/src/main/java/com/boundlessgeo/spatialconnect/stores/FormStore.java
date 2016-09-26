@@ -29,7 +29,6 @@ import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -42,7 +41,8 @@ public class FormStore extends GeoPackageStore {
 
     private final String LOG_TAG = FormStore.class.getSimpleName();
     public static final String NAME = "FORM_STORE";
-    private ArrayList<SCFormConfig> formConfigs = new ArrayList<>();
+    private Map<String, SCFormConfig> storeForms = new HashMap<>();
+    private Map<String, String> formIds = new HashMap<>();
     public BehaviorSubject<Boolean> hasForms = BehaviorSubject.create(false);
 
     /**
@@ -56,31 +56,37 @@ public class FormStore extends GeoPackageStore {
         super(context, scStoreConfig);
     }
 
-    public void addFormLayer(SCFormConfig formConfig) {
-        Log.d(LOG_TAG, "Saving form config " + formConfig.getFormKey());
-        formConfigs.add(formConfig);
-        final String tableName = formConfig.getFormKey();
-        Map<String, String> typeDefs = new HashMap<>();
-        for (SCFormField field : formConfig.getFields()) {
-            typeDefs.put(field.getKey().replace(" ", "_").toLowerCase(), field.getColumnType());
-        }
-        super.addLayer(tableName, typeDefs);
+    public void registerFormByConfig(SCFormConfig formConfig) {
+        addLayerByConfig(formConfig);
+    }
 
-        hasForms.onNext(true);
+    public void updateFormByConfig(SCFormConfig formConfig) {
+        addLayerByConfig(formConfig);
+    }
+
+    public void unregisterFormByConfig(SCFormConfig formConfig) {
+        storeForms.remove(formConfig.getFormKey());
+        formIds.remove(formConfig.getFormKey());
+        hasForms.onNext(storeForms.size() > 0);
+    }
+
+    public void unregisterFormByKey(String key) {
+        SCFormConfig config = storeForms.get(key);
+        unregisterFormByConfig(config);
     }
 
     public void deleteFormLayer(String layerName) {
-        Iterator<SCFormConfig> itr = formConfigs.iterator();
-        while (itr.hasNext()) {
-            if (itr.next().getFormKey().equals(layerName)) {
-                itr.remove();
-            }
-        }
+        storeForms.remove(layerName);
         ((GeoPackageAdapter) getAdapter()).deleteLayer(layerName);
     }
 
     public List<SCFormConfig> getFormConfigs() {
-        return formConfigs;
+        List<SCFormConfig> configList = new ArrayList<>();
+        for (SCFormConfig c : storeForms.values()) {
+            configList.add(c);
+        }
+
+        return configList;
     }
 
     @Override
@@ -91,12 +97,9 @@ public class FormStore extends GeoPackageStore {
         return spatialFeature.doOnCompleted(new Action0() {
             @Override
             public void call() {
-                String formId = "";
-                for(SCFormConfig config : formConfigs) {
-                    if (config.getFormKey().equals(scSpatialFeature.getKey().getLayerId())) {
-                        formId = config.getId();
-                    }
-                }
+                String formId;
+                SCFormConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
+                formId = c.getId();
                 if (formId != null) {
                     final String theUrl = SCBackendService.API_URL + "forms/" + formId + "/submit";
                     if (SCBackendService.API_URL != null) {
@@ -130,5 +133,18 @@ public class FormStore extends GeoPackageStore {
     @Override
     public Observable<SCSpatialFeature> queryById(final SCKeyTuple keyTuple) {
         return Observable.empty();
+    }
+
+    private void addLayerByConfig(SCFormConfig config) {
+        storeForms.put(config.getFormKey(), config);
+        formIds.put(config.getFormKey(), config.getId());
+        final String tableName = config.getFormKey();
+        Map<String, String> typeDefs = new HashMap<>();
+        for (SCFormField field : config.getFields()) {
+            typeDefs.put(field.getKey(), field.getColumnType());
+        }
+        super.addLayer(tableName, typeDefs);
+
+        hasForms.onNext(storeForms.size() > 0);
     }
 }

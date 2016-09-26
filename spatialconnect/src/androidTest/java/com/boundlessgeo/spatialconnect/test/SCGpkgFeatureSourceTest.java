@@ -15,6 +15,7 @@ import com.squareup.sqlbrite.BriteDatabase;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -26,7 +27,7 @@ import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
 
-
+@Ignore
 public class SCGpkgFeatureSourceTest extends BaseTestCase {
 
     private static SpatialConnect sc;

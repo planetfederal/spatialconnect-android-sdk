@@ -145,7 +145,7 @@ public class SCConfigService extends SCService {
                 Log.d(LOG_TAG, "Creating table for form " + formConfig.getFormKey());
                 FormStore store = dataService.getFormStore();
                 if (store != null) {
-                    store.addFormLayer(formConfig);
+                    store.registerFormByConfig(formConfig);
                 }
             }
         }

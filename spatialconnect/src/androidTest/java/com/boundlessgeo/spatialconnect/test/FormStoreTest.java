@@ -11,7 +11,6 @@ import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -109,7 +108,7 @@ public class FormStoreTest extends BaseTestCase {
                 !updatedProps.get(TEST_KEY_1).equals(TEST_VALUE_1));
     }
 
-    @Ignore
+    @Test
     public void testFormLayerCanBeDeleted() {
         FormStore formStore =  sc.getDataService().getFormStore();
         formStore.deleteFormLayer(TEST_LAYER_NAME);
