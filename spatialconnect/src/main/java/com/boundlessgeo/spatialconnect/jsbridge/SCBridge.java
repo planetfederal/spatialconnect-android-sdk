@@ -17,10 +17,14 @@ package com.boundlessgeo.spatialconnect.jsbridge;
 import android.location.Location;
 import android.support.annotation.Nullable;
 import android.util.Log;
+import android.view.View;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
+import com.boundlessgeo.spatialconnect.dataAdapter.GeoJsonAdapter;
+import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
+import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
@@ -33,8 +37,13 @@ import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
+import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
+import com.boundlessgeo.spatialconnect.stores.SCRasterStore;
+import com.boundlessgeo.spatialconnect.tiles.GpkgRasterSource;
+import com.boundlessgeo.spatialconnect.tiles.GpkgTileProvider;
+import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
@@ -47,7 +56,14 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.bridge.WritableNativeMap;
+import com.facebook.react.uimanager.UIManagerModule;
+import com.facebook.react.uimanager.UIBlock;
+import com.facebook.react.uimanager.NativeViewHierarchyManager;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
+
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapView;
+import com.google.android.gms.maps.OnMapReadyCallback;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -83,6 +99,30 @@ public class SCBridge extends ReactContextBaseJavaModule {
     @Override
     public String getName() {
         return "SCBridge";
+    }
+
+    @ReactMethod
+    public void bindMapView(final int tag) {
+        UIManagerModule uiManager = this.reactContext.getNativeModule(UIManagerModule.class);
+        uiManager.addUIBlock(new UIBlock() {
+            public void execute (NativeViewHierarchyManager nvhm) {
+                MapView mapView = (MapView)nvhm.resolveView(tag);
+                mapView.getMapAsync(new OnMapReadyCallback() {
+                    @Override
+                    public void onMapReady(GoogleMap googleMap) {
+                        List<SCDataStore> stores = sc.getDataService().getActiveStores();
+                        for (SCDataStore store : stores) {
+                            if(store instanceof GeoPackageStore && ((GeoPackageAdapter)store.getAdapter()).getTileSources().size() > 0) {
+                                SCRasterStore rs = new GpkgRasterSource((GeoPackageStore)store);
+                                for (SCGpkgTileSource ts : rs.rasterList()) {
+                                    rs.overlayFromLayer(ts.getTableName(), googleMap);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
     }
 
     /**

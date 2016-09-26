@@ -44,3 +44,5 @@ build/
 
 #NDK
 obj/
+
+node_modules/

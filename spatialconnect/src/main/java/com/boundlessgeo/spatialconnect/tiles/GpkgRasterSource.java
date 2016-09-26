@@ -7,6 +7,7 @@ import com.boundlessgeo.spatialconnect.stores.SCRasterStore;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.TileOverlayOptions;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +40,6 @@ public class GpkgRasterSource implements SCRasterStore {
 
     @Override
     public List<SCGpkgTileSource> rasterList() {
-        return (List) ((GeoPackageAdapter) gpkgStore.getAdapter()).getTileSources().values();
+        return new ArrayList<SCGpkgTileSource>(((GeoPackageAdapter)gpkgStore.getAdapter()).getTileSources().values());
     }
 }
