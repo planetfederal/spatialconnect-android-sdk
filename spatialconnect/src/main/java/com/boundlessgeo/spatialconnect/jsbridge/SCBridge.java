@@ -77,6 +77,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
         this.sc = SpatialConnect.getInstance();
         this.sc.initialize(reactContext.getApplicationContext());
         this.reactContext = reactContext;
+        // todo: get GoogleMap instance from react native 
     }
 
     @Override
