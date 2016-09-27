@@ -24,6 +24,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCGeometryCollection;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 
 import org.apache.commons.io.FileUtils;
 
@@ -32,9 +33,13 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 
+import okhttp3.Response;
 import rx.Observable;
 import rx.Subscriber;
+import rx.functions.Action1;
 import rx.functions.Func1;
 
 
@@ -58,13 +63,52 @@ public class GeoJsonAdapter extends SCDataAdapter {
 
         return Observable.create(new Observable.OnSubscribe<Void>() {
             @Override
-            public void call(Subscriber subscriber) {
+            public void call(final Subscriber subscriber) {
                 adapterInstance.connect();
 
-                // if the file was packaged with the application, then attempt to connect
-                if (scStoreConfig.isMainBundle()) {
-                    // first check if the GeoJson file already exists in the internal storage location specified in the uri
-                    File f = new File(context.getFilesDir(), scStoreConfig.getUri());
+                if (scStoreConfig.getUri().startsWith("http")) {
+                    //download from web
+                    try {
+                        URL theUrl = new URL(scStoreConfig.getUri());
+                        HttpHandler.getInstance().get(theUrl.toString())
+                                .subscribe(new Action1<Response>() {
+                                    @Override
+                                    public void call(Response response) {
+                                        if (!response.isSuccessful()) {
+                                            adapterInstance.disconnect();
+                                        }
+                                        try {
+                                            // save response as file
+                                            File f = new File(context.getFilesDir(), scStoreConfig.getUri());
+                                            if (!f.exists()) {
+                                                FileUtils.copyInputStreamToFile(response.body().byteStream(), f);
+
+                                                adapterInstance.connected();
+                                                subscriber.onCompleted();
+                                            }
+                                        }
+                                        catch (IOException e) {
+                                            Log.w(LOG_TAG, "Couldn't download geojson store.", e);
+                                            adapterInstance.disconnect();
+                                            e.printStackTrace();
+                                            subscriber.onError(e);
+                                        }
+                                        finally {
+                                            response.body().close();
+                                        }
+                                    }
+                                });
+                    }
+                    catch (MalformedURLException e) {
+                        Log.e(LOG_TAG, "URL was malformed. Check the syntax: " + scStoreConfig.getUri());
+                        adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+                        subscriber.onError(e);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    //attempt to find file local
+                    File f = new File(context.getFilesDir(), scStoreConfig.getUri().replace("file://", ""));
                     if (!f.exists()) {
                         Log.d(LOG_TAG, "File does not exist at " + scStoreConfig.getUri());
                         InputStream is = null;
@@ -111,7 +155,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
                         subscriber.onCompleted();
                     }
                 }
-                // TODO: else, look for the geojson file in other locations
+
             }
         });
     }
