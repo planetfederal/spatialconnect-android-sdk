@@ -79,7 +79,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
                                         }
                                         try {
                                             // save response as file
-                                            File f = new File(context.getFilesDir(), scStoreConfig.getUri());
+                                            File f = new File(context.getFilesDir(), scStoreConfig.getUniqueID());
                                             if (!f.exists()) {
                                                 FileUtils.copyInputStreamToFile(response.body().byteStream(), f);
 
