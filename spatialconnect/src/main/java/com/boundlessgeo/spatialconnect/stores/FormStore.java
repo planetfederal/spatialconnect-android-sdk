@@ -136,15 +136,23 @@ public class FormStore extends GeoPackageStore {
     }
 
     private void addLayerByConfig(SCFormConfig config) {
-        storeForms.put(config.getFormKey(), config);
-        formIds.put(config.getFormKey(), config.getId());
-        final String tableName = config.getFormKey();
+        boolean fieldsValid = true;
         Map<String, String> typeDefs = new HashMap<>();
         for (SCFormField field : config.getFields()) {
-            typeDefs.put(field.getKey(), field.getColumnType());
+            if (field.getKey() != null && field.getKey().length() > 0) {
+                typeDefs.put(field.getKey(), field.getColumnType());
+            } else {
+                fieldsValid = false;
+                break;
+            }
         }
-        super.addLayer(tableName, typeDefs);
 
-        hasForms.onNext(storeForms.size() > 0);
+        if (fieldsValid) {
+            storeForms.put(config.getFormKey(), config);
+            formIds.put(config.getFormKey(), config.getId());
+            final String tableName = config.getFormKey();
+            super.addLayer(tableName, typeDefs);
+            hasForms.onNext(storeForms.size() > 0);
+        }
     }
 }
