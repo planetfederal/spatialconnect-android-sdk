@@ -96,9 +96,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                 Log.d(LOG_TAG, "Connecting to " + context.getDatabasePath(scStoreConfig.getUniqueID()).getPath());
                 adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTING);
 
-                // The Database's name on disk is its store ID. This is to guaruntee
-                // uniqueness
-                // when being stored on disk.
+                // The db name on disk is its store ID to guarantee uniqueness on disk
                 if (context.getDatabasePath(scStoreConfig.getUniqueID()).exists()) {
                     Log.d(LOG_TAG, "GeoPackage " + scStoreConfig.getUniqueID() + " already exists.  Not downloading.");
                     // create new GeoPackage for the file that's already on disk
