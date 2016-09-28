@@ -93,13 +93,14 @@ public class GeoPackageAdapter extends SCDataAdapter {
             @Override
             public void call(final Subscriber<? super SCDataAdapterStatus> subscriber) {
 
-                Log.d(LOG_TAG, "Connecting to " + context.getDatabasePath(scStoreConfig.getName()).getPath());
+                Log.d(LOG_TAG, "Connecting to " + context.getDatabasePath(scStoreConfig.getUniqueID()).getPath());
                 adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTING);
 
-                if (context.getDatabasePath(scStoreConfig.getName()).exists()) {
-                    Log.d(LOG_TAG, "GeoPackage " + scStoreConfig.getName() + " already exists.  Not downloading.");
+                // The db name on disk is its store ID to guarantee uniqueness on disk
+                if (context.getDatabasePath(scStoreConfig.getUniqueID()).exists()) {
+                    Log.d(LOG_TAG, "GeoPackage " + scStoreConfig.getUniqueID() + " already exists.  Not downloading.");
                     // create new GeoPackage for the file that's already on disk
-                    gpkg = new GeoPackage(context, scStoreConfig.getName());
+                    gpkg = new GeoPackage(context, scStoreConfig.getUniqueID());
                     if (gpkg.isValid()) {
                         adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
                         subscriber.onCompleted();
@@ -128,7 +129,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                                                 // save the file to the databases directory
                                                 saveFileToFilesystem(response.body().byteStream());
                                                 // create new GeoPackage instance now that we've saved the file
-                                                gpkg = new GeoPackage(context, scStoreConfig.getName());
+                                                gpkg = new GeoPackage(context, scStoreConfig.getUniqueID());
                                                 if (gpkg.isValid()) {
                                                     adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
                                                     subscriber.onCompleted();
@@ -156,7 +157,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                         }
                     }
                     else if (scStoreConfig.getUri().startsWith("file")) {
-                        gpkg = new GeoPackage(context, scStoreConfig.getName());
+                        gpkg = new GeoPackage(context, scStoreConfig.getUniqueID());
                         if (gpkg.isValid()) {
                             adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
                             subscriber.onCompleted();
@@ -621,7 +622,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
     }
 
     private void saveFileToFilesystem(InputStream is) throws IOException {
-        File dbFile = context.getDatabasePath(scStoreConfig.getName());
+        File dbFile = context.getDatabasePath(scStoreConfig.getUniqueID());
         FileOutputStream fos = new FileOutputStream(dbFile);
         byte[] buffer = new byte[1024];
         int len = 0;
