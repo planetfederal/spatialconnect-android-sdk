@@ -22,7 +22,6 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.scutilities.LocationHelper;
 
 import rx.Observable;
-import rx.functions.Action1;
 import rx.subjects.BehaviorSubject;
 
 /**
@@ -65,18 +64,7 @@ public class SCSensorService extends SCService {
               Log.w(LOG_TAG, "Attempted to start GPS listener but was unsuccessful.");
             }
         } else {
-            // explicitly ask for permission
-            locationHelper.requestGPSPermission().subscribe(new Action1<Boolean>() {
-                @Override
-                public void call(Boolean permissionGranted) {
-                    if (permissionGranted) {
-                        locationHelper.enableGps();
-                        gpsListenerStarted = true;
-                    } else {
-                        Log.w(LOG_TAG, "Cannot start GPS listener b/c permission was denied.");
-                    }
-                }
-            });
+            Log.i(LOG_TAG, "GPS permission has not been granted");
         }
     }
 

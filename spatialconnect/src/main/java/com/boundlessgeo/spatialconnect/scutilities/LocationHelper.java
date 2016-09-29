@@ -210,14 +210,5 @@ public class LocationHelper implements ActivityCompat.OnRequestPermissionsResult
         }
     }
 
-   public Observable<Boolean> requestGPSPermission() {
-       ActivityCompat.requestPermissions(
-          (Activity) context,
-          new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
-          PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION
-       );
-       return PERMISSION_SUBJECT;
-   }
-
 }
 
