@@ -10,7 +10,8 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License
+ * See the License for the specific language governing permissions and limitations under the
+ * License
  */
 package com.boundlessgeo.spatialconnect.tiles;
 
@@ -19,25 +20,23 @@ import com.google.android.gms.maps.model.TileProvider;
 
 public class GpkgTileProvider implements TileProvider {
 
-    private SCGpkgTileSource tileSource;
+  private SCGpkgTileSource tileSource;
 
-    public GpkgTileProvider(SCGpkgTileSource tileSource) {
-        this.tileSource = tileSource;
+  public GpkgTileProvider(SCGpkgTileSource tileSource) {
+    this.tileSource = tileSource;
+  }
+
+  @Override public Tile getTile(int x, int y, int zoom) {
+    if (!tileExists(x, y, zoom)) {
+      return NO_TILE;
     }
+    return tileSource.getTile(x, y, zoom);
+  }
 
-    @Override
-    public Tile getTile(int x, int y, int zoom) {
-        if (!tileExists(x, y, zoom)) {
-            return NO_TILE;
-        }
-        return tileSource.getTile(x, y, zoom);
+  private boolean tileExists(int x, int y, int zoom) {
+    if ((zoom < tileSource.getMinZoom() || zoom > tileSource.getMaxZoom())) {
+      return false;
     }
-
-    private boolean tileExists(int x, int y, int zoom) {
-        if ((zoom < tileSource.getMinZoom() || zoom > tileSource.getMaxZoom())) {
-            return false;
-        }
-        return true;
-    }
-
+    return true;
+  }
 }

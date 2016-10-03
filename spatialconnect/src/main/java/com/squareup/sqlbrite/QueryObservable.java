@@ -38,8 +38,7 @@ public final class QueryObservable extends Observable<Query> {
    *
    * @param mapper Maps the current {@link Cursor} row to {@code T}. May not return null.
    */
-  @CheckResult @NonNull
-  public final <T> Observable<T> mapToOne(@NonNull Func1<Cursor, T> mapper) {
+  @CheckResult @NonNull public final <T> Observable<T> mapToOne(@NonNull Func1<Cursor, T> mapper) {
     return lift(Query.mapToOne(mapper));
   }
 
@@ -63,9 +62,8 @@ public final class QueryObservable extends Observable<Query> {
    * @param mapper Maps the current {@link Cursor} row to {@code T}. May not return null.
    * @param defaultValue Value returned if result set is empty
    */
-  @CheckResult @NonNull
-  public final <T> Observable<T> mapToOneOrDefault(@NonNull Func1<Cursor, T> mapper,
-      T defaultValue) {
+  @CheckResult @NonNull public final <T> Observable<T> mapToOneOrDefault(
+      @NonNull Func1<Cursor, T> mapper, T defaultValue) {
     return lift(Query.mapToOneOrDefault(mapper, defaultValue));
   }
 
@@ -90,8 +88,8 @@ public final class QueryObservable extends Observable<Query> {
    *
    * @param mapper Maps the current {@link Cursor} row to {@code T}. May not return null.
    */
-  @CheckResult @NonNull
-  public final <T> Observable<List<T>> mapToList(@NonNull Func1<Cursor, T> mapper) {
+  @CheckResult @NonNull public final <T> Observable<List<T>> mapToList(
+      @NonNull Func1<Cursor, T> mapper) {
     return lift(Query.mapToList(mapper));
   }
 }

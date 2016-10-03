@@ -17,9 +17,6 @@ package com.squareup.sqlbrite;
 
 import android.content.ContentValues;
 import android.database.Cursor;
-import org.sqlite.database.sqlite.SQLiteDatabase;
-import org.sqlite.database.sqlite.SQLiteOpenHelper;
-import org.sqlite.database.sqlite.SQLiteTransactionListener;
 import android.support.annotation.CheckResult;
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
@@ -32,35 +29,43 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import org.sqlite.database.sqlite.SQLiteDatabase;
+import org.sqlite.database.sqlite.SQLiteOpenHelper;
+import org.sqlite.database.sqlite.SQLiteTransactionListener;
 import rx.Observable;
 import rx.Scheduler;
 import rx.functions.Action0;
 import rx.functions.Func1;
 import rx.subjects.PublishSubject;
 
+import static java.lang.System.nanoTime;
+import static java.lang.annotation.RetentionPolicy.SOURCE;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.sqlite.database.sqlite.SQLiteDatabase.CONFLICT_ABORT;
 import static org.sqlite.database.sqlite.SQLiteDatabase.CONFLICT_FAIL;
 import static org.sqlite.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE;
 import static org.sqlite.database.sqlite.SQLiteDatabase.CONFLICT_NONE;
 import static org.sqlite.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE;
 import static org.sqlite.database.sqlite.SQLiteDatabase.CONFLICT_ROLLBACK;
-import static java.lang.System.nanoTime;
-import static java.lang.annotation.RetentionPolicy.SOURCE;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 /**
  * A lightweight wrapper around {@link SQLiteOpenHelper} which allows for continuously observing
  * the result of a query. Create using a {@link SqlBrite} instance.
  */
 public final class BriteDatabase implements Closeable {
-  private final SQLiteOpenHelper helper;
-  private final SqlBrite.Logger logger;
-
   // Package-private to avoid synthetic accessor method for 'transaction' instance.
   final ThreadLocal<SqliteTransaction> transactions = new ThreadLocal<>();
+  private final SQLiteOpenHelper helper;
+  private final SqlBrite.Logger logger;
   /** Publishes sets of tables which have changed. */
   private final PublishSubject<Set<String>> triggers = PublishSubject.create();
-
+  private final Object databaseLock = new Object();
+  private final Scheduler scheduler;
+  // Package-private to avoid synthetic accessor method for 'transaction' instance.
+  volatile boolean logging;
+  // Read and write guarded by 'databaseLock'. Lazily initialized. Use methods to access.
+  private volatile SQLiteDatabase readableDatabase;
+  private volatile SQLiteDatabase writeableDatabase;
   private final Transaction transaction = new Transaction() {
     @Override public void markSuccessful() {
       if (logging) log("TXN SUCCESS %s", transactions.get());
@@ -95,20 +100,33 @@ public final class BriteDatabase implements Closeable {
     }
   };
 
-  // Read and write guarded by 'databaseLock'. Lazily initialized. Use methods to access.
-  private volatile SQLiteDatabase readableDatabase;
-  private volatile SQLiteDatabase writeableDatabase;
-  private final Object databaseLock = new Object();
-
-  private final Scheduler scheduler;
-
-  // Package-private to avoid synthetic accessor method for 'transaction' instance.
-  volatile boolean logging;
-
   BriteDatabase(SQLiteOpenHelper helper, SqlBrite.Logger logger, Scheduler scheduler) {
     this.helper = helper;
     this.logger = logger;
     this.scheduler = scheduler;
+  }
+
+  private static String indentSql(String sql) {
+    return sql.replace("\n", "\n       ");
+  }
+
+  private static String conflictString(@ConflictAlgorithm int conflictAlgorithm) {
+    switch (conflictAlgorithm) {
+      case CONFLICT_ABORT:
+        return "abort";
+      case CONFLICT_FAIL:
+        return "fail";
+      case CONFLICT_IGNORE:
+        return "ignore";
+      case CONFLICT_NONE:
+        return "none";
+      case CONFLICT_REPLACE:
+        return "replace";
+      case CONFLICT_ROLLBACK:
+        return "rollback";
+      default:
+        return "unknown (" + conflictAlgorithm + ')';
+    }
   }
 
   /**
@@ -191,11 +209,9 @@ public final class BriteDatabase implements Closeable {
    * }
    * }</pre>
    *
-   *
    * @see SQLiteDatabase#beginTransaction()
    */
-  @CheckResult @NonNull
-  public Transaction newTransaction() {
+  @CheckResult @NonNull public Transaction newTransaction() {
     SqliteTransaction transaction = new SqliteTransaction(transactions.get());
     transactions.set(transaction);
     if (logging) log("TXN BEGIN %s", transaction);
@@ -240,9 +256,8 @@ public final class BriteDatabase implements Closeable {
    *
    * @see SQLiteDatabase#rawQuery(String, String[])
    */
-  @CheckResult @NonNull
-  public QueryObservable createQuery(@NonNull final String table, @NonNull String sql,
-      @NonNull String... args) {
+  @CheckResult @NonNull public QueryObservable createQuery(@NonNull final String table,
+      @NonNull String sql, @NonNull String... args) {
     Func1<Set<String>, Boolean> tableFilter = new Func1<Set<String>, Boolean>() {
       @Override public Boolean call(Set<String> triggers) {
         return triggers.contains(table);
@@ -261,9 +276,8 @@ public final class BriteDatabase implements Closeable {
    *
    * @see SQLiteDatabase#rawQuery(String, String[])
    */
-  @CheckResult @NonNull
-  public QueryObservable createQuery(@NonNull final Iterable<String> tables, @NonNull String sql,
-      @NonNull String... args) {
+  @CheckResult @NonNull public QueryObservable createQuery(@NonNull final Iterable<String> tables,
+      @NonNull String sql, @NonNull String... args) {
     Func1<Set<String>, Boolean> tableFilter = new Func1<Set<String>, Boolean>() {
       @Override public Boolean call(Set<String> triggers) {
         for (String table : tables) {
@@ -513,6 +527,11 @@ public final class BriteDatabase implements Closeable {
     sendTableTrigger(Collections.singleton(table));
   }
 
+  void log(String message, Object... args) {
+    if (args.length > 0) message = String.format(message, args);
+    logger.log(message);
+  }
+
   /** An in-progress database transaction. */
   public interface Transaction extends Closeable {
     /**
@@ -543,7 +562,6 @@ public final class BriteDatabase implements Closeable {
      * throw an exception if that is not the case.
      *
      * @return true if the transaction was yielded
-     *
      * @see SQLiteDatabase#yieldIfContendedSafely()
      */
     // TODO @WorkerThread
@@ -557,10 +575,9 @@ public final class BriteDatabase implements Closeable {
      * throw an exception if that is not the case.
      *
      * @param sleepAmount if > 0, sleep this long before starting a new transaction if
-     *   the lock was actually yielded. This will allow other background threads to make some
-     *   more progress than they would if we started the transaction immediately.
+     * the lock was actually yielded. This will allow other background threads to make some
+     * more progress than they would if we started the transaction immediately.
      * @return true if the transaction was yielded
-     *
      * @see SQLiteDatabase#yieldIfContendedSafely(long)
      */
     // TODO @WorkerThread
@@ -574,43 +591,9 @@ public final class BriteDatabase implements Closeable {
   }
 
   @IntDef({
-      CONFLICT_ABORT,
-      CONFLICT_FAIL,
-      CONFLICT_IGNORE,
-      CONFLICT_NONE,
-      CONFLICT_REPLACE,
+      CONFLICT_ABORT, CONFLICT_FAIL, CONFLICT_IGNORE, CONFLICT_NONE, CONFLICT_REPLACE,
       CONFLICT_ROLLBACK
-  })
-  @Retention(SOURCE)
-  public @interface ConflictAlgorithm {
-  }
-
-  private static String indentSql(String sql) {
-    return sql.replace("\n", "\n       ");
-  }
-
-  void log(String message, Object... args) {
-    if (args.length > 0) message = String.format(message, args);
-    logger.log(message);
-  }
-
-  private static String conflictString(@ConflictAlgorithm int conflictAlgorithm) {
-    switch (conflictAlgorithm) {
-      case CONFLICT_ABORT:
-        return "abort";
-      case CONFLICT_FAIL:
-        return "fail";
-      case CONFLICT_IGNORE:
-        return "ignore";
-      case CONFLICT_NONE:
-        return "none";
-      case CONFLICT_REPLACE:
-        return "replace";
-      case CONFLICT_ROLLBACK:
-        return "rollback";
-      default:
-        return "unknown (" + conflictAlgorithm + ')';
-    }
+  }) @Retention(SOURCE) public @interface ConflictAlgorithm {
   }
 
   static final class SqliteTransaction extends LinkedHashSet<String>

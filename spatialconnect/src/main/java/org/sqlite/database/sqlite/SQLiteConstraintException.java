@@ -24,9 +24,10 @@ package org.sqlite.database.sqlite;
  * An exception that indicates that an integrity constraint was violated.
  */
 public class SQLiteConstraintException extends SQLiteException {
-    public SQLiteConstraintException() {}
+  public SQLiteConstraintException() {
+  }
 
-    public SQLiteConstraintException(String error) {
-        super(error);
-    }
+  public SQLiteConstraintException(String error) {
+    super(error);
+  }
 }

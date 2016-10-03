@@ -24,9 +24,10 @@ package org.sqlite.database.sqlite;
  * An exception that indicates that the SQLite database is full.
  */
 public class SQLiteFullException extends SQLiteException {
-    public SQLiteFullException() {}
+  public SQLiteFullException() {
+  }
 
-    public SQLiteFullException(String error) {
-        super(error);
-    }
+  public SQLiteFullException(String error) {
+    super(error);
+  }
 }

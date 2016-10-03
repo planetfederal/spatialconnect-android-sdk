@@ -26,9 +26,10 @@ package org.sqlite.database.sqlite;
  * or as the result of using the ABORT conflict clause.
  */
 public class SQLiteAbortException extends SQLiteException {
-    public SQLiteAbortException() {}
+  public SQLiteAbortException() {
+  }
 
-    public SQLiteAbortException(String error) {
-        super(error);
-    }
+  public SQLiteAbortException(String error) {
+    super(error);
+  }
 }

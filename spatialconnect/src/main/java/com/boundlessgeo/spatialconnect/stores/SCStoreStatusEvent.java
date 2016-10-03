@@ -10,25 +10,26 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License
+ * See the License for the specific language governing permissions and limitations under the
+ * License
  */
 package com.boundlessgeo.spatialconnect.stores;
 
 public class SCStoreStatusEvent {
 
-    private SCDataStoreStatus status;
-    private String storeId;
+  private SCDataStoreStatus status;
+  private String storeId;
 
-    public SCStoreStatusEvent(SCDataStoreStatus status, String storeId) {
-        this.status = status;
-        this.storeId = storeId;
-    }
+  public SCStoreStatusEvent(SCDataStoreStatus status, String storeId) {
+    this.status = status;
+    this.storeId = storeId;
+  }
 
-    public SCDataStoreStatus getStatus() {
-        return this.status;
-    }
+  public SCDataStoreStatus getStatus() {
+    return this.status;
+  }
 
-    public String getStoreId() {
-        return this.storeId;
-    }
+  public String getStoreId() {
+    return this.storeId;
+  }
 }

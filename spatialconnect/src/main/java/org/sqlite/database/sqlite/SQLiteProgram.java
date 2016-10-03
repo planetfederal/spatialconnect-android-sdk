@@ -22,7 +22,6 @@ package org.sqlite.database.sqlite;
 
 import android.database.DatabaseUtils;
 import android.os.CancellationSignal;
-
 import java.util.Arrays;
 
 /**
@@ -32,191 +31,196 @@ import java.util.Arrays;
  * </p>
  */
 public abstract class SQLiteProgram extends SQLiteClosable {
-    private static final String[] EMPTY_STRING_ARRAY = new String[0];
+  private static final String[] EMPTY_STRING_ARRAY = new String[0];
 
-    private final SQLiteDatabase mDatabase;
-    private final String mSql;
-    private final boolean mReadOnly;
-    private final String[] mColumnNames;
-    private final int mNumParameters;
-    private final Object[] mBindArgs;
+  private final SQLiteDatabase mDatabase;
+  private final String mSql;
+  private final boolean mReadOnly;
+  private final String[] mColumnNames;
+  private final int mNumParameters;
+  private final Object[] mBindArgs;
 
-    SQLiteProgram(SQLiteDatabase db, String sql, Object[] bindArgs,
-            CancellationSignal cancellationSignalForPrepare) {
-        mDatabase = db;
-        mSql = sql.trim();
+  SQLiteProgram(SQLiteDatabase db, String sql, Object[] bindArgs,
+      CancellationSignal cancellationSignalForPrepare) {
+    mDatabase = db;
+    mSql = sql.trim();
 
-        int n = DatabaseUtils.getSqlStatementType(mSql);
-        switch (n) {
-            case DatabaseUtils.STATEMENT_BEGIN:
-            case DatabaseUtils.STATEMENT_COMMIT:
-            case DatabaseUtils.STATEMENT_ABORT:
-                mReadOnly = false;
-                mColumnNames = EMPTY_STRING_ARRAY;
-                mNumParameters = 0;
-                break;
+    int n = DatabaseUtils.getSqlStatementType(mSql);
+    switch (n) {
+      case DatabaseUtils.STATEMENT_BEGIN:
+      case DatabaseUtils.STATEMENT_COMMIT:
+      case DatabaseUtils.STATEMENT_ABORT:
+        mReadOnly = false;
+        mColumnNames = EMPTY_STRING_ARRAY;
+        mNumParameters = 0;
+        break;
 
-            default:
-                boolean assumeReadOnly = (n == DatabaseUtils.STATEMENT_SELECT);
-                SQLiteStatementInfo info = new SQLiteStatementInfo();
-                db.getThreadSession().prepare(mSql,
-                        db.getThreadDefaultConnectionFlags(assumeReadOnly),
-                        cancellationSignalForPrepare, info);
-                mReadOnly = info.readOnly;
-                mColumnNames = info.columnNames;
-                mNumParameters = info.numParameters;
-                break;
-        }
-
-        if (bindArgs != null && bindArgs.length > mNumParameters) {
-            throw new IllegalArgumentException("Too many bind arguments.  "
-                    + bindArgs.length + " arguments were provided but the statement needs "
-                    + mNumParameters + " arguments.");
-        }
-
-        if (mNumParameters != 0) {
-            mBindArgs = new Object[mNumParameters];
-            if (bindArgs != null) {
-                System.arraycopy(bindArgs, 0, mBindArgs, 0, bindArgs.length);
-            }
-        } else {
-            mBindArgs = null;
-        }
+      default:
+        boolean assumeReadOnly = (n == DatabaseUtils.STATEMENT_SELECT);
+        SQLiteStatementInfo info = new SQLiteStatementInfo();
+        db.getThreadSession()
+            .prepare(mSql, db.getThreadDefaultConnectionFlags(assumeReadOnly),
+                cancellationSignalForPrepare, info);
+        mReadOnly = info.readOnly;
+        mColumnNames = info.columnNames;
+        mNumParameters = info.numParameters;
+        break;
     }
 
-    final SQLiteDatabase getDatabase() {
-        return mDatabase;
+    if (bindArgs != null && bindArgs.length > mNumParameters) {
+      throw new IllegalArgumentException("Too many bind arguments.  "
+          + bindArgs.length
+          + " arguments were provided but the statement needs "
+          + mNumParameters
+          + " arguments.");
     }
 
-    final String getSql() {
-        return mSql;
+    if (mNumParameters != 0) {
+      mBindArgs = new Object[mNumParameters];
+      if (bindArgs != null) {
+        System.arraycopy(bindArgs, 0, mBindArgs, 0, bindArgs.length);
+      }
+    } else {
+      mBindArgs = null;
     }
+  }
 
-    final Object[] getBindArgs() {
-        return mBindArgs;
-    }
+  final SQLiteDatabase getDatabase() {
+    return mDatabase;
+  }
 
-    final String[] getColumnNames() {
-        return mColumnNames;
-    }
+  final String getSql() {
+    return mSql;
+  }
 
-    /** @hide */
-    protected final SQLiteSession getSession() {
-        return mDatabase.getThreadSession();
-    }
+  final Object[] getBindArgs() {
+    return mBindArgs;
+  }
 
-    /** @hide */
-    protected final int getConnectionFlags() {
-        return mDatabase.getThreadDefaultConnectionFlags(mReadOnly);
-    }
+  final String[] getColumnNames() {
+    return mColumnNames;
+  }
 
-    /** @hide */
-    protected final void onCorruption() {
-        mDatabase.onCorruption();
-    }
+  /** @hide */
+  protected final SQLiteSession getSession() {
+    return mDatabase.getThreadSession();
+  }
 
-    /**
-     * Unimplemented.
-     * @deprecated This method is deprecated and must not be used.
-     */
-    @Deprecated
-    public final int getUniqueId() {
-        return -1;
-    }
+  /** @hide */
+  protected final int getConnectionFlags() {
+    return mDatabase.getThreadDefaultConnectionFlags(mReadOnly);
+  }
 
-    /**
-     * Bind a NULL value to this statement. The value remains bound until
-     * {@link #clearBindings} is called.
-     *
-     * @param index The 1-based index to the parameter to bind null to
-     */
-    public void bindNull(int index) {
-        bind(index, null);
-    }
+  /** @hide */
+  protected final void onCorruption() {
+    mDatabase.onCorruption();
+  }
 
-    /**
-     * Bind a long value to this statement. The value remains bound until
-     * {@link #clearBindings} is called.
-     *addToBindArgs
-     * @param index The 1-based index to the parameter to bind
-     * @param value The value to bind
-     */
-    public void bindLong(int index, long value) {
-        bind(index, value);
-    }
+  /**
+   * Unimplemented.
+   *
+   * @deprecated This method is deprecated and must not be used.
+   */
+  @Deprecated public final int getUniqueId() {
+    return -1;
+  }
 
-    /**
-     * Bind a double value to this statement. The value remains bound until
-     * {@link #clearBindings} is called.
-     *
-     * @param index The 1-based index to the parameter to bind
-     * @param value The value to bind
-     */
-    public void bindDouble(int index, double value) {
-        bind(index, value);
-    }
+  /**
+   * Bind a NULL value to this statement. The value remains bound until
+   * {@link #clearBindings} is called.
+   *
+   * @param index The 1-based index to the parameter to bind null to
+   */
+  public void bindNull(int index) {
+    bind(index, null);
+  }
 
-    /**
-     * Bind a String value to this statement. The value remains bound until
-     * {@link #clearBindings} is called.
-     *
-     * @param index The 1-based index to the parameter to bind
-     * @param value The value to bind, must not be null
-     */
-    public void bindString(int index, String value) {
-        if (value == null) {
-            throw new IllegalArgumentException("the bind value at index " + index + " is null");
-        }
-        bind(index, value);
-    }
+  /**
+   * Bind a long value to this statement. The value remains bound until
+   * {@link #clearBindings} is called.
+   * addToBindArgs
+   *
+   * @param index The 1-based index to the parameter to bind
+   * @param value The value to bind
+   */
+  public void bindLong(int index, long value) {
+    bind(index, value);
+  }
 
-    /**
-     * Bind a byte array value to this statement. The value remains bound until
-     * {@link #clearBindings} is called.
-     *
-     * @param index The 1-based index to the parameter to bind
-     * @param value The value to bind, must not be null
-     */
-    public void bindBlob(int index, byte[] value) {
-        if (value == null) {
-            throw new IllegalArgumentException("the bind value at index " + index + " is null");
-        }
-        bind(index, value);
-    }
+  /**
+   * Bind a double value to this statement. The value remains bound until
+   * {@link #clearBindings} is called.
+   *
+   * @param index The 1-based index to the parameter to bind
+   * @param value The value to bind
+   */
+  public void bindDouble(int index, double value) {
+    bind(index, value);
+  }
 
-    /**
-     * Clears all existing bindings. Unset bindings are treated as NULL.
-     */
-    public void clearBindings() {
-        if (mBindArgs != null) {
-            Arrays.fill(mBindArgs, null);
-        }
+  /**
+   * Bind a String value to this statement. The value remains bound until
+   * {@link #clearBindings} is called.
+   *
+   * @param index The 1-based index to the parameter to bind
+   * @param value The value to bind, must not be null
+   */
+  public void bindString(int index, String value) {
+    if (value == null) {
+      throw new IllegalArgumentException("the bind value at index " + index + " is null");
     }
+    bind(index, value);
+  }
 
-    /**
-     * Given an array of String bindArgs, this method binds all of them in one single call.
-     *
-     * @param bindArgs the String array of bind args, none of which must be null.
-     */
-    public void bindAllArgsAsStrings(String[] bindArgs) {
-        if (bindArgs != null) {
-            for (int i = bindArgs.length; i != 0; i--) {
-                bindString(i, bindArgs[i - 1]);
-            }
-        }
+  /**
+   * Bind a byte array value to this statement. The value remains bound until
+   * {@link #clearBindings} is called.
+   *
+   * @param index The 1-based index to the parameter to bind
+   * @param value The value to bind, must not be null
+   */
+  public void bindBlob(int index, byte[] value) {
+    if (value == null) {
+      throw new IllegalArgumentException("the bind value at index " + index + " is null");
     }
+    bind(index, value);
+  }
 
-    @Override
-    protected void onAllReferencesReleased() {
-        clearBindings();
+  /**
+   * Clears all existing bindings. Unset bindings are treated as NULL.
+   */
+  public void clearBindings() {
+    if (mBindArgs != null) {
+      Arrays.fill(mBindArgs, null);
     }
+  }
 
-    private void bind(int index, Object value) {
-        if (index < 1 || index > mNumParameters) {
-            throw new IllegalArgumentException("Cannot bind argument at index "
-                    + index + " because the index is out of range.  "
-                    + "The statement has " + mNumParameters + " parameters.");
-        }
-        mBindArgs[index - 1] = value;
+  /**
+   * Given an array of String bindArgs, this method binds all of them in one single call.
+   *
+   * @param bindArgs the String array of bind args, none of which must be null.
+   */
+  public void bindAllArgsAsStrings(String[] bindArgs) {
+    if (bindArgs != null) {
+      for (int i = bindArgs.length; i != 0; i--) {
+        bindString(i, bindArgs[i - 1]);
+      }
     }
+  }
+
+  @Override protected void onAllReferencesReleased() {
+    clearBindings();
+  }
+
+  private void bind(int index, Object value) {
+    if (index < 1 || index > mNumParameters) {
+      throw new IllegalArgumentException("Cannot bind argument at index "
+          + index
+          + " because the index is out of range.  "
+          + "The statement has "
+          + mNumParameters
+          + " parameters.");
+    }
+    mBindArgs[index - 1] = value;
+  }
 }

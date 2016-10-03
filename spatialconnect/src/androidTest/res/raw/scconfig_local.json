@@ -1,33 +1,34 @@
 {
-  "stores":[
+  "stores": [
     {
       "store_type": "geojson",
       "version": "1",
       "uri": "nola_polling_places.json",
-      "isMainBundle":true,
-      "id":"50402599-3ad3-439f-9c49-3c8a7579933b",
-      "name":"Simple"
+      "isMainBundle": true,
+      "id": "50402599-3ad3-439f-9c49-3c8a7579933b",
+      "name": "Simple"
     }
   ],
-  "forms":[
+  "forms": [
     {
-      "id":2,
-      "version":0,
-      "form_key":"baseball_team",
-      "form_label":"Baseball Team",
-      "fields":[
+      "id": 2,
+      "version": 0,
+      "form_key": "baseball_team",
+      "form_label": "Baseball Team",
+      "fields": [
         {
-          "id":13,
-          "type":"string",
-          "field_label":"Favorite?",
-          "field_key":"team","position":0
+          "id": 13,
+          "type": "string",
+          "field_label": "Favorite?",
+          "field_key": "team",
+          "position": 0
         },
         {
-          "id":14,
-          "type":"string",
-          "field_label":"Why?",
-          "field_key":"why",
-          "position":1
+          "id": 14,
+          "type": "string",
+          "field_label": "Why?",
+          "field_key": "why",
+          "position": 1
         }
       ]
     }

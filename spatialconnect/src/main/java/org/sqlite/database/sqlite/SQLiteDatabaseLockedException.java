@@ -29,9 +29,10 @@ package org.sqlite.database.sqlite;
  * continuing.
  */
 public class SQLiteDatabaseLockedException extends SQLiteException {
-    public SQLiteDatabaseLockedException() {}
+  public SQLiteDatabaseLockedException() {
+  }
 
-    public SQLiteDatabaseLockedException(String error) {
-        super(error);
-    }
+  public SQLiteDatabaseLockedException(String error) {
+    super(error);
+  }
 }

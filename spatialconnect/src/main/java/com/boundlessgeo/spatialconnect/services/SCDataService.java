@@ -10,13 +10,13 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License
+ * See the License for the specific language governing permissions and limitations under the
+ * License
  */
 package com.boundlessgeo.spatialconnect.services;
 
 import android.content.Context;
 import android.util.Log;
-
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -30,14 +30,12 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 import com.boundlessgeo.spatialconnect.stores.WFSStore;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
@@ -53,459 +51,428 @@ import rx.subjects.BehaviorSubject;
  */
 public class SCDataService extends SCService {
 
-    private static final String LOG_TAG = SCDataService.class.getSimpleName();
-    private Set<String> supportedStores; // the strings are store keys: type.version
-    private Map<String, SCDataStore> stores;
-    public BehaviorSubject<Boolean> hasStores = BehaviorSubject.create(false);
-    private Context context;
+  private static final String LOG_TAG = SCDataService.class.getSimpleName();
+  public BehaviorSubject<Boolean> hasStores = BehaviorSubject.create(false);
+  /**
+   * This is the Observable that subscribers in your app will subscribe to so that they can receive {@link
+   * SCStoreStatusEvent}s.  Subscribers must explicitly call {@link rx.observables.ConnectableObservable#connect()}
+   * connect to start receiving events b/c storeEvents is a ConnectableObservable. We use a ConnectableObservable
+   * so that multiple subscribers can connect before beginning to emit the events about the {@link SCDataStore}s.
+   */
+  public ConnectableObservable<SCStoreStatusEvent> storeEvents;
+  /**
+   * The storeEventSubject is like an internal event bus, its job is to receive {@link SCStoreStatusEvent}s
+   * published by a {@link SCDataStore}.
+   */
+  protected BehaviorSubject<SCStoreStatusEvent> storeEventSubject;
+  private Set<String> supportedStores; // the strings are store keys: type.version
+  private Map<String, SCDataStore> stores;
+  private Context context;
 
-    /**
-     * The storeEventSubject is like an internal event bus, its job is to receive {@link SCStoreStatusEvent}s
-     * published by a {@link SCDataStore}.
-     */
-    protected BehaviorSubject<SCStoreStatusEvent> storeEventSubject;
+  public SCDataService(Context context) {
+    super();
+    this.supportedStores = new HashSet<>();
+    this.stores = new HashMap<>();
+    // "cold" observable used to emit SCStoreStatusEvents
+    this.storeEventSubject = BehaviorSubject.create();
+    // turns the "cold" storeEventSubject observable into a "hot" ConnectableObservable
+    this.storeEvents = storeEventSubject.publish();
+    addDefaultStoreImpls();
+    this.context = context;
+    initializeDefaultStore();
+    initializeFormStore();
+    initializeLocationStore();
+  }
 
-    /**
-     * This is the Observable that subscribers in your app will subscribe to so that they can receive {@link
-     * SCStoreStatusEvent}s.  Subscribers must explicitly call {@link rx.observables.ConnectableObservable#connect()}
-     * connect to start receiving events b/c storeEvents is a ConnectableObservable. We use a ConnectableObservable
-     * so that multiple subscribers can connect before beginning to emit the events about the {@link SCDataStore}s.
-     */
-    public ConnectableObservable<SCStoreStatusEvent> storeEvents;
+  private void initializeDefaultStore() {
+    Log.d(LOG_TAG, "Creating default store");
+    SCStoreConfig defaultStoreConfig = new SCStoreConfig();
+    defaultStoreConfig.setName(DefaultStore.NAME);
+    defaultStoreConfig.setUniqueID(DefaultStore.NAME);
+    defaultStoreConfig.setUri("file://" + DefaultStore.NAME);
+    defaultStoreConfig.setType("gpkg");
+    defaultStoreConfig.setVersion("1");
+    DefaultStore defaultStore = new DefaultStore(context, defaultStoreConfig);
+    this.stores.put(defaultStore.getStoreId(), defaultStore);
+    // block until store is started
+    defaultStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
+      @Override public void onCompleted() {
+        Log.d(LOG_TAG, "Registered default store with SCDataService.");
+      }
 
-    public SCDataService(Context context) {
-        super();
-        this.supportedStores = new HashSet<>();
-        this.stores = new HashMap<>();
-        // "cold" observable used to emit SCStoreStatusEvents
-        this.storeEventSubject = BehaviorSubject.create();
-        // turns the "cold" storeEventSubject observable into a "hot" ConnectableObservable
-        this.storeEvents = storeEventSubject.publish();
-        addDefaultStoreImpls();
-        this.context = context;
-        initializeDefaultStore();
-        initializeFormStore();
-        initializeLocationStore();
+      @Override public void onError(Throwable e) {
+        Log.e(LOG_TAG, "Couldn't start default store", e);
+        System.exit(0);
+      }
+
+      @Override public void onNext(SCStoreStatusEvent event) {
+        Log.w(LOG_TAG, "Shouldn't return onNext");
+      }
+    });
+  }
+
+  private void initializeFormStore() {
+    SCStoreConfig formStoreConfig = new SCStoreConfig();
+    formStoreConfig.setName(FormStore.NAME);
+    formStoreConfig.setUniqueID(FormStore.NAME);
+    formStoreConfig.setUri("file://" + FormStore.NAME);
+    formStoreConfig.setType("gpkg");
+    formStoreConfig.setVersion("1");
+    FormStore formStore = new FormStore(context, formStoreConfig);
+    this.stores.put(formStore.getStoreId(), formStore);
+    // block until store is started
+    formStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
+      @Override public void onCompleted() {
+        Log.d(LOG_TAG, "Registered form store with SCDataService.");
+      }
+
+      @Override public void onError(Throwable e) {
+        Log.e(LOG_TAG, "Couldn't start form store", e);
+        System.exit(0);
+      }
+
+      @Override public void onNext(SCStoreStatusEvent event) {
+        Log.w(LOG_TAG, "Shouldn't return onNext");
+      }
+    });
+  }
+
+  private void initializeLocationStore() {
+    SCStoreConfig locationStoreConfig = new SCStoreConfig();
+    locationStoreConfig.setName(LocationStore.NAME);
+    locationStoreConfig.setUniqueID(LocationStore.NAME);
+    locationStoreConfig.setUri("file://" + LocationStore.NAME);
+    locationStoreConfig.setType("gpkg");
+    locationStoreConfig.setVersion("1");
+    LocationStore locationStore = new LocationStore(context, locationStoreConfig);
+    this.stores.put(locationStore.getStoreId(), locationStore);
+    // block until store is started
+    locationStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
+      @Override public void onCompleted() {
+        Log.d(LOG_TAG, "Registered location store with SCDataService.");
+      }
+
+      @Override public void onError(Throwable e) {
+        Log.e(LOG_TAG, "Couldn't start form store", e);
+        System.exit(0);
+      }
+
+      @Override public void onNext(SCStoreStatusEvent event) {
+        Log.w(LOG_TAG, "Shouldn't return onNext");
+      }
+    });
+  }
+
+  public void addDefaultStoreImpls() {
+    this.supportedStores.add(GeoJsonStore.TYPE + "." + "1");
+    this.supportedStores.add(GeoJsonStore.TYPE + "." + "1.0");
+    this.supportedStores.add(GeoPackageStore.TYPE + "." + "1");
+    this.supportedStores.add(GeoPackageStore.TYPE + "." + "1.0");
+    this.supportedStores.add(WFSStore.TYPE + "." + "1.1.0");
+  }
+
+  public void startStore(final SCDataStore store) {
+    if (!store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+      Log.d(LOG_TAG, "Starting store " + store.getName() + " " + store.getStoreId());
+      store.start()
+          .observeOn(AndroidSchedulers.mainThread())
+          .subscribe(new Action1<SCStoreStatusEvent>() {
+            @Override public void call(SCStoreStatusEvent s) {
+            }
+          }, new Action1<Throwable>() {
+            @Override public void call(Throwable t) {
+              Log.d(LOG_TAG, t.getLocalizedMessage());
+              // onError can happen if we cannot start the store b/c of some error or runtime exception
+              storeEventSubject.onNext(
+                  new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED,
+                      store.getStoreId()));
+            }
+          }, new Action0() {
+            @Override public void call() {
+              Log.d(LOG_TAG, "Store " + store.getName() + " is running.");
+              storeEventSubject.onNext(
+                  new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING,
+                      store.getStoreId()));
+
+              hasStores.onNext(true);
+            }
+          });
     }
+  }
 
-    private void initializeDefaultStore() {
-        Log.d(LOG_TAG, "Creating default store");
-        SCStoreConfig defaultStoreConfig = new SCStoreConfig();
-        defaultStoreConfig.setName(DefaultStore.NAME);
-        defaultStoreConfig.setUniqueID(DefaultStore.NAME);
-        defaultStoreConfig.setUri("file://" + DefaultStore.NAME);
-        defaultStoreConfig.setType("gpkg");
-        defaultStoreConfig.setVersion("1");
-        DefaultStore defaultStore = new DefaultStore(context, defaultStoreConfig);
-        this.stores.put(defaultStore.getStoreId(), defaultStore);
-        // block until store is started
-        defaultStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
-            @Override
-            public void onCompleted() {
-                Log.d(LOG_TAG, "Registered default store with SCDataService.");
-            }
+  public void stopStore(final SCDataStore store) {
+    if (store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+      Log.d(LOG_TAG, "Stopping store " + store.getName() + " " + store.getStoreId());
+      store.stop();
+      storeEventSubject.onNext(
+          new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, store.getStoreId()));
+      if (stores.size() > 0) {
+        hasStores.onNext(true);
+      }
+    }
+  }
 
-            @Override
-            public void onError(Throwable e) {
-                Log.e(LOG_TAG, "Couldn't start default store", e);
-                System.exit(0);
-            }
-
-            @Override
-            public void onNext(SCStoreStatusEvent event) {
-                Log.w(LOG_TAG, "Shouldn't return onNext");
-            }
+  /**
+   * Closes the stream by calling the subscriber's onComplete() when the specified store has started.
+   *
+   * @return an Observable that completes when the store is started.
+   */
+  public Observable<Void> storeStarted(final String storeId) {
+    // if the data service already has a running instance of the store, then it's started
+    for (SCDataStore store : getActiveStores()) {
+      if (storeId.equals(store.getStoreId())) {
+        Log.d(LOG_TAG, "Store " + store.getName() + " was already started");
+        return Observable.empty();
+      }
+    }
+    // otherwise we wait for the SC_DATA_STORE_RUNNING event for the store.
+    return Observable.create(new Observable.OnSubscribe<Void>() {
+      @Override public void call(final Subscriber<? super Void> subscriber) {
+        // filter the events
+        storeEventSubject.filter(new Func1<SCStoreStatusEvent, Boolean>() {
+          @Override public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
+            return scStoreStatusEvent.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)
+                && scStoreStatusEvent.getStoreId().equals(storeId);
+          }
+        }).subscribe(new Action1<SCStoreStatusEvent>() {
+          @Override public void call(final SCStoreStatusEvent scStoreStatusEvent) {
+            subscriber.onCompleted();
+          }
         });
+      }
+    });
+  }
+
+  /**
+   * Calling start on the {@link SCDataService} will start all registered {@link SCDataStore}s.
+   */
+  public void start() {
+    Log.d(LOG_TAG, "Starting SCDataService. Starting all registered data stores.");
+    super.start();
+    for (SCDataStore store : getAllStores()) {
+      startStore(store);
     }
+    this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
+  }
 
-    private void initializeFormStore() {
-        SCStoreConfig formStoreConfig = new SCStoreConfig();
-        formStoreConfig.setName(FormStore.NAME);
-        formStoreConfig.setUniqueID(FormStore.NAME);
-        formStoreConfig.setUri("file://" + FormStore.NAME);
-        formStoreConfig.setType("gpkg");
-        formStoreConfig.setVersion("1");
-        FormStore formStore = new FormStore(context, formStoreConfig);
-        this.stores.put(formStore.getStoreId(), formStore);
-        // block until store is started
-        formStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
-            @Override
-            public void onCompleted() {
-                Log.d(LOG_TAG, "Registered form store with SCDataService.");
-            }
-
-            @Override
-            public void onError(Throwable e) {
-                Log.e(LOG_TAG, "Couldn't start form store", e);
-                System.exit(0);
-            }
-
-            @Override
-            public void onNext(SCStoreStatusEvent event) {
-                Log.w(LOG_TAG, "Shouldn't return onNext");
-            }
-        });
+  public void registerAndStartStoreByConfig(SCStoreConfig config) {
+    if (registerStoreByConfig(config)) {
+      SCDataStore store = stores.get(config.getUniqueID());
+      if (store != null) {
+        store.start();
+      }
     }
+  }
 
-    private void initializeLocationStore() {
-        SCStoreConfig locationStoreConfig = new SCStoreConfig();
-        locationStoreConfig.setName(LocationStore.NAME);
-        locationStoreConfig.setUniqueID(LocationStore.NAME);
-        locationStoreConfig.setUri("file://" + LocationStore.NAME);
-        locationStoreConfig.setType("gpkg");
-        locationStoreConfig.setVersion("1");
-        LocationStore locationStore = new LocationStore(context, locationStoreConfig);
-        this.stores.put(locationStore.getStoreId(), locationStore);
-        // block until store is started
-        locationStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
-            @Override
-            public void onCompleted() {
-                Log.d(LOG_TAG, "Registered location store with SCDataService.");
-            }
+  public boolean registerStoreByConfig(SCStoreConfig scStoreConfig) {
+    String key = scStoreConfig.getType() + "." + scStoreConfig.getVersion();
+    if (isStoreSupported(key)) {
+      if (key.startsWith(GeoJsonStore.TYPE)) {
+        Log.d(LOG_TAG,
+            "Registering geojson store " + scStoreConfig.getName() + " with SCDataService.");
+        registerStore(new GeoJsonStore(context, scStoreConfig));
+      } else if (key.startsWith(GeoPackageStore.TYPE)) {
+        Log.d(LOG_TAG,
+            "Registering gpkg store " + scStoreConfig.getName() + " with SCDataService.");
+        registerStore(new GeoPackageStore(context, scStoreConfig));
+      } else if (key.startsWith(WFSStore.TYPE)) {
+        Log.d(LOG_TAG, "Registering wfs store " + scStoreConfig.getName() + " with SCDataService.");
+        registerStore(new WFSStore(context, scStoreConfig));
+      }
 
-            @Override
-            public void onError(Throwable e) {
-                Log.e(LOG_TAG, "Couldn't start form store", e);
-                System.exit(0);
-            }
-
-            @Override
-            public void onNext(SCStoreStatusEvent event) {
-                Log.w(LOG_TAG, "Shouldn't return onNext");
-            }
-        });
+      // now persist the store's properties
+      SCStoreConfigRepository storeConfigRepository = new SCStoreConfigRepository(context);
+      storeConfigRepository.addStoreConfig(scStoreConfig);
+      Log.d(LOG_TAG, "returning true from register store by config");
+      return true;
+    } else {
+      Log.w(LOG_TAG,
+          "Cannot register new store b/c it's unsupported. The unsupported store key was " + key);
+      return false;
     }
+  }
 
-    public void addDefaultStoreImpls() {
-        this.supportedStores.add(GeoJsonStore.TYPE + "." + "1");
-        this.supportedStores.add(GeoJsonStore.TYPE + "." + "1.0");
-        this.supportedStores.add(GeoPackageStore.TYPE + "." + "1");
-        this.supportedStores.add(GeoPackageStore.TYPE + "." + "1.0");
-        this.supportedStores.add(WFSStore.TYPE + "." + "1.1.0");
-    }
+  private void updateStore(SCDataStore store) {
+    stopStore(store);
+    stores.put(store.getStoreId(), store);
+    startStore(store);
+  }
 
-    public void startStore(final SCDataStore store) {
-        if (!store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
-            Log.d(LOG_TAG, "Starting store " + store.getName() + " " + store.getStoreId());
-            store.start()
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(new Action1<SCStoreStatusEvent>() {
-                @Override
-                public void call(SCStoreStatusEvent s) {
-                }
-            }, new Action1<Throwable>() {
-                @Override
-                public void call(Throwable t) {
-                    Log.d(LOG_TAG, t.getLocalizedMessage());
-                    // onError can happen if we cannot start the store b/c of some error or runtime exception
-                    storeEventSubject.onNext(
-                            new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, store.getStoreId())
-                    );
-                }
-            }, new Action0() {
-                @Override
-                public void call() {
-                    Log.d(LOG_TAG, "Store " + store.getName() + " is running.");
-                    storeEventSubject.onNext(
-                            new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, store.getStoreId())
-                    );
+  public boolean updateStoresByConfig(SCStoreConfig scStoreConfig) {
+    String key = String.format("%s.%s", scStoreConfig.getType(), scStoreConfig.getVersion());
+    if (isStoreSupported(key)) {
 
-                    hasStores.onNext(true);
-                }
-            });
-        }
-    }
+      SCDataStore currentStore = stores.get(scStoreConfig.getUniqueID());
+      SCDataStore updatedStore = null;
 
-    public void stopStore(final SCDataStore store) {
-        if (store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
-            Log.d(LOG_TAG, "Stopping store " + store.getName() + " " + store.getStoreId());
-            store.stop();
-            storeEventSubject.onNext(
-                    new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, store.getStoreId()));
-            if (stores.size() > 0) {
-                hasStores.onNext(true);
-            }
-        }
-    }
+      if (key.startsWith(GeoJsonStore.TYPE)) {
+        Log.d(LOG_TAG,
+            "Updating geojson store " + scStoreConfig.getName() + " with SCDataService.");
+        updatedStore = new GeoJsonStore(context, scStoreConfig);
+      } else if (key.startsWith(GeoPackageStore.TYPE)) {
+        Log.d(LOG_TAG, "Updating gpkg store " + scStoreConfig.getName() + " with SCDataService.");
+        updatedStore = new GeoPackageStore(context, scStoreConfig);
+      } else if (key.startsWith(WFSStore.TYPE)) {
+        Log.d(LOG_TAG, "Updating wfs store " + scStoreConfig.getName() + " with SCDataService.");
+        updatedStore = new WFSStore(context, scStoreConfig);
+      }
 
-    /**
-     * Closes the stream by calling the subscriber's onComplete() when the specified store has started.
-     *
-     * @return an Observable that completes when the store is started.
-     */
-    public Observable<Void> storeStarted(final String storeId) {
-        // if the data service already has a running instance of the store, then it's started
-        for (SCDataStore store : getActiveStores()) {
-            if (storeId.equals(store.getStoreId())) {
-                Log.d(LOG_TAG, "Store " + store.getName() + " was already started");
-                return Observable.empty();
-            }
-        }
-        // otherwise we wait for the SC_DATA_STORE_RUNNING event for the store.
-        return Observable.create(
-                new Observable.OnSubscribe<Void>() {
-                    @Override
-                    public void call(final Subscriber<? super Void> subscriber) {
-                        // filter the events
-                        storeEventSubject.filter(
-                                new Func1<SCStoreStatusEvent, Boolean>() {
-                                    @Override
-                                    public Boolean call(SCStoreStatusEvent scStoreStatusEvent) {
-                                        return scStoreStatusEvent.getStatus()
-                                                .equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING) &&
-                                                scStoreStatusEvent.getStoreId().equals(storeId);
-                                    }
-                                }
-                        ).subscribe(new Action1<SCStoreStatusEvent>() {
-                            @Override
-                            public void call(final SCStoreStatusEvent scStoreStatusEvent) {
-                                subscriber.onCompleted();
-                            }
-                        });
-                    }
-                }
-        );
-    }
+      // now persist the store's properties
+      SCStoreConfigRepository storeConfigRepository = new SCStoreConfigRepository(context);
+      storeConfigRepository.addStoreConfig(scStoreConfig);
 
-
-    /**
-     * Calling start on the {@link SCDataService} will start all registered {@link SCDataStore}s.
-     */
-    public void start() {
-        Log.d(LOG_TAG, "Starting SCDataService. Starting all registered data stores.");
-        super.start();
-        for (SCDataStore store : getAllStores()) {
-            startStore(store);
-        }
-        this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
-    }
-
-    public void registerAndStartStoreByConfig(SCStoreConfig config) {
-        if (registerStoreByConfig(config)) {
-            SCDataStore store = stores.get(config.getUniqueID());
-            if (store != null) {
-                store.start();
-            }
-        }
-    }
-
-    public boolean registerStoreByConfig(SCStoreConfig scStoreConfig) {
-        String key = scStoreConfig.getType() + "." + scStoreConfig.getVersion();
-        if (isStoreSupported(key)) {
-            if (key.startsWith(GeoJsonStore.TYPE)) {
-                Log.d(LOG_TAG, "Registering geojson store " + scStoreConfig.getName() + " with SCDataService.");
-                registerStore(new GeoJsonStore(context, scStoreConfig));
-            }
-            else if (key.startsWith(GeoPackageStore.TYPE)) {
-                Log.d(LOG_TAG, "Registering gpkg store " + scStoreConfig.getName() + " with SCDataService.");
-                registerStore(new GeoPackageStore(context, scStoreConfig));
-            }
-            else if (key.startsWith(WFSStore.TYPE)) {
-                Log.d(LOG_TAG, "Registering wfs store " + scStoreConfig.getName() + " with SCDataService.");
-                registerStore(new WFSStore(context, scStoreConfig));
-            }
-
-            // now persist the store's properties
-            SCStoreConfigRepository storeConfigRepository = new SCStoreConfigRepository(context);
-            storeConfigRepository.addStoreConfig(scStoreConfig);
-            Log.d(LOG_TAG,"returning true from register store by config");
-            return true;
-        }
-        else {
-            Log.w(LOG_TAG, "Cannot register new store b/c it's unsupported. The unsupported store key was " + key);
-            return false;
-        }
-
-    }
-
-    private void updateStore(SCDataStore store) {
-        stopStore(store);
-        stores.put(store.getStoreId(), store);
-        startStore(store);
-    }
-
-    public boolean updateStoresByConfig(SCStoreConfig scStoreConfig) {
-        String key  = String.format("%s.%s", scStoreConfig.getType(), scStoreConfig.getVersion());
-        if (isStoreSupported(key)) {
-
-            SCDataStore currentStore = stores.get(scStoreConfig.getUniqueID());
-            SCDataStore updatedStore = null;
-
-            if (key.startsWith(GeoJsonStore.TYPE)) {
-                Log.d(LOG_TAG, "Updating geojson store " + scStoreConfig.getName() + " with SCDataService.");
-                updatedStore = new GeoJsonStore(context, scStoreConfig);
-            }
-            else if (key.startsWith(GeoPackageStore.TYPE)) {
-                Log.d(LOG_TAG, "Updating gpkg store " + scStoreConfig.getName() + " with SCDataService.");
-                updatedStore = new GeoPackageStore(context, scStoreConfig);
-            }
-            else if (key.startsWith(WFSStore.TYPE)) {
-                Log.d(LOG_TAG, "Updating wfs store " + scStoreConfig.getName() + " with SCDataService.");
-                updatedStore = new WFSStore(context, scStoreConfig);
-            }
-
-            // now persist the store's properties
-            SCStoreConfigRepository storeConfigRepository = new SCStoreConfigRepository(context);
-            storeConfigRepository.addStoreConfig(scStoreConfig);
-
-            if (currentStore == null) {
-                Log.e(LOG_TAG, String.format("Store %s does not exists", scStoreConfig.getUniqueID()));
-                return false;
-            } else {
-                if (updatedStore != null) {
-                    updateStore(updatedStore);
-                    return true;
-                } else {
-                    return false;
-                }
-            }
+      if (currentStore == null) {
+        Log.e(LOG_TAG, String.format("Store %s does not exists", scStoreConfig.getUniqueID()));
+        return false;
+      } else {
+        if (updatedStore != null) {
+          updateStore(updatedStore);
+          return true;
         } else {
-            Log.e(LOG_TAG,
-                    String.format("The store you tried to start:%s doesn't have a support implementation"
-                            , key));
-            return false;
+          return false;
         }
+      }
+    } else {
+      Log.e(LOG_TAG,
+          String.format("The store you tried to start:%s doesn't have a support implementation",
+              key));
+      return false;
     }
+  }
 
+  public void addSupportedStoreKey(String key) {
+    this.supportedStores.add(key);
+  }
 
-    public void addSupportedStoreKey(String key) {
-        this.supportedStores.add(key);
+  public void removeSupportedStoreKey(String key) {
+    this.supportedStores.remove(key);
+  }
+
+  public void registerStore(SCDataStore store) {
+    this.stores.put(store.getStoreId(), store);
+    // if data service is started/running when a new store is added, then we want to start the store
+    if (getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING)) {
+      startStore(store);
     }
+  }
 
-    public void removeSupportedStoreKey(String key) {
-        this.supportedStores.remove(key);
+  public void unregisterStore(SCDataStore store) {
+    this.stores.remove(store.getStoreId());
+    // if data service is started, and a store is unregister, then we want to stop the store
+    if (getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING)) {
+      Log.d(LOG_TAG, "Stopping store " + store.getName());
+      stopStore(store);
     }
+  }
 
+  public List<String> getSupportedStoreKeys() {
+    return new ArrayList<>(supportedStores);
+  }
 
-    public void registerStore(SCDataStore store) {
-        this.stores.put(store.getStoreId(), store);
-        // if data service is started/running when a new store is added, then we want to start the store
-        if (getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING)) {
-            startStore(store);
-        }
+  public boolean isStoreSupported(String key) {
+    return supportedStores.contains(key);
+  }
+
+  /**
+   * Returns a list of active stores where active is defined as a store that is currently running.
+   *
+   * @return the list of active data stores
+   */
+  public List<SCDataStore> getActiveStores() {
+    List<SCDataStore> activeStores = new ArrayList<>();
+    for (String key : stores.keySet()) {
+      SCDataStore scDataStore = stores.get(key);
+      if (scDataStore.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+        activeStores.add(scDataStore);
+      }
     }
+    return activeStores;
+  }
 
-    public void unregisterStore(SCDataStore store) {
-        this.stores.remove(store.getStoreId());
-        // if data service is started, and a store is unregister, then we want to stop the store
-        if (getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING)) {
-            Log.d(LOG_TAG, "Stopping store " + store.getName());
-            stopStore(store);
-        }
+  public List<SCDataStore> getAllStores() {
+    List<SCDataStore> activeStores = new ArrayList<>();
+    for (String key : stores.keySet()) {
+      SCDataStore scDataStore = stores.get(key);
+      activeStores.add(scDataStore);
     }
+    return activeStores;
+  }
 
-    public List<String> getSupportedStoreKeys() {
-        return new ArrayList<>(supportedStores);
+  /**
+   * Returns an active SCDataStore instance that matches the id.
+   *
+   * @param id
+   * @return the active SCDataStore instance or null if one doesn't exist
+   */
+  public SCDataStore getStoreById(String id) {
+    for (SCDataStore store : getAllStores()) {
+      if (store.getStoreId().equals(id)) {
+        return store;
+      }
     }
+    return null;
+  }
 
-    public boolean isStoreSupported(String key) {
-        return supportedStores.contains(key);
-    }
+  public Observable<SCSpatialFeature> queryStores(final List<String> storeIds,
+      final SCQueryFilter filter) {
+    return Observable.from(getActiveStores()).filter(new Func1<SCDataStore, Boolean>() {
+      @Override public Boolean call(final SCDataStore store) {
+        return storeIds.contains(store.getStoreId());
+      }
+    }).flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
+      @Override public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
+        Log.d(LOG_TAG, "Querying store " + scDataStore.getName());
+        return scDataStore.query(filter);
+      }
+    });
+  }
 
-    /**
-     * Returns a list of active stores where active is defined as a store that is currently running.
-     *
-     * @return the list of active data stores
-     */
-    public List<SCDataStore> getActiveStores() {
-        List<SCDataStore> activeStores = new ArrayList<>();
-        for (String key : stores.keySet()) {
-            SCDataStore scDataStore = stores.get(key);
-            if (scDataStore.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
-                activeStores.add(scDataStore);
-            }
-        }
-        return activeStores;
-    }
+  public Observable<SCSpatialFeature> queryAllStores(final SCQueryFilter filter) {
+    return Observable.from(getActiveStores())
+        .flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
+          @Override public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
+            Log.d(LOG_TAG, "Querying store " + scDataStore.getName());
+            return scDataStore.query(filter);
+          }
+        });
+  }
 
-    public List<SCDataStore> getAllStores() {
-        List<SCDataStore> activeStores = new ArrayList<>();
-        for (String key : stores.keySet()) {
-            SCDataStore scDataStore = stores.get(key);
-            activeStores.add(scDataStore);
-        }
-        return activeStores;
+  public DefaultStore getDefaultStore() {
+    for (SCDataStore store : stores.values()) {
+      if (store.getName().equals(DefaultStore.NAME)) {
+        return (DefaultStore) store;
+      }
     }
+    Log.w(LOG_TAG, "Default store was not found!");
+    return null;
+  }
 
-    /**
-     * Returns an active SCDataStore instance that matches the id.
-     *
-     * @param id
-     * @return the active SCDataStore instance or null if one doesn't exist
-     */
-    public SCDataStore getStoreById(String id) {
-        for (SCDataStore store : getAllStores()) {
-            if (store.getStoreId().equals(id)) {
-                return store;
-            }
-        }
-        return null;
+  public FormStore getFormStore() {
+    for (SCDataStore store : stores.values()) {
+      if (store.getName().equals(FormStore.NAME)) {
+        return (FormStore) store;
+      }
     }
+    Log.w(LOG_TAG, "Form store was not found!");
+    return null;
+  }
 
-    public Observable<SCSpatialFeature> queryStores(final List<String> storeIds, final SCQueryFilter filter) {
-        return Observable.from(getActiveStores())
-                .filter(new Func1<SCDataStore, Boolean>() {
-                    @Override
-                    public Boolean call(final SCDataStore store) {
-                        return storeIds.contains(store.getStoreId());
-                    }
-                })
-                .flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
-                    @Override
-                    public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
-                        Log.d(LOG_TAG, "Querying store " + scDataStore.getName());
-                        return scDataStore.query(filter);
-                    }
-                });
+  public LocationStore getLocationStore() {
+    for (SCDataStore store : stores.values()) {
+      if (store.getName().equals(LocationStore.NAME)) {
+        return (LocationStore) store;
+      }
     }
+    Log.w(LOG_TAG, "Location store was not found!");
+    return null;
+  }
 
-    public Observable<SCSpatialFeature> queryAllStores(final SCQueryFilter filter) {
-        return Observable.from(getActiveStores())
-                .flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
-                    @Override
-                    public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
-                        Log.d(LOG_TAG, "Querying store " + scDataStore.getName());
-                        return scDataStore.query(filter);
-                    }
-                });
-    }
+  public Context getContext() {
+    return context;
+  }
 
-    public DefaultStore getDefaultStore() {
-        for (SCDataStore store : stores.values()) {
-            if (store.getName().equals(DefaultStore.NAME)) {
-                return (DefaultStore) store;
-            }
-        }
-        Log.w(LOG_TAG, "Default store was not found!");
-        return null;
-    }
-
-    public FormStore getFormStore() {
-        for (SCDataStore store : stores.values()) {
-            if (store.getName().equals(FormStore.NAME)) {
-                return (FormStore) store;
-            }
-        }
-        Log.w(LOG_TAG, "Form store was not found!");
-        return null;
-    }
-
-    public LocationStore getLocationStore() {
-        for (SCDataStore store : stores.values()) {
-            if (store.getName().equals(LocationStore.NAME)) {
-                return (LocationStore) store;
-            }
-        }
-        Log.w(LOG_TAG, "Location store was not found!");
-        return null;
-    }
-
-    public Context getContext() {
-        return context;
-    }
-
-    public void setContext(Context context) {
-        this.context = context;
-    }
+  public void setContext(Context context) {
+    this.context = context;
+  }
 }
 
