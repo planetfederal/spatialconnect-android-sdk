@@ -20,9 +20,13 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
+import com.boundlessgeo.spatialconnect.geometries.SCPolygon;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
+import com.google.android.gms.maps.GoogleMap;
 
+import java.util.List;
 import java.util.Map;
 
 import rx.Observable;
@@ -31,7 +35,7 @@ import rx.Subscriber;
 /**
  * Provides capabilities for interacting with a single GeoPackage.
  */
-public class GeoPackageStore extends SCDataStore {
+public class GeoPackageStore extends SCDataStore implements SCRasterStore {
 
     private static final String LOG_TAG = GeoPackageStore.class.getSimpleName();
     public static final String TYPE = "gpkg";
@@ -142,5 +146,20 @@ public class GeoPackageStore extends SCDataStore {
     @Override
     public void pause() {
 
+    }
+
+    @Override
+    public void overlayFromLayer(String layerName, GoogleMap map) {
+
+    }
+
+    @Override
+    public SCPolygon getCoverage() {
+        return null;
+    }
+
+    @Override
+    public List<SCGpkgTileSource> rasterList() {
+        return null;
     }
 }

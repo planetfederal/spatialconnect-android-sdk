@@ -46,7 +46,7 @@ import rx.functions.Action1;
  * <p></p>
  * Note that all features will be queried and created in a workspace named <i>spatialconnect</i>.
  */
-public class WFSStore extends SCDataStore {
+public class WFSStore extends SCDataStore implements  SCSpatialStore, SCDataStoreLifeCycle {
 
     private static final String LOG_TAG = WFSStore.class.getSimpleName();
     private String baseUrl;
