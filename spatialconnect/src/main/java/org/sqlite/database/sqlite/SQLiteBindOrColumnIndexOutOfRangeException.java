@@ -24,9 +24,10 @@ package org.sqlite.database.sqlite;
  * Thrown if the the bind or column parameter index is out of range
  */
 public class SQLiteBindOrColumnIndexOutOfRangeException extends SQLiteException {
-    public SQLiteBindOrColumnIndexOutOfRangeException() {}
+  public SQLiteBindOrColumnIndexOutOfRangeException() {
+  }
 
-    public SQLiteBindOrColumnIndexOutOfRangeException(String error) {
-        super(error);
-    }
+  public SQLiteBindOrColumnIndexOutOfRangeException(String error) {
+    super(error);
+  }
 }

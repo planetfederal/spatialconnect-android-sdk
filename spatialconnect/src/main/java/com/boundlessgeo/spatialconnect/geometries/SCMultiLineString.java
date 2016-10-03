@@ -10,29 +10,24 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License
+ * See the License for the specific language governing permissions and limitations under the
+ * License
  */
 package com.boundlessgeo.spatialconnect.geometries;
-
 
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.MultiLineString;
 
-public class SCMultiLineString extends SCGeometry
-{
-    public SCMultiLineString(Geometry geometry)
-    {
-        super(geometry);
-    }
+public class SCMultiLineString extends SCGeometry {
+  public SCMultiLineString(Geometry geometry) {
+    super(geometry);
+  }
 
-    public MultiLineString getJTS()
-    {
-        return (MultiLineString)this.geometry;
-    }
+  public MultiLineString getJTS() {
+    return (MultiLineString) this.geometry;
+  }
 
-    @Override
-    public String toString()
-    {
-        return geometry.toText();
-    }
+  @Override public String toString() {
+    return geometry.toText();
+  }
 }

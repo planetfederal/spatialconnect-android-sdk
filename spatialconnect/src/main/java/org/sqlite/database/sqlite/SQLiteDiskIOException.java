@@ -21,13 +21,14 @@
 package org.sqlite.database.sqlite;
 
 /**
- * An exception that indicates that an IO error occured while accessing the 
+ * An exception that indicates that an IO error occured while accessing the
  * SQLite database file.
  */
 public class SQLiteDiskIOException extends SQLiteException {
-    public SQLiteDiskIOException() {}
+  public SQLiteDiskIOException() {
+  }
 
-    public SQLiteDiskIOException(String error) {
-        super(error);
-    }
+  public SQLiteDiskIOException(String error) {
+    super(error);
+  }
 }

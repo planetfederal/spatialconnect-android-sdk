@@ -21,67 +21,66 @@
 package org.sqlite.database.sqlite;
 
 import android.database.Cursor;
-import org.sqlite.database.sqlite.SQLiteDatabase.CursorFactory;
 import android.os.CancellationSignal;
+import org.sqlite.database.sqlite.SQLiteDatabase.CursorFactory;
 
 /**
  * A cursor driver that uses the given query directly.
- * 
+ *
  * @hide
  */
 public final class SQLiteDirectCursorDriver implements SQLiteCursorDriver {
-    private final SQLiteDatabase mDatabase;
-    private final String mEditTable; 
-    private final String mSql;
-    private final CancellationSignal mCancellationSignal;
-    private SQLiteQuery mQuery;
+  private final SQLiteDatabase mDatabase;
+  private final String mEditTable;
+  private final String mSql;
+  private final CancellationSignal mCancellationSignal;
+  private SQLiteQuery mQuery;
 
-    public SQLiteDirectCursorDriver(SQLiteDatabase db, String sql, String editTable,
-            CancellationSignal cancellationSignal) {
-        mDatabase = db;
-        mEditTable = editTable;
-        mSql = sql;
-        mCancellationSignal = cancellationSignal;
+  public SQLiteDirectCursorDriver(SQLiteDatabase db, String sql, String editTable,
+      CancellationSignal cancellationSignal) {
+    mDatabase = db;
+    mEditTable = editTable;
+    mSql = sql;
+    mCancellationSignal = cancellationSignal;
+  }
+
+  public Cursor query(CursorFactory factory, String[] selectionArgs) {
+    final SQLiteQuery query = new SQLiteQuery(mDatabase, mSql, mCancellationSignal);
+    final Cursor cursor;
+    try {
+      query.bindAllArgsAsStrings(selectionArgs);
+
+      if (factory == null) {
+        cursor = new SQLiteCursor(this, mEditTable, query);
+      } else {
+        cursor = factory.newCursor(mDatabase, this, mEditTable, query);
+      }
+    } catch (RuntimeException ex) {
+      query.close();
+      throw ex;
     }
 
-    public Cursor query(CursorFactory factory, String[] selectionArgs) {
-        final SQLiteQuery query = new SQLiteQuery(mDatabase, mSql, mCancellationSignal);
-        final Cursor cursor;
-        try {
-            query.bindAllArgsAsStrings(selectionArgs);
+    mQuery = query;
+    return cursor;
+  }
 
-            if (factory == null) {
-                cursor = new SQLiteCursor(this, mEditTable, query);
-            } else {
-                cursor = factory.newCursor(mDatabase, this, mEditTable, query);
-            }
-        } catch (RuntimeException ex) {
-            query.close();
-            throw ex;
-        }
+  public void cursorClosed() {
+    // Do nothing
+  }
 
-        mQuery = query;
-        return cursor;
-    }
+  public void setBindArguments(String[] bindArgs) {
+    mQuery.bindAllArgsAsStrings(bindArgs);
+  }
 
-    public void cursorClosed() {
-        // Do nothing
-    }
+  public void cursorDeactivated() {
+    // Do nothing
+  }
 
-    public void setBindArguments(String[] bindArgs) {
-        mQuery.bindAllArgsAsStrings(bindArgs);
-    }
+  public void cursorRequeried(Cursor cursor) {
+    // Do nothing
+  }
 
-    public void cursorDeactivated() {
-        // Do nothing
-    }
-
-    public void cursorRequeried(Cursor cursor) {
-        // Do nothing
-    }
-
-    @Override
-    public String toString() {
-        return "SQLiteDirectCursorDriver: " + mSql;
-    }
+  @Override public String toString() {
+    return "SQLiteDirectCursorDriver: " + mSql;
+  }
 }

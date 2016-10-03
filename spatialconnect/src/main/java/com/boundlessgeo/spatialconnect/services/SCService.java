@@ -10,47 +10,48 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License
+ * See the License for the specific language governing permissions and limitations under the
+ * License
  */
 package com.boundlessgeo.spatialconnect.services;
 
 import java.util.UUID;
 
 public class SCService {
-    private String id;
-    private SCServiceStatus status;
+  private String id;
+  private SCServiceStatus status;
 
-    public SCService() {
-        this.id = UUID.randomUUID().toString();
-        this.status = SCServiceStatus.SC_SERVICE_STOPPED;
-    }
+  public SCService() {
+    this.id = UUID.randomUUID().toString();
+    this.status = SCServiceStatus.SC_SERVICE_STOPPED;
+  }
 
-    // TODO: should this return an observable?
-    public void start() {
-        this.status = SCServiceStatus.SC_SERVICE_STARTING;
-    }
+  // TODO: should this return an observable?
+  public void start() {
+    this.status = SCServiceStatus.SC_SERVICE_STARTING;
+  }
 
-    public void stop() {
-        this.status = SCServiceStatus.SC_SERVICE_STOPPED;
-    }
+  public void stop() {
+    this.status = SCServiceStatus.SC_SERVICE_STOPPED;
+  }
 
-    public void resume() {
-        this.status = SCServiceStatus.SC_SERVICE_RUNNING;
-    }
+  public void resume() {
+    this.status = SCServiceStatus.SC_SERVICE_RUNNING;
+  }
 
-    public void pause() {
-        this.status = SCServiceStatus.SC_SERVICE_PAUSED;
-    }
+  public void pause() {
+    this.status = SCServiceStatus.SC_SERVICE_PAUSED;
+  }
 
-    public String getId() {
-        return id;
-    }
+  public String getId() {
+    return id;
+  }
 
-    public SCServiceStatus getStatus() {
-        return status;
-    }
+  public SCServiceStatus getStatus() {
+    return status;
+  }
 
-    public void setStatus(SCServiceStatus status) {
-        this.status = status;
-    }
+  public void setStatus(SCServiceStatus status) {
+    this.status = status;
+  }
 }

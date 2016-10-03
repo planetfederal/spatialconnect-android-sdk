@@ -18,128 +18,124 @@ package com.boundlessgeo.spatialconnect.db;
 import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
-
 import com.squareup.sqlbrite.BriteDatabase;
 import com.squareup.sqlbrite.SqlBrite;
-
+import java.io.File;
 import org.sqlite.database.DatabaseErrorHandler;
 import org.sqlite.database.sqlite.SQLiteDatabase;
 import org.sqlite.database.sqlite.SQLiteOpenHelper;
-
-import java.io.File;
-
 import rx.schedulers.Schedulers;
 
 /**
- * SCSqliteHelper is used to expose the custom build of SQLite embedded with the spatialconnect-android-sdk.  It
+ * SCSqliteHelper is used to expose the custom build of SQLite embedded with the
+ * spatialconnect-android-sdk.  It
  * provides a {@link BriteDatabase} object which can be used to provide observable sql queries.
  */
 public class SCSqliteHelper extends SQLiteOpenHelper {
 
-    private static final int DATABASE_VERSION = 1;
-    private SqlBrite sqlBrite = SqlBrite.create(new SqlBrite.Logger() {
-        @Override
-        public void log(String message) {
-            Log.d("SQLBRITE", message);
-        }
-    });
-    private BriteDatabase db = sqlBrite.wrapDatabaseHelper(this, Schedulers.io());
+  private static final int DATABASE_VERSION = 1;
 
-    static {
-        System.loadLibrary("gpkg");
-        System.loadLibrary("sqliteX");
+  static {
+    System.loadLibrary("gpkg");
+    System.loadLibrary("sqliteX");
+  }
+
+  private SqlBrite sqlBrite = SqlBrite.create(new SqlBrite.Logger() {
+    @Override public void log(String message) {
+      Log.d("SQLBRITE", message);
     }
+  });
+  private BriteDatabase db = sqlBrite.wrapDatabaseHelper(this, Schedulers.io());
 
-    /**
-     * Creates a new instance of {@link SCSqliteHelper} used to interact with the database specified by the parameter
-     * <b>databaseName</b>.
-     *
-     * @param context
-     * @param databaseName
-     */
-    public SCSqliteHelper(Context context, String databaseName) {
-        // http://stackoverflow.com/questions/26642797/android-custom-sqlite-build-cannot-open-database
-        super(context, context.getDatabasePath(databaseName).getPath(), null, DATABASE_VERSION, new DatabaseErrorHandler() {
-            @Override
-            public void onCorruption(SQLiteDatabase dbObj) {
-                throw new RuntimeException("Database is corrupted!  Cannot create SCSqliteHelper.");
-            }
+  /**
+   * Creates a new instance of {@link SCSqliteHelper} used to interact with the database specified
+   * by the parameter
+   * <b>databaseName</b>.
+   */
+  public SCSqliteHelper(Context context, String databaseName) {
+    // http://stackoverflow.com/questions/26642797/android-custom-sqlite-build-cannot-open-database
+    super(context, context.getDatabasePath(databaseName).getPath(), null, DATABASE_VERSION,
+        new DatabaseErrorHandler() {
+          @Override public void onCorruption(SQLiteDatabase dbObj) {
+            throw new RuntimeException("Database is corrupted!  Cannot create SCSqliteHelper.");
+          }
         });
-        File dbDirectory = context.getDatabasePath(databaseName).getParentFile();
-        if (!dbDirectory.exists()) {
-            // force initialization if database directory doesn't exist
-            // TODO: consider doing this in a background thread so it doesn't block
-            dbDirectory.mkdir();
-            getWritableDatabase();
-        }
-//        db.setLoggingEnabled(true);
+    File dbDirectory = context.getDatabasePath(databaseName).getParentFile();
+    if (!dbDirectory.exists()) {
+      // force initialization if database directory doesn't exist
+      // TODO: consider doing this in a background thread so it doesn't block
+      dbDirectory.mkdir();
+      getWritableDatabase();
     }
+    //        db.setLoggingEnabled(true);
+  }
 
-    /**
-     * Returns the sqlbrite database instance.
-     */
-    public BriteDatabase db() {
-        return this.db;
-    }
+  public static String getString(Cursor cursor, String columnName) {
+    return cursor.getString(cursor.getColumnIndexOrThrow(columnName));
+  }
 
-    /**
-     * Called when the database connection is being configured.  Configure database settings for things like foreign
-     * key support, write-ahead logging, etc.
-     *
-     * @param db The database.
-     */
-    @Override
-    public void onConfigure(SQLiteDatabase db) {
-        super.onConfigure(db);
-        db.setForeignKeyConstraintsEnabled(true);
-    }
+  public static boolean getBoolean(Cursor cursor, String columnName) {
+    return getInt(cursor, columnName) == 1;
+  }
 
-    /**
-     * Called when the database is created for the FIRST time.  If a database already exists on disk with the same
-     * DATABASE_NAME, this method will NOT be called.
-     *
-     * @param db The database.
-     */
-    @Override
-    public void onCreate(SQLiteDatabase db) {
-        // we aren't creating databases when using SCSqliteHelper so we don't need to implement this
-    }
+  public static long getLong(Cursor cursor, String columnName) {
+    return cursor.getLong(cursor.getColumnIndexOrThrow(columnName));
+  }
 
-    /**
-     * Called when the database needs to be upgraded.  This method will only be called if a database already exists on
-     * disk with the same DATABASE_NAME, but the DATABASE_VERSION is different than the version of the database that
-     * exists on disk.
-     *
-     * @param db         The database.
-     * @param oldVersion The old database version.
-     * @param newVersion The new database version.
-     */
-    @Override
-    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // we aren't updating databases when using SCSqliteHelper so we don't need to implement this
-    }
+  public static int getInt(Cursor cursor, String columnName) {
+    return cursor.getInt(cursor.getColumnIndexOrThrow(columnName));
+  }
 
-    public static String getString(Cursor cursor, String columnName) {
-        return cursor.getString(cursor.getColumnIndexOrThrow(columnName));
-    }
+  public static double getDouble(Cursor cursor, String columnName) {
+    return cursor.getDouble(cursor.getColumnIndexOrThrow(columnName));
+  }
 
-    public static boolean getBoolean(Cursor cursor, String columnName) {
-        return getInt(cursor, columnName) == 1;
-    }
+  public static byte[] getBlob(Cursor cursor, String columnName) {
+    return cursor.getBlob(cursor.getColumnIndexOrThrow(columnName));
+  }
 
-    public static long getLong(Cursor cursor, String columnName) {
-        return cursor.getLong(cursor.getColumnIndexOrThrow(columnName));
-    }
+  /**
+   * Returns the sqlbrite database instance.
+   */
+  public BriteDatabase db() {
+    return this.db;
+  }
 
-    public static int getInt(Cursor cursor, String columnName) {
-        return cursor.getInt(cursor.getColumnIndexOrThrow(columnName));
-    }
+  /**
+   * Called when the database connection is being configured.  Configure database settings for
+   * things like foreign
+   * key support, write-ahead logging, etc.
+   *
+   * @param db The database.
+   */
+  @Override public void onConfigure(SQLiteDatabase db) {
+    super.onConfigure(db);
+    db.setForeignKeyConstraintsEnabled(true);
+  }
 
-    public static double getDouble(Cursor cursor, String columnName) {
-        return cursor.getDouble(cursor.getColumnIndexOrThrow(columnName));
-    }
+  /**
+   * Called when the database is created for the FIRST time.  If a database already exists on disk
+   * with the same
+   * DATABASE_NAME, this method will NOT be called.
+   *
+   * @param db The database.
+   */
+  @Override public void onCreate(SQLiteDatabase db) {
+    // we aren't creating databases when using SCSqliteHelper so we don't need to implement this
+  }
 
-    public static byte[] getBlob(Cursor cursor, String columnName) {
-        return cursor.getBlob(cursor.getColumnIndexOrThrow(columnName));
-    }
+  /**
+   * Called when the database needs to be upgraded.  This method will only be called if a database
+   * already exists on
+   * disk with the same DATABASE_NAME, but the DATABASE_VERSION is different than the version of the
+   * database that
+   * exists on disk.
+   *
+   * @param db The database.
+   * @param oldVersion The old database version.
+   * @param newVersion The new database version.
+   */
+  @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+    // we aren't updating databases when using SCSqliteHelper so we don't need to implement this
+  }
 }

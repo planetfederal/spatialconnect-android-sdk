@@ -17,12 +17,12 @@ package com.squareup.sqlbrite;
 
 import android.content.ContentResolver;
 import android.database.Cursor;
-import org.sqlite.database.sqlite.SQLiteOpenHelper;
 import android.support.annotation.CheckResult;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 import java.util.List;
+import org.sqlite.database.sqlite.SQLiteOpenHelper;
 import rx.Observable;
 import rx.Observable.Operator;
 import rx.Scheduler;
@@ -34,8 +34,13 @@ import rx.functions.Func1;
  * the result of a query.
  */
 public final class SqlBrite {
-  @CheckResult @NonNull
-  public static SqlBrite create() {
+  private final Logger logger;
+
+  private SqlBrite(@NonNull Logger logger) {
+    this.logger = logger;
+  }
+
+  @CheckResult @NonNull public static SqlBrite create() {
     return create(new Logger() {
       @Override public void log(String message) {
         Log.d("SqlBrite", message);
@@ -43,15 +48,8 @@ public final class SqlBrite {
     });
   }
 
-  @CheckResult @NonNull
-  public static SqlBrite create(@NonNull Logger logger) {
+  @CheckResult @NonNull public static SqlBrite create(@NonNull Logger logger) {
     return new SqlBrite(logger);
-  }
-
-  private final Logger logger;
-
-  private SqlBrite(@NonNull Logger logger) {
-    this.logger = logger;
   }
 
   /**
@@ -81,6 +79,11 @@ public final class SqlBrite {
     return new BriteContentResolver(contentResolver, logger, scheduler);
   }
 
+  /** A simple indirection for logging debug messages. */
+  public interface Logger {
+    void log(String message);
+  }
+
   /** An executable query. */
   public static abstract class Query {
     /**
@@ -88,15 +91,16 @@ public final class SqlBrite {
      * single row to {@code T} using {@code mapper}.
      * <p>
      * It is an error for a query to pass through this operator with more than 1 row in its result
-     * set. Use {@code LIMIT 1} on the underlying SQL query to prevent this. Result sets with 0 rows
+     * set. Use {@code LIMIT 1} on the underlying SQL query to prevent this. Result sets with 0
+     * rows
      * do not emit an item.
      * <p>
      * This operator ignores {@code null} cursors returned from {@link #run()}.
      *
      * @param mapper Maps the current {@link Cursor} row to {@code T}. May not return null.
      */
-    @CheckResult @NonNull
-    public static <T> Operator<T, Query> mapToOne(@NonNull Func1<Cursor, T> mapper) {
+    @CheckResult @NonNull public static <T> Operator<T, Query> mapToOne(
+        @NonNull Func1<Cursor, T> mapper) {
       return new QueryToOneOperator<>(mapper, false, null);
     }
 
@@ -105,7 +109,8 @@ public final class SqlBrite {
      * single row to {@code T} using {@code mapper}.
      * <p>
      * It is an error for a query to pass through this operator with more than 1 row in its result
-     * set. Use {@code LIMIT 1} on the underlying SQL query to prevent this. Result sets with 0 rows
+     * set. Use {@code LIMIT 1} on the underlying SQL query to prevent this. Result sets with 0
+     * rows
      * emit {@code defaultValue}.
      * <p>
      * This operator emits {@code defaultValue} if {@code null} is returned from {@link #run()}.
@@ -113,9 +118,8 @@ public final class SqlBrite {
      * @param mapper Maps the current {@link Cursor} row to {@code T}. May not return null.
      * @param defaultValue Value returned if result set is empty
      */
-    @CheckResult @NonNull
-    public static <T> Operator<T, Query> mapToOneOrDefault(@NonNull Func1<Cursor, T> mapper,
-        T defaultValue) {
+    @CheckResult @NonNull public static <T> Operator<T, Query> mapToOneOrDefault(
+        @NonNull Func1<Cursor, T> mapper, T defaultValue) {
       return new QueryToOneOperator<>(mapper, true, defaultValue);
     }
 
@@ -123,7 +127,8 @@ public final class SqlBrite {
      * Creates an {@linkplain Operator observable operator} which transforms a query to a
      * {@code List<T>} using {@code mapper}.
      * <p>
-     * Be careful using this operator as it will always consume the entire cursor and create objects
+     * Be careful using this operator as it will always consume the entire cursor and create
+     * objects
      * for each row, every time this observable emits a new query. On tables whose queries update
      * frequently or very large result sets this can result in the creation of many objects.
      * <p>
@@ -131,8 +136,8 @@ public final class SqlBrite {
      *
      * @param mapper Maps the current {@link Cursor} row to {@code T}. May not return null.
      */
-    @CheckResult @NonNull
-    public static <T> Operator<List<T>, Query> mapToList(@NonNull Func1<Cursor, T> mapper) {
+    @CheckResult @NonNull public static <T> Operator<List<T>, Query> mapToList(
+        @NonNull Func1<Cursor, T> mapper) {
       return new QueryToListOperator<>(mapper);
     }
 
@@ -146,8 +151,7 @@ public final class SqlBrite {
      * time.
      */
     @CheckResult // TODO @WorkerThread
-    @Nullable
-    public abstract Cursor run();
+    @Nullable public abstract Cursor run();
 
     /**
      * Execute the query on the underlying database and return an Observable of each row mapped to
@@ -171,8 +175,7 @@ public final class SqlBrite {
      * <p>
      * The resulting observable will be empty if {@code null} is returned from {@link #run()}.
      */
-    @CheckResult @NonNull
-    public final <T> Observable<T> asRows(final Func1<Cursor, T> mapper) {
+    @CheckResult @NonNull public final <T> Observable<T> asRows(final Func1<Cursor, T> mapper) {
       return Observable.create(new Observable.OnSubscribe<T>() {
         @Override public void call(Subscriber<? super T> subscriber) {
           Cursor cursor = run();
@@ -191,10 +194,5 @@ public final class SqlBrite {
         }
       });
     }
-  }
-
-  /** A simple indirection for logging debug messages. */
-  public interface Logger {
-    void log(String message);
   }
 }

@@ -23,13 +23,14 @@ package org.sqlite.database.sqlite;
 /**
  * An exception that indicates that garbage-collector is finalizing a database object
  * that is not explicitly closed
+ *
  * @hide
  */
 public class DatabaseObjectNotClosedException extends RuntimeException {
-    private static final String s = "Application did not close the cursor or database object " +
-            "that was opened here";
+  private static final String s =
+      "Application did not close the cursor or database object " + "that was opened here";
 
-    public DatabaseObjectNotClosedException() {
-        super(s);
-    }
+  public DatabaseObjectNotClosedException() {
+    super(s);
+  }
 }

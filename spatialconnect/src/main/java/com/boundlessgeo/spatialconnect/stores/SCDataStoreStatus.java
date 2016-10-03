@@ -10,15 +10,15 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License
+ * See the License for the specific language governing permissions and limitations under the
+ * License
  */
 package com.boundlessgeo.spatialconnect.stores;
 
-public enum SCDataStoreStatus
-{
-    SC_DATA_STORE_STARTED,  // when store is initialized
-    SC_DATA_STORE_DOWNLOADING, // when the store needs to download data from a remote location
-    SC_DATA_STORE_RUNNING, // when the store is running an ready to be used
-    SC_DATA_STORE_PAUSED,
-    SC_DATA_STORE_STOPPED // before the store is initialized OR if was unsuccessful trying to get to the running state
+public enum SCDataStoreStatus {
+  SC_DATA_STORE_STARTED,  // when store is initialized
+  SC_DATA_STORE_DOWNLOADING, // when the store needs to download data from a remote location
+  SC_DATA_STORE_RUNNING, // when the store is running an ready to be used
+  SC_DATA_STORE_PAUSED,
+  SC_DATA_STORE_STOPPED // before the store is initialized OR if was unsuccessful trying to get to the running state
 }

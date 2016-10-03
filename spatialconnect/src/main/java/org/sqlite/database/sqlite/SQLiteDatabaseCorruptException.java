@@ -24,9 +24,10 @@ package org.sqlite.database.sqlite;
  * An exception that indicates that the SQLite database file is corrupt.
  */
 public class SQLiteDatabaseCorruptException extends SQLiteException {
-    public SQLiteDatabaseCorruptException() {}
+  public SQLiteDatabaseCorruptException() {
+  }
 
-    public SQLiteDatabaseCorruptException(String error) {
-        super(error);
-    }
+  public SQLiteDatabaseCorruptException(String error) {
+    super(error);
+  }
 }

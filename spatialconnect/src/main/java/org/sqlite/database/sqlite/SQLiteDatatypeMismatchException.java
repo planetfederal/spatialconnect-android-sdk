@@ -21,9 +21,10 @@
 package org.sqlite.database.sqlite;
 
 public class SQLiteDatatypeMismatchException extends SQLiteException {
-    public SQLiteDatatypeMismatchException() {}
+  public SQLiteDatatypeMismatchException() {
+  }
 
-    public SQLiteDatatypeMismatchException(String error) {
-        super(error);
-    }
+  public SQLiteDatatypeMismatchException(String error) {
+    super(error);
+  }
 }

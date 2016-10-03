@@ -10,50 +10,46 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License
+ * See the License for the specific language governing permissions and limitations under the
+ * License
  */
 package com.boundlessgeo.spatialconnect.config;
 
-
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.util.List;
 
 public class SCConfig {
 
-    @JsonProperty("stores")
-    private List<SCStoreConfig> stores;
+  @JsonProperty("stores") private List<SCStoreConfig> stores;
 
-    @JsonProperty("forms")
-    private List<SCFormConfig> forms;
+  @JsonProperty("forms") private List<SCFormConfig> forms;
 
-    @JsonProperty("remote")
-    private SCRemoteConfig remote;
+  @JsonProperty("remote") private SCRemoteConfig remote;
 
-    public SCConfig() {
-    }
+  public SCConfig() {
+  }
 
-    public List<SCStoreConfig> getStoreConfigs() {
-        return stores;
-    }
+  public List<SCStoreConfig> getStoreConfigs() {
+    return stores;
+  }
 
-    public void setStoreConfigs(List<SCStoreConfig> configs) {
-        this.stores = configs;
-    }
+  public void setStoreConfigs(List<SCStoreConfig> configs) {
+    this.stores = configs;
+  }
 
-    public List<SCFormConfig> getFormConfigs() {
-        return forms;
-    }
+  public List<SCFormConfig> getFormConfigs() {
+    return forms;
+  }
 
-    public void setFormConfigs(List<SCFormConfig> forms) {
-        this.forms = forms;
-    }
+  public void setFormConfigs(List<SCFormConfig> forms) {
+    this.forms = forms;
+  }
 
-    public SCRemoteConfig getRemote() {
-        return remote;
-    }
+  public SCRemoteConfig getRemote() {
+    return remote;
+  }
 
-    public void setRemote(SCRemoteConfig remote) {
-        this.remote = remote;
-    }
+  public void setRemote(SCRemoteConfig remote) {
+    this.remote = remote;
+  }
 }

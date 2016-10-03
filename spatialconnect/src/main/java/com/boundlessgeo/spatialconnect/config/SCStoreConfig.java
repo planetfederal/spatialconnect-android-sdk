@@ -10,122 +10,111 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License
+ * See the License for the specific language governing permissions and limitations under the
+ * License
  */
 package com.boundlessgeo.spatialconnect.config;
 
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.util.List;
 
 /**
  * Represents a JSON object describing a SCSpatialStore.
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class SCStoreConfig
-{
-    /**
-     * The store's type.  geopackage, geojson, WMS, etc
-     */
-    @JsonProperty("store_type")
-    private String type;
+@JsonInclude(JsonInclude.Include.NON_NULL) public class SCStoreConfig {
+  /**
+   * The store's type.  geopackage, geojson, WMS, etc
+   */
+  @JsonProperty("store_type") private String type;
 
-    /**
-     * The version of the type. For example, 1.1.0 could be a valid version for the WMS type.
-     */
-    private String version;
+  /**
+   * The version of the type. For example, 1.1.0 could be a valid version for the WMS type.
+   */
+  private String version;
 
-    /**
-     * Indicates whether the store is packaged within the APK itself.
-     */
-    private boolean isMainBundle;
+  /**
+   * Indicates whether the store is packaged within the APK itself.
+   */
+  private boolean isMainBundle;
 
-    /**
-     * The URI to the store.  Could be a file path or an HTTP(S) URL
-     */
-    private String uri;
+  /**
+   * The URI to the store.  Could be a file path or an HTTP(S) URL
+   */
+  private String uri;
 
-    /**
-     * Unique id of the store.
-     */
-    @JsonProperty("id")
-    private String uniqueID;
+  /**
+   * Unique id of the store.
+   */
+  @JsonProperty("id") private String uniqueID;
 
-    /**
-     * Descriptive name for the store used in the UI display.  Can't have a period (.)
-     */
-    private String name;
+  /**
+   * Descriptive name for the store used in the UI display.  Can't have a period (.)
+   */
+  private String name;
 
-    /**
-     * Optionally specify default layers for this store.
-     */
-    @JsonProperty("default_layers")
-    private List<String> defaultLayers;
+  /**
+   * Optionally specify default layers for this store.
+   */
+  @JsonProperty("default_layers") private List<String> defaultLayers;
 
-    public SCStoreConfig() {}
+  public SCStoreConfig() {
+  }
 
-    public String getType()
-    {
-        return type;
-    }
+  public String getType() {
+    return type;
+  }
 
-    public void setType(String type)
-    {
-        this.type = type;
-    }
+  public void setType(String type) {
+    this.type = type;
+  }
 
-    public String getVersion()
-    {
-        return (version != null) ? version : "1";
-    }
+  public String getVersion() {
+    return (version != null) ? version : "1";
+  }
 
-    public void setVersion(String version)
-    {
-        this.version = version;
-    }
+  public void setVersion(String version) {
+    this.version = version;
+  }
 
-    public boolean isMainBundle() { return isMainBundle; }
+  public boolean isMainBundle() {
+    return isMainBundle;
+  }
 
-    public void setIsMainBundle(boolean isMainBundle) { this.isMainBundle = isMainBundle; }
+  public void setIsMainBundle(boolean isMainBundle) {
+    this.isMainBundle = isMainBundle;
+  }
 
-    public String getUri()
-    {
-        return uri;
-    }
+  public String getUri() {
+    return uri;
+  }
 
-    public void setUri(String uri)
-    {
-        this.uri = uri;
-    }
+  public void setUri(String uri) {
+    this.uri = uri;
+  }
 
-    public String getUniqueID()
-    {
-        return uniqueID;
-    }
+  public String getUniqueID() {
+    return uniqueID;
+  }
 
-    public void setUniqueID(String uniqueID)
-    {
-        this.uniqueID = uniqueID;
-    }
+  public void setUniqueID(String uniqueID) {
+    this.uniqueID = uniqueID;
+  }
 
-    public String getName()
-    {
-        return name;
-    }
+  public String getName() {
+    return name;
+  }
 
-    /** Cant have a period **/
-    public void setName(String name)
-    {
-        this.name = name;
-    }
+  /** Cant have a period **/
+  public void setName(String name) {
+    this.name = name;
+  }
 
-    public List<String> getDefaultLayers() {
-        return defaultLayers;
-    }
+  public List<String> getDefaultLayers() {
+    return defaultLayers;
+  }
 
-    public void setDefaultLayers(List<String> defaultLayers) {
-        this.defaultLayers = defaultLayers;
-    }
+  public void setDefaultLayers(List<String> defaultLayers) {
+    this.defaultLayers = defaultLayers;
+  }
 }

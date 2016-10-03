@@ -1,22 +1,22 @@
 <manifest
-    package="com.boundlessgeo.spatialconnect.test"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.boundlessgeo.spatialconnect.test">
 
-    <uses-permission android:name="android.permission.ACCESS_MOCK_LOCATION"/>
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+  <uses-permission android:name="android.permission.ACCESS_MOCK_LOCATION"/>
+  <uses-permission android:name="android.permission.WAKE_LOCK"/>
+  <uses-permission android:name="android.permission.INTERNET"/>
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+  <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
 
-    <application
-        android:allowBackup="true"
-        android:label="@string/app_name"
-        android:name="android.support.multidex.MultiDexApplication">
-        <!-- setup the activity used for testing -->
-        <activity
-            android:name="com.boundlessgeo.spatialconnect.SpatialConnectActivity">
-        </activity>
-        <service android:name="org.eclipse.paho.android.service.MqttService" />
-    </application>
+  <application
+      android:name="android.support.multidex.MultiDexApplication"
+      android:allowBackup="true"
+      android:label="@string/app_name">
+    <!-- setup the activity used for testing -->
+    <activity
+        android:name="com.boundlessgeo.spatialconnect.SpatialConnectActivity">
+    </activity>
+    <service android:name="org.eclipse.paho.android.service.MqttService"/>
+  </application>
 
 </manifest>

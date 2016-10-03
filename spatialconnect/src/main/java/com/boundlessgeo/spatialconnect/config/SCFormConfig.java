@@ -1,97 +1,87 @@
 package com.boundlessgeo.spatialconnect.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.util.List;
 
 public class SCFormConfig {
 
-    /**
-     * Unique id of the form.
-     */
-    @JsonProperty("id")
-    private String id;
+  /**
+   * Unique id of the form.
+   */
+  @JsonProperty("id") private String id;
 
-    /**
-     * Immutable name of the form.
-     */
-    @JsonProperty("form_key")
-    private String formKey;
+  /**
+   * Immutable name of the form.
+   */
+  @JsonProperty("form_key") private String formKey;
 
-    /**
-     * The label to display for the form.
-     */
-    @JsonProperty("form_label")
-    private String formLabel;
+  /**
+   * The label to display for the form.
+   */
+  @JsonProperty("form_label") private String formLabel;
 
-    /**
-     * The version of this form.
-     */
-    @JsonProperty("version")
-    private String version;
+  /**
+   * The version of this form.
+   */
+  @JsonProperty("version") private String version;
 
-    /**
-     * List of the form fields that define this form.
-     */
-    @JsonProperty("fields")
-    private List<SCFormField> fields;
+  /**
+   * List of the form fields that define this form.
+   */
+  @JsonProperty("fields") private List<SCFormField> fields;
 
-    public String getId() {
-        return id;
-    }
+  public String getId() {
+    return id;
+  }
 
-    public void setId(String id) {
-        this.id = id;
-    }
+  public void setId(String id) {
+    this.id = id;
+  }
 
-    public List<SCFormField> getFields() {
-        return fields;
-    }
+  public List<SCFormField> getFields() {
+    return fields;
+  }
 
-    public void setFields(List<SCFormField> fields) {
-        this.fields = fields;
-    }
+  public void setFields(List<SCFormField> fields) {
+    this.fields = fields;
+  }
 
-    public String getVersion() {
-        return version;
-    }
+  public String getVersion() {
+    return version;
+  }
 
-    public void setVersion(String version) {
-        this.version = version;
-    }
+  public void setVersion(String version) {
+    this.version = version;
+  }
 
-    public String getFormKey() {
-        return formKey;
-    }
+  public String getFormKey() {
+    return formKey;
+  }
 
-    public void setFormKey(String formKey) {
-        this.formKey = formKey;
-    }
+  public void setFormKey(String formKey) {
+    this.formKey = formKey;
+  }
 
-    public String getFormLabel() {
-        return formLabel;
-    }
+  public String getFormLabel() {
+    return formLabel;
+  }
 
-    public void setFormLabel(String formLabel) {
-        this.formLabel = formLabel;
-    }
+  public void setFormLabel(String formLabel) {
+    this.formLabel = formLabel;
+  }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+  @Override public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
 
-        SCFormConfig that = (SCFormConfig) o;
+    SCFormConfig that = (SCFormConfig) o;
 
-        return !(id != null ? !id.equals(that.id) : that.id != null);
+    return !(id != null ? !id.equals(that.id) : that.id != null);
+  }
 
-    }
-
-    @Override
-    public int hashCode() {
-        return id != null ? id.hashCode() : 0;
-    }
-
+  @Override public int hashCode() {
+    return id != null ? id.hashCode() : 0;
+  }
 }
 
 

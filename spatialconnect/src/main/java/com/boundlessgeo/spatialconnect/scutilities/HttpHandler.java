@@ -10,17 +10,15 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and limitations under the License
+ * See the License for the specific language governing permissions and limitations under the
+ * License
  */
 package com.boundlessgeo.spatialconnect.scutilities;
 
 import android.util.Log;
-
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
-
 import java.io.IOException;
 import java.io.InputStream;
-
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -39,170 +37,148 @@ import rx.schedulers.Schedulers;
 
 public class HttpHandler {
 
-    private final static String LOG_TAG = HttpHandler.class.getSimpleName();
+  public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+  private final static String LOG_TAG = HttpHandler.class.getSimpleName();
+  private static HttpHandler instance;
+  private static OkHttpClient client;
+  final ProgressListener progressListener = new ProgressListener() {
+    @Override public void update(long bytesRead, long contentLength, boolean done) {
+      // TODO: consider wrapping the  update in an observable that you can throttle
+      // something like this: https://groups.google.com/forum/#!msg/rxjava/aqDM7Eq3zT8/PCF_7pdlGgAJ
+      //                Log.v(LOG_TAG, String.format("%d%% done\n", (100 * bytesRead) / contentLength));
+    }
+  };
 
-    private static HttpHandler instance;
-    private static OkHttpClient client;
-    public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+  private HttpHandler() {
+    this.client = new OkHttpClient.Builder().addNetworkInterceptor(new LoggingInterceptor())
+        .addNetworkInterceptor(new SCAuthService.AuthHeaderInterceptor())
+        .authenticator(new SCAuthService.SCAuthenticator())
+        .build();
+  }
 
+  public static HttpHandler getInstance() {
+    if (instance == null) {
+      instance = new HttpHandler();
+    }
+    return instance;
+  }
 
-    public static HttpHandler getInstance() {
-        if (instance == null) {
-            instance = new HttpHandler();
+  public Observable<Response> get(final String url) throws IOException {
+    return Observable.create(new Observable.OnSubscribe<Response>() {
+      @Override public void call(Subscriber<? super Response> subscriber) {
+        try {
+          Request request = new Request.Builder().url(url).build();
+          Response response = client.newCall(request).execute();
+          if (!response.isSuccessful()) {
+            subscriber.onError(new Exception("error"));
+          } else {
+            subscriber.onNext(response);
+            subscriber.onCompleted();
+          }
+        } catch (IOException e) {
+          subscriber.onError(e);
         }
-        return instance;
-    }
+      }
+    }).subscribeOn(Schedulers.io());
+  }
 
-    private HttpHandler() {
-        this.client = new OkHttpClient.Builder()
-                .addNetworkInterceptor(new LoggingInterceptor())
-                .addNetworkInterceptor(new SCAuthService.AuthHeaderInterceptor())
-                .authenticator(new SCAuthService.SCAuthenticator())
-                .build();
-    }
+  public InputStream getResponseAsInputStream(String url) throws IOException {
+    Request request = new Request.Builder().url(url).build();
+    Response response = client.newCall(request).execute();
+    return response.body().byteStream();
+  }
 
-    public Observable<Response> get(final String url) throws IOException {
-        return Observable.create(new Observable.OnSubscribe<Response>() {
-            @Override
-            public void call(Subscriber<? super Response> subscriber) {
-                try {
-                    Request request = new Request.Builder()
-                            .url(url)
-                            .build();
-                    Response response = client.newCall(request).execute();
-                    if (!response.isSuccessful()) {
-                        subscriber.onError(new Exception("error"));
-                    } else {
-                        subscriber.onNext(response);
-                        subscriber.onCompleted();
-                    }
-                } catch (IOException e) {
-                    subscriber.onError(e);
-                }
-            }
-        })
-        .subscribeOn(Schedulers.io());
-    }
-
-    public InputStream getResponseAsInputStream(String url) throws IOException {
-        Request request = new Request.Builder()
-                .url(url)
-                .build();
-        Response response = client.newCall(request).execute();
-        return response.body().byteStream();
-    }
-
-    public Observable<Response> post(final String url, final String json) {
-        return Observable.create(new Observable.OnSubscribe<Response>() {
-            @Override
-            public void call(Subscriber<? super Response> subscriber) {
-                try {
-                    RequestBody body = RequestBody.create(JSON, json);
-                    Request request = new Request.Builder()
-                            .url(url)
-                            .post(body)
-                            .build();
-                    Response response = client.newCall(request).execute();
-                    if (!response.isSuccessful()) {
-                        subscriber.onError(new Exception("error"));
-                    } else {
-                        subscriber.onNext(response);
-                        subscriber.onCompleted();
-                    }
-                } catch (IOException e) {
-                    subscriber.onError(e);
-                }
-            }
-        })
-        .subscribeOn(Schedulers.io());
-    }
-
-    public Response getResponse(String theUrl) throws IOException {
-        Request request = new Request.Builder()
-                .url(theUrl)
-                .build();
-        return client.newCall(request).execute();
-    }
-
-    public void cancelAllRequests() {
-        client.dispatcher().cancelAll();
-    }
-
-    class LoggingInterceptor implements Interceptor {
-        @Override
-        public Response intercept(Interceptor.Chain chain) throws IOException {
-            Request request = chain.request();
-
-            long t1 = System.nanoTime();
-            Log.d(LOG_TAG, String.format("Sending request %s on %s%n%s",
-                    request.url(), chain.connection(), request.headers()));
-
-            Response response = chain.proceed(request);
-
-            long t2 = System.nanoTime();
-            Log.d(LOG_TAG, String.format("Received %d response for %s in %.1fms%n%s",
-                    response.code(), response.request().url(), (t2 - t1) / 1e6d, response.headers()));
-
-            return response;
+  public Observable<Response> post(final String url, final String json) {
+    return Observable.create(new Observable.OnSubscribe<Response>() {
+      @Override public void call(Subscriber<? super Response> subscriber) {
+        try {
+          RequestBody body = RequestBody.create(JSON, json);
+          Request request = new Request.Builder().url(url).post(body).build();
+          Response response = client.newCall(request).execute();
+          if (!response.isSuccessful()) {
+            subscriber.onError(new Exception("error"));
+          } else {
+            subscriber.onNext(response);
+            subscriber.onCompleted();
+          }
+        } catch (IOException e) {
+          subscriber.onError(e);
         }
+      }
+    }).subscribeOn(Schedulers.io());
+  }
+
+  public Response getResponse(String theUrl) throws IOException {
+    Request request = new Request.Builder().url(theUrl).build();
+    return client.newCall(request).execute();
+  }
+
+  public void cancelAllRequests() {
+    client.dispatcher().cancelAll();
+  }
+
+  interface ProgressListener {
+    void update(long bytesRead, long contentLength, boolean done);
+  }
+
+  // from https://github.com/square/okhttp/blob/master/samples/guide/src/main/java/okhttp3/recipes/Progress.java
+  private static class ProgressResponseBody extends ResponseBody {
+
+    private final ResponseBody responseBody;
+    private final ProgressListener progressListener;
+    private BufferedSource bufferedSource;
+
+    public ProgressResponseBody(ResponseBody responseBody, ProgressListener progressListener) {
+      this.responseBody = responseBody;
+      this.progressListener = progressListener;
     }
 
-    // from https://github.com/square/okhttp/blob/master/samples/guide/src/main/java/okhttp3/recipes/Progress.java
-    private static class ProgressResponseBody extends ResponseBody {
-
-        private final ResponseBody responseBody;
-        private final ProgressListener progressListener;
-        private BufferedSource bufferedSource;
-
-        public ProgressResponseBody(ResponseBody responseBody, ProgressListener progressListener) {
-            this.responseBody = responseBody;
-            this.progressListener = progressListener;
-        }
-
-        @Override
-        public MediaType contentType() {
-            return responseBody.contentType();
-        }
-
-        @Override
-        public long contentLength() {
-            return responseBody.contentLength();
-        }
-
-        @Override
-        public BufferedSource source() {
-            if (bufferedSource == null) {
-                bufferedSource = Okio.buffer(source(responseBody.source()));
-            }
-            return bufferedSource;
-        }
-
-        private Source source(Source source) {
-            return new ForwardingSource(source) {
-                long totalBytesRead = 0L;
-
-                @Override
-                public long read(Buffer sink, long byteCount) throws IOException {
-                    long bytesRead = super.read(sink, byteCount);
-                    // read() returns the number of bytes read, or -1 if this source is exhausted.
-                    totalBytesRead += bytesRead != -1 ? bytesRead : 0;
-                    progressListener.update(totalBytesRead, responseBody.contentLength(), bytesRead == -1);
-                    return bytesRead;
-                }
-            };
-        }
+    @Override public MediaType contentType() {
+      return responseBody.contentType();
     }
 
-    interface ProgressListener {
-        void update(long bytesRead, long contentLength, boolean done);
+    @Override public long contentLength() {
+      return responseBody.contentLength();
     }
 
-    final ProgressListener progressListener = new ProgressListener() {
-        @Override
-        public void update(long bytesRead, long contentLength, boolean done) {
-            // TODO: consider wrapping the  update in an observable that you can throttle
-            // something like this: https://groups.google.com/forum/#!msg/rxjava/aqDM7Eq3zT8/PCF_7pdlGgAJ
-//                Log.v(LOG_TAG, String.format("%d%% done\n", (100 * bytesRead) / contentLength));
+    @Override public BufferedSource source() {
+      if (bufferedSource == null) {
+        bufferedSource = Okio.buffer(source(responseBody.source()));
+      }
+      return bufferedSource;
+    }
+
+    private Source source(Source source) {
+      return new ForwardingSource(source) {
+        long totalBytesRead = 0L;
+
+        @Override public long read(Buffer sink, long byteCount) throws IOException {
+          long bytesRead = super.read(sink, byteCount);
+          // read() returns the number of bytes read, or -1 if this source is exhausted.
+          totalBytesRead += bytesRead != -1 ? bytesRead : 0;
+          progressListener.update(totalBytesRead, responseBody.contentLength(), bytesRead == -1);
+          return bytesRead;
         }
-    };
+      };
+    }
+  }
+
+  class LoggingInterceptor implements Interceptor {
+    @Override public Response intercept(Interceptor.Chain chain) throws IOException {
+      Request request = chain.request();
+
+      long t1 = System.nanoTime();
+      Log.d(LOG_TAG,
+          String.format("Sending request %s on %s%n%s", request.url(), chain.connection(),
+              request.headers()));
+
+      Response response = chain.proceed(request);
+
+      long t2 = System.nanoTime();
+      Log.d(LOG_TAG, String.format("Received %d response for %s in %.1fms%n%s", response.code(),
+          response.request().url(), (t2 - t1) / 1e6d, response.headers()));
+
+      return response;
+    }
+  }
 }
