@@ -31,6 +31,7 @@ env:
 
 # Emulator Management: Create, Start and Wait
 before_script:
+  - "npm install react-native@0.34"
   - android list targets
   - echo no | android create avd --force -n test -t android-23 --abi armeabi-v7a
   - emulator -avd test -no-audio -no-window -memory 2048 -partition-size 2048 &
