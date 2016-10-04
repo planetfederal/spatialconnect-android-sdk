@@ -42,7 +42,7 @@ import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Action1;
 
-public class LocationStore extends GeoPackageStore {
+public class LocationStore extends GeoPackageStore implements  SCSpatialStore, SCDataStoreLifeCycle {
 
     private static final String LOG_TAG = LocationStore.class.getSimpleName();
     private final String LAST_KNOWN_TABLE = "last_known_location";

@@ -27,7 +27,7 @@ import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import rx.Observable;
 import rx.Subscriber;
 
-public class GeoJsonStore extends SCDataStore {
+public class GeoJsonStore extends SCDataStore implements  SCSpatialStore, SCDataStoreLifeCycle {
 
     private static final String LOG_TAG = GeoJsonStore.class.getSimpleName();
     public static final String TYPE = "geojson";

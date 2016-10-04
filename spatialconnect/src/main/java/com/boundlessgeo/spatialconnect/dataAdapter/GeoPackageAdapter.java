@@ -23,6 +23,7 @@ import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.db.GeoPackageContents;
 import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
+import com.boundlessgeo.spatialconnect.tiles.GpkgTileProvider;
 import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
@@ -34,6 +35,9 @@ import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.TileOverlay;
+import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.squareup.sqlbrite.BriteDatabase;
 import com.squareup.sqlbrite.SqlBrite;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -471,6 +475,19 @@ public class GeoPackageAdapter extends SCDataAdapter {
 
     public Map<String, SCGpkgTileSource> getTileSources() {
         return gpkg.getTileSources();
+    }
+
+    public void overlayFromLayer(String layer, GoogleMap mapView) {
+        Map<String, SCGpkgTileSource> tileSources = getTileSources();
+        if (tileSources.size() > 0) {
+            if (tileSources.keySet().contains(layer)) {
+                mapView.addTileOverlay(
+                        new TileOverlayOptions().tileProvider(
+                                new GpkgTileProvider(tileSources.get(layer))
+                        )
+                );
+            }
+        }
     }
 
     /**
