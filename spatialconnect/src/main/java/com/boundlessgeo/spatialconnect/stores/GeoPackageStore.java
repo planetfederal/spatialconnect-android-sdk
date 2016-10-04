@@ -150,7 +150,7 @@ public class GeoPackageStore extends SCDataStore implements SCRasterStore {
 
     @Override
     public void overlayFromLayer(String layerName, GoogleMap map) {
-
+        ((GeoPackageAdapter) getAdapter()).overlayFromLayer(layerName, map);
     }
 
     @Override
