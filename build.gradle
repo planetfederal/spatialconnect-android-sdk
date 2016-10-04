@@ -20,7 +20,7 @@ allprojects {
             url 'https://repo.eclipse.org/content/repositories/paho-releases/'
         }
         maven {
-            url '../../node_modules/react-native/android'
+            url '/home/travis/build/boundlessgeo/spatialconnect-android-sdk/node_modules/react-native/android'
         }
     }
 }
