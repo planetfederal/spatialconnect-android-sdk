@@ -30,6 +30,7 @@ env:
     - ADB_INSTALL_TIMEOUT=8
 
 install:
+  - npm install -g npm@2
   - npm install react-native@0.34
 
 # Emulator Management: Create, Start and Wait
