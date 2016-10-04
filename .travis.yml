@@ -31,7 +31,7 @@ env:
 
 install:
   - npm install -g npm@2
-  - npm install react-native@0.34
+  - npm install react-native@0.34 -dd
 
 # Emulator Management: Create, Start and Wait
 before_script:
