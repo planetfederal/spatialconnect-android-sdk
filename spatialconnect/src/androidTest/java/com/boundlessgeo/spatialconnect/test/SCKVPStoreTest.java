@@ -5,6 +5,7 @@ import android.content.Context;
 import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.FileOutputStream;
@@ -16,6 +17,7 @@ import java.util.Map;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
+@Ignore
 public class SCKVPStoreTest extends BaseTestCase {
 
     @Before

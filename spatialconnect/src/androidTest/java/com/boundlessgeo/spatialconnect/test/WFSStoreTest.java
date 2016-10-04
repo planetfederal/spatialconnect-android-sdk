@@ -12,6 +12,7 @@ import com.boundlessgeo.spatialconnect.stores.WFSStore;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -21,6 +22,7 @@ import rx.observers.TestSubscriber;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
+@Ignore
 public class WFSStoreTest extends BaseTestCase {
 
     private static SpatialConnect sc;

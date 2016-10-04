@@ -25,6 +25,7 @@ import com.boundlessgeo.spatialconnect.scutilities.LocationHelper;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.lang.reflect.InvocationTargetException;
@@ -33,6 +34,7 @@ import java.util.Arrays;
 
 import rx.observers.TestSubscriber;
 
+@Ignore
 public class LocationHelperTest extends BaseTestCase {
 
     private static LocationManager locationManager;
