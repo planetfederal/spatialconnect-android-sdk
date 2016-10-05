@@ -17,7 +17,6 @@ import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
 
-@Ignore
 public class SCBackendServiceTest extends BaseTestCase {
 
     private static SpatialConnect sc;
