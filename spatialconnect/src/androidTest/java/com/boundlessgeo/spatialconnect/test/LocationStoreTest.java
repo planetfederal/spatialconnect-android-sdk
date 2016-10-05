@@ -24,7 +24,6 @@ import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
 
-@Ignore
 public class LocationStoreTest extends BaseTestCase {
 
     private static SpatialConnect sc;
