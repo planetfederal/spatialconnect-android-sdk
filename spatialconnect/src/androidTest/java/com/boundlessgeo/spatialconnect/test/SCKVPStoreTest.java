@@ -17,7 +17,6 @@ import java.util.Map;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
-@Ignore
 public class SCKVPStoreTest extends BaseTestCase {
 
     @Before
