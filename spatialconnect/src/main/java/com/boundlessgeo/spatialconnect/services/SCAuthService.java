@@ -149,9 +149,8 @@ public class SCAuthService extends SCService {
         });
     }
 
-    public static String getAccessToken() throws IOException {
+    public static String getAccessToken() {
         return accessToken;
     }
-
 
 }

@@ -357,15 +357,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
     private void handleAccessToken(ReadableMap message) {
         Log.d(LOG_TAG, "Handling AUTHSERVICE_ACCESS_TOKEN message " + message.toString());
-        try {
-            String accessToken = SCAuthService.getAccessToken();
-            if (accessToken != null) {
-                sendEvent(message.getInt("type"), accessToken);
-            }
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-            Log.w(LOG_TAG, "Could not get access token");
+        String accessToken = SCAuthService.getAccessToken();
+        if (accessToken != null) {
+            sendEvent(message.getInt("type"), accessToken);
         }
     }
 
