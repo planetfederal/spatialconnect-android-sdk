@@ -27,7 +27,6 @@ import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
 
-@Ignore
 public class SCGpkgFeatureSourceTest extends BaseTestCase {
 
     private static SpatialConnect sc;
@@ -39,8 +38,7 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
         sc.addConfig(remoteConfigFile);
         sc.startAllServices();
         sc.getAuthService().authenticate("admin@something.com", "admin");
-        waitForStoreToStart(RIO_GPKG_ID);
-        waitForStoreToStart(WHITEHORSE_GPKG_ID);
+        waitForStoreToStart(HAITI_GPKG_ID);
     }
 
     @AfterClass
@@ -51,25 +49,22 @@ public class SCGpkgFeatureSourceTest extends BaseTestCase {
 
     @Test
     public void testGetGeoPackageContents() {
-        SCDataStore rio = sc.getDataService().getStoreById(RIO_GPKG_ID);
-        int contentsSize = ((GeoPackageAdapter) rio.getAdapter()).getGeoPackageContents().size();
-        assertEquals("The Rio gpkg should have 27 rows in the gpkg_contents table.", 27, contentsSize);
-        SCDataStore whitehorse = sc.getDataService().getStoreById(WHITEHORSE_GPKG_ID);
-        contentsSize = ((GeoPackageAdapter) whitehorse.getAdapter()).getGeoPackageContents().size();
-        assertEquals("The Whitehorse gpkg should only have 1 row in the gpkg_contents table.", 1, contentsSize);
+        SCDataStore whitehorse = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        int contentsSize = ((GeoPackageAdapter) whitehorse.getAdapter()).getGeoPackageContents().size();
+        assertEquals("The Haiti gpkg should only have 3 row in the gpkg_contents table.", 3, contentsSize);
     }
 
     @Test
     public void testGetFeatureSources() {
-        SCDataStore store = sc.getDataService().getStoreById(RIO_GPKG_ID);
+        SCDataStore store = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         int featureSourcesSize = ((GeoPackageAdapter) store.getAdapter()).getFeatureSources().size();
-        assertEquals("The Haiti gpkg should have 27 feature tables.", 27, featureSourcesSize);
+        assertEquals("The Haiti gpkg should have 3 feature tables.", 3, featureSourcesSize);
     }
 
-    @Test
+    @Ignore
     public void testRtreeIndexIsCreated() {
-        BriteDatabase db = new SCSqliteHelper(testContext, "Rio").db();
-        SCDataStore store = sc.getDataService().getStoreById(RIO_GPKG_ID);
+        BriteDatabase db = new SCSqliteHelper(testContext, HAITI_GPKG_ID).db();
+        SCDataStore store = sc.getDataService().getStoreById(HAITI_GPKG_ID);
         Cursor cursor = null;
         for (SCGpkgFeatureSource source : ((GeoPackageAdapter) store.getAdapter()).getFeatureSources().values()) {
             try {
