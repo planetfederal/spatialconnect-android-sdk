@@ -83,9 +83,9 @@ public class SCDataService extends SCService {
         this.storeEvents = storeEventSubject.publish();
         addDefaultStoreImpls();
         this.context = context;
-        //initializeDefaultStore();
-        //initializeFormStore();
-        //initializeLocationStore();
+        initializeDefaultStore();
+        initializeFormStore();
+        initializeLocationStore();
     }
 
     private void initializeDefaultStore() {
