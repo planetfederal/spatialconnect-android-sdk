@@ -58,7 +58,6 @@ import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertTrue;
 
-@Ignore
 public class GeoPackageTest extends BaseTestCase {
 
     private static SpatialConnect sc;

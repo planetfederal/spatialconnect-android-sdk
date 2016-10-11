@@ -27,9 +27,8 @@ public class SCGpkgTileSourceTest extends BaseTestCase {
         deleteDatabases();
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        sc.addConfig(remoteConfigFile);
+        sc.addConfig(localConfigFile);
         sc.startAllServices();
-        sc.getAuthService().authenticate("admin@something.com", "admin");
         waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
 
