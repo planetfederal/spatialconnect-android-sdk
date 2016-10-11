@@ -3,10 +3,34 @@
     {
       "store_type": "geojson",
       "version": "1",
-      "uri": "nola_polling_places.json",
-      "isMainBundle":true,
-      "id":"50402599-3ad3-439f-9c49-3c8a7579933b",
-      "name":"Simple"
+      "uri": "https://s3.amazonaws.com/test.spacon/bars.geojson",
+      "id":"3dc5afc9-393b-444c-8581-582e2c2d98a3",
+      "name":"bars",
+      "default_layers": [ ]
+    },
+    {
+      "id": "c96c0155-31b3-434a-8171-beb36fb24512",
+      "store_type": "gpkg",
+      "version": "1",
+      "uri": "https://s3.amazonaws.com/test.spacon/haiti4mobile.gpkg",
+      "name": "Haiti",
+      "default_layers": [ ]
+    },
+    {
+      "id": "deba6ab8-016e-4e0a-8010-c2e77d72d0a1",
+      "store_type": "gpkg",
+      "version": "1",
+      "uri": "https://s3.amazonaws.com/test.spacon/whitehorse-small.gpkg",
+      "name": "WhiteHorse",
+      "default_layers": [ ]
+    },
+    {
+      "id":"71522e9b-3ec6-48c3-8d5c-57c8d14baf6a",
+      "store_type":"wfs",
+      "version":"1.1.0",
+      "uri":"http://efc-dev.boundlessgeo.com:8080/geoserver/spatialconnect/ows",
+      "name":"wfstest",
+      "default_layers":["baseball_team"]
     }
   ],
   "forms":[

@@ -14,8 +14,13 @@
  */
 package com.boundlessgeo.spatialconnect.test;
 
+import android.database.Cursor;
+
 import com.boundlessgeo.spatialconnect.SpatialConnect;
+import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
+import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
+import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -30,6 +35,7 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
+import com.squareup.sqlbrite.BriteDatabase;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
@@ -57,15 +63,16 @@ public class GeoPackageTest extends BaseTestCase {
     private static SpatialConnect sc;
     private static int TIMEOUT = 2;
     private static SCBoundingBox HAITI_BOUNDING_BOX = new SCBoundingBox(-73.5315, 18.0728, -71.0211, 19.994);
+    private static BriteDatabase haiti;
 
     @BeforeClass
     public static void setUp() throws Exception {
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        sc.addConfig(remoteConfigFile);
+        sc.addConfig(localConfigFile);
         sc.startAllServices();
-        sc.getAuthService().authenticate("admin@something.com", "admin");
-        waitForStoreToStart(HAITI_GPKG_ID);
+        haiti = new SCSqliteHelper(testContext, BaseTestCase.HAITI_GPKG_ID).db();
+        waitForStoreToStart(BaseTestCase.HAITI_GPKG_ID);
     }
 
     @AfterClass
@@ -74,24 +81,18 @@ public class GeoPackageTest extends BaseTestCase {
         deleteDatabases();
     }
 
+//    public GeoPackageTest(SpatialConnect spatialConnect) {
+//        sc = spatialConnect;
+//    }
+
     @Test
     public void testThatDataServiceStartedGeoPackageStore() {
         boolean containsGeoPackageStore = false;
-        for (SCDataStore store : sc.getDataService().getActiveStores()) {
-            assertTrue("The store should be running.",
-                    store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)
-            );
-            if (store.getType().equals("gpkg")) {
-                containsGeoPackageStore = true;
-                assertTrue("The store's adapter should be connected.",
-                        store.getAdapter().getStatus()
-                                .equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)
-                );
-            }
-        }
-        assertTrue("A geopackage store should be running.", containsGeoPackageStore);
-        // test that store has the correct status
-        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
+
+        assertTrue("The store's adapter should be connected.",
+                gpkgStore.getAdapter().getStatus()
+                        .equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED));
         assertNotNull("The store should downloaded locally", gpkgStore);
         assertEquals("The store should be running", SCDataStoreStatus.SC_DATA_STORE_RUNNING, gpkgStore.getStatus());
     }
@@ -102,7 +103,7 @@ public class GeoPackageTest extends BaseTestCase {
                 new SCPredicate(HAITI_BOUNDING_BOX, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
         );
         TestSubscriber testSubscriber = new TestSubscriber();
-        sc.getDataService().queryStores(Arrays.asList(HAITI_GPKG_ID), filter)
+        sc.getDataService().queryStores(Arrays.asList(BaseTestCase.HAITI_GPKG_ID), filter)
                 .timeout(TIMEOUT, TimeUnit.SECONDS)
                 .subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
@@ -111,7 +112,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageQueryWithin() {
-        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
 
         SCQueryFilter filter = new SCQueryFilter(
                 new SCPredicate(HAITI_BOUNDING_BOX, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
@@ -128,7 +129,7 @@ public class GeoPackageTest extends BaseTestCase {
         );
         SCSpatialFeature feature = (SCSpatialFeature) testSubscriber.getOnNextEvents().get(0);
         assertEquals("The store id should be for Rio.",
-                HAITI_GPKG_ID,
+                BaseTestCase.HAITI_GPKG_ID,
                 feature.getKey().getStoreId()
         );
         assertEquals("The layer should be point_features.",
@@ -146,14 +147,14 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageQueryContains() {
-        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
 
         SCQueryFilter filter = new SCQueryFilter(
                 new SCPredicate(HAITI_BOUNDING_BOX, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
         );
         filter.addLayerId("point_features");
         TestSubscriber testSubscriber = new TestSubscriber();
-        gpkgStore.query(filter).timeout(2, TimeUnit.SECONDS).subscribe(testSubscriber);
+        gpkgStore.query(filter).timeout(10, TimeUnit.SECONDS).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         assertEquals("The query should have the first 100 features, b/c we specify a layer without a limit.",
                 (Integer) 100,
@@ -161,7 +162,7 @@ public class GeoPackageTest extends BaseTestCase {
         );
         SCSpatialFeature feature = (SCSpatialFeature) testSubscriber.getOnNextEvents().get(0);
         assertEquals("The store id should be for Rio.",
-                HAITI_GPKG_ID,
+                BaseTestCase.HAITI_GPKG_ID,
                 feature.getKey().getStoreId()
         );
         assertEquals("The layer should be police_stations.",
@@ -179,8 +180,8 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageQueryById() {
-        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
-        SCKeyTuple featureKey = new SCKeyTuple(HAITI_GPKG_ID, "point_features", "1");
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
+        SCKeyTuple featureKey = new SCKeyTuple(BaseTestCase.HAITI_GPKG_ID, "point_features", "1");
         TestSubscriber testSubscriber = new TestSubscriber();
         gpkgStore.queryById(featureKey).timeout(10, TimeUnit.SECONDS).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
@@ -197,7 +198,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageCreateFeature() {
-        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
         SCSpatialFeature newFeature = getTestHaitiPoint();
         // remove the feature id b/c we want the db to create that for us
         newFeature.setId("");
@@ -221,7 +222,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageUpdateFeature() {
-        final SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        final SCDataStore gpkgStore = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
         final SCSpatialFeature pointToUpdate = getTestHaitiPoint();
         TestSubscriber testSubscriber = new TestSubscriber();
         gpkgStore.update(pointToUpdate).subscribe(testSubscriber);
@@ -241,7 +242,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageDeleteFeature() {
-        final SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        final SCDataStore gpkgStore = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
         final SCSpatialFeature pointToDelete = getTestLinearFeatureHaitiPoint();
         TestSubscriber testSubscriber = new TestSubscriber();
         gpkgStore.delete(pointToDelete.getKey()).subscribe(testSubscriber);
@@ -258,7 +259,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageCreateFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
-        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
         TestSubscriber testSubscriber = new TestSubscriber();
         SCSpatialFeature feature = getTestHaitiPoint();
         feature.setLayerId("invalid_table_name");
@@ -272,7 +273,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageUpdateFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
-        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
         TestSubscriber testSubscriber = new TestSubscriber();
         SCSpatialFeature feature = getTestHaitiPoint();
         feature.setLayerId("invalid_table_name");
@@ -287,7 +288,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageDeleteFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
-        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
         TestSubscriber testSubscriber = new TestSubscriber();
         SCSpatialFeature feature = getTestHaitiPoint();
         feature.setLayerId("invalid_table_name");
@@ -301,7 +302,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageQueryByIdThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
-        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        SCDataStore gpkgStore = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
         TestSubscriber testSubscriber = new TestSubscriber();
         SCSpatialFeature feature = getTestHaitiPoint();
         feature.setLayerId("invalid_table_name");
@@ -324,7 +325,7 @@ public class GeoPackageTest extends BaseTestCase {
                         .subscribe(new Action1<SCStoreStatusEvent>() {
                             @Override
                             public void call(SCStoreStatusEvent event) {
-                                if (event.getStoreId().equals(HAITI_GPKG_ID) &&
+                                if (event.getStoreId().equals(BaseTestCase.HAITI_GPKG_ID) &&
                                         event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_STOPPED)) {
                                     subscriber.onCompleted();
                                 }
@@ -333,12 +334,137 @@ public class GeoPackageTest extends BaseTestCase {
             }}).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertCompleted();
-        GeoPackageStore gpkgStore = (GeoPackageStore) sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        GeoPackageStore gpkgStore = (GeoPackageStore) sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
         assertTrue("The geopackage should not be running b/c it is not valid.  The status was " +
                 gpkgStore.getStatus().name(),
                 gpkgStore.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_STOPPED)
         );
     }
+
+    //test Feature sources
+
+    @Test
+    public void testGetGeoPackageContents() {
+        SCDataStore whitehorse = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
+        int contentsSize = ((GeoPackageAdapter) whitehorse.getAdapter()).getGeoPackageContents().size();
+        assertEquals("The Haiti gpkg should only have 3 row in the gpkg_contents table.", 3, contentsSize);
+    }
+
+    @Test
+    public void testGetFeatureSources() {
+        SCDataStore store = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
+        int featureSourcesSize = ((GeoPackageAdapter) store.getAdapter()).getFeatureSources().size();
+        assertEquals("The Haiti gpkg should have 3 feature tables.", 3, featureSourcesSize);
+    }
+
+    //base sqliteHelperTest
+    @Ignore
+    public void testGeoPackageStoreCanBeAccessedBySCSqliteHelper() {
+        Cursor cursor = haiti.query("SELECT COUNT(*) FROM point_features;");
+        cursor.moveToFirst();
+        assertEquals("The point_features table should only have 100 rows.", 100, cursor.getInt(0));
+    }
+
+    // test table creation functions
+    @Ignore
+    public void test_CreateSpatialIndex_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT CreateSpatialIndex(?, ?, ?);", new String[]{"point_features", "geom", "fid"});
+        cursor.moveToFirst();
+        Cursor cursor2 = haiti.query("SELECT COUNT(*) FROM rtree_police_stations_geom;");
+        cursor2.moveToFirst();
+        assertEquals("The spatial index tables should exist and be populated.", 150, cursor2.getInt(0));
+    }
+
+    // test geometry i/o functions
+    @Test
+    public void test_ST_AsText_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT ST_AsText(the_geom) FROM point_features LIMIT 1;");
+        cursor.moveToFirst();
+        assertTrue("The geom should start with Point if ST_AsText worked.", cursor.getString(0).startsWith("Point"));
+    }
+
+    @Ignore
+    public void test_ST_GeomFromText_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT ST_GeomFromText('Point (-72.981321 18.42740796)');");
+        cursor.moveToFirst();
+        assertTrue("ST_GeomFromText should return a blob if it loaded correctly.", cursor.getColumnCount() == 1);
+        assertTrue("ST_GeomFromText should return a blob if it loaded correctly.", cursor.getBlob(0).length > 0);
+
+    }
+
+    @Test
+    public void test_ST_WKTToSQL_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT ST_WKTToSQL('Point (0 0)');");
+        cursor.moveToFirst();
+        assertTrue("ST_WKTToSQL should return a blob if it loaded correctly.", cursor.getColumnCount() == 1);
+        assertTrue("ST_WKTToSQL should return a blob if it loaded correctly.", cursor.getBlob(0).length > 0);
+    }
+
+
+    // test geometry inspection functions
+    @Test
+    public void test_ST_MinX_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT ST_MinX(the_geom) FROM point_features LIMIT 1;");
+        cursor.moveToFirst();
+        assertTrue("ST_MinX should return a number if it loaded correctly.", cursor.getCount() == 1);
+    }
+
+    @Test
+    public void test_ST_MaxX_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT ST_MaxX(the_geom) FROM point_features LIMIT 1;");
+        cursor.moveToFirst();
+        assertTrue("ST_MaxX should return a number if it loaded correctly.", cursor.getCount() == 1);
+    }
+
+    @Test
+    public void test_ST_MinY_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT ST_MinY(the_geom) FROM point_features LIMIT 1;");
+        cursor.moveToFirst();
+        assertTrue("ST_MinY should return a number if it loaded correctly.", cursor.getCount() == 1);
+    }
+
+    @Test
+    public void test_ST_MaxY_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT ST_MaxY(the_geom) FROM point_features LIMIT 1;");
+        cursor.moveToFirst();
+        assertTrue("ST_MaxY should return a number if it loaded correctly.", cursor.getCount() == 1);
+    }
+
+    @Test
+    public void test_ST_SRID_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT ST_SRID(the_geom) FROM point_features LIMIT 1;");
+        cursor.moveToFirst();
+        assertEquals("ST_SRID should return 4326 geom column in point_features.", 4326, cursor.getInt(0));
+    }
+
+    @Test
+    public void test_ST_IsMeasured_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT ST_IsMeasured(the_geom) FROM point_features LIMIT 1;");
+        cursor.moveToFirst();
+        assertEquals("ST_IsMeasured should return 0 for point features.", 0, cursor.getInt(0));
+    }
+
+    @Test
+    public void test_ST_Is3d_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT ST_Is3d(the_geom) FROM point_features LIMIT 1;");
+        cursor.moveToFirst();
+        assertEquals("ST_Is3d should return 0 for point features.", 0, cursor.getInt(0));
+    }
+
+    @Test
+    public void test_ST_CoordDim_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT ST_CoordDim(the_geom) FROM point_features LIMIT 1;");
+        cursor.moveToFirst();
+        assertEquals("The dimensions should be 2.", 2, cursor.getInt(0));
+    }
+
+    @Test
+    public void test_ST_GeometryType_FunctionLoaded() {
+        Cursor cursor = haiti.query("SELECT ST_GeometryType(the_geom) FROM point_features LIMIT 1;");
+        cursor.moveToFirst();
+        assertEquals("The geometry type should be Point.", "Point", cursor.getString(0));
+    }
+
 
     private static void waitForStoreToStart(final String storeId) {
         System.out.println("Waiting for store " + storeId + " to start");
@@ -387,7 +513,7 @@ public class GeoPackageTest extends BaseTestCase {
         // pick a random number between 1 an 100
         scSpatialFeature.setId(String.valueOf(new Random().nextInt((100))));
         scSpatialFeature.setLayerId("point_features");
-        scSpatialFeature.setStoreId(HAITI_GPKG_ID);
+        scSpatialFeature.setStoreId(BaseTestCase.HAITI_GPKG_ID);
         scSpatialFeature.getProperties().put("NAME", "some point feature 123");
         scSpatialFeature.getProperties().put("OTHER_TAGS", "we have dogs at this one");
         return scSpatialFeature;
@@ -406,7 +532,7 @@ public class GeoPackageTest extends BaseTestCase {
         // pick a random number between 1 an 100
         scSpatialFeature.setId(String.valueOf(new Random().nextInt((100))));
         scSpatialFeature.setLayerId("linear_features");
-        scSpatialFeature.setStoreId(HAITI_GPKG_ID);
+        scSpatialFeature.setStoreId(BaseTestCase.HAITI_GPKG_ID);
         scSpatialFeature.getProperties().put("NAME", "some point feature 123");
         scSpatialFeature.getProperties().put("OTHER_TAGS", "we have dogs at this one");
         return scSpatialFeature;

@@ -27,6 +27,7 @@ import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
 
+@Ignore
 public class SCGpkgFeatureSourceTest extends BaseTestCase {
 
     private static SpatialConnect sc;

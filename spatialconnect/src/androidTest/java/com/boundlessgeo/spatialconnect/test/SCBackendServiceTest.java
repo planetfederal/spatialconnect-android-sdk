@@ -17,6 +17,7 @@ import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
 
+@Ignore
 public class SCBackendServiceTest extends BaseTestCase {
 
     private static SpatialConnect sc;
@@ -33,7 +34,7 @@ public class SCBackendServiceTest extends BaseTestCase {
     @AfterClass
     public static void tearDown() throws Exception {
         HttpHandler.getInstance().cancelAllRequests();
-        deleteDatabases();
+//        deleteDatabases();
     }
 
     @Test

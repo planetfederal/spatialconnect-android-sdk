@@ -54,10 +54,11 @@ public abstract class BaseTestCase {
     protected static File localConfigFile;
 
     protected final static String RIO_GPKG_ID = "9d415438-08c5-48f5-b80b-d5bc9c810b3d";
-    protected final static String HAITI_GPKG_ID = "c96c0155-31b3-434a-8171-beb36fb24512";
+    public final static String HAITI_GPKG_ID = "c96c0155-31b3-434a-8171-beb36fb24512";
     protected final static String WHITEHORSE_GPKG_ID = "deba6ab8-016e-4e0a-8010-c2e77d72d0a1";
-    protected final static String GEOJSON_STORE_ID = "50402599-3ad3-439f-9c49-3c8a7579933b";
+    protected final static String GEOJSON_STORE_ID = "3e6c072e-8e62-41be-8d1a-7a3116df9c16";
     protected final static String POLYGONS_GPKG_ID = "45d45141-e1a3-4044-95f0-7d4a37cf23e1";
+    protected final static String BARS_GEO_JSON_ID = "3dc5afc9-393b-444c-8581-582e2c2d98a3";
 
     public BaseTestCase() {
     }

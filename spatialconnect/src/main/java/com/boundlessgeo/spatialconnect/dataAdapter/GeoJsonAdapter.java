@@ -68,7 +68,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
                 adapterInstance.connect();
 
                 final String filePath = scStoreConfig.getUniqueID() + EXT;
-                final File geoJsonFile = new File(filePath);
+                final File geoJsonFile = new File(context.getFilesDir(), filePath); //new File(filePath);
 
                 if (!geoJsonFile.exists()) {
                     if (scStoreConfig.getUri().startsWith("http")) {
@@ -221,14 +221,22 @@ public class GeoJsonAdapter extends SCDataAdapter {
      * @return
      */
     private String getResourceAsString() {
-        int resourceId = context.getResources().getIdentifier(
-                scStoreConfig.getUri().split("\\.")[0], "raw", context.getPackageName()
-        );
-        InputStream is = context.getResources().openRawResource(resourceId);
+        InputStream is = null;
+        StringBuilder stringBuilder = null;
+        try {
+        final String filePath = scStoreConfig.getUniqueID() + EXT;
+        final File geoJsonFile = new File(context.getFilesDir(), filePath);
+
+//        int resourceId = context.getResources().getIdentifier(
+//                scStoreConfig.getUri().split("\\.")[0], "raw", context.getPackageName()
+//        );
+        //InputStream is = context.getResources().openRawResource(resourceId);
+            is = FileUtils.openInputStream(geoJsonFile);
+
         BufferedReader bufferedreader = new BufferedReader(new InputStreamReader(is));
         String line;
-        StringBuilder stringBuilder = new StringBuilder();
-        try {
+         stringBuilder = new StringBuilder();
+
             while ((line = bufferedreader.readLine()) != null) {
                 stringBuilder.append(line);
             }
