@@ -150,6 +150,9 @@ public class GeoJsonAdapter extends SCDataAdapter {
                         }
                     }
 
+                } else {
+                    adapterInstance.connected();
+                    subscriber.onCompleted();
                 }
             }
         });

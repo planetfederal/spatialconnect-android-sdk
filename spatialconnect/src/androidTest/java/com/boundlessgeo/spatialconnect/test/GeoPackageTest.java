@@ -58,6 +58,7 @@ import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertTrue;
 
+
 public class GeoPackageTest extends BaseTestCase {
 
     private static SpatialConnect sc;
@@ -78,16 +79,11 @@ public class GeoPackageTest extends BaseTestCase {
     @AfterClass
     public static void tearDown() throws Exception {
         HttpHandler.getInstance().cancelAllRequests();
-        deleteDatabases();
+        testContext.deleteDatabase(HAITI_GPKG_ID);
     }
-
-//    public GeoPackageTest(SpatialConnect spatialConnect) {
-//        sc = spatialConnect;
-//    }
 
     @Test
     public void testThatDataServiceStartedGeoPackageStore() {
-        boolean containsGeoPackageStore = false;
         SCDataStore gpkgStore = sc.getDataService().getStoreById(BaseTestCase.HAITI_GPKG_ID);
 
         assertTrue("The store's adapter should be connected.",
