@@ -182,8 +182,10 @@ public class SCConfigService extends SCService {
     @Override
     public void start() {
         Log.d(LOG_TAG, "Starting SCConfig Service.  Loading all configs");
-        loadConfigs();
-        this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
+        if (getStatus() != SCServiceStatus.SC_SERVICE_RUNNING) {
+            loadConfigs();
+            this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
+        }
     }
 
     /* Checks if external storage is available for read and write */
