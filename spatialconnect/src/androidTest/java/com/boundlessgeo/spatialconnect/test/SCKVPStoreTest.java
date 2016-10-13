@@ -5,6 +5,7 @@ import android.content.Context;
 import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.FileOutputStream;

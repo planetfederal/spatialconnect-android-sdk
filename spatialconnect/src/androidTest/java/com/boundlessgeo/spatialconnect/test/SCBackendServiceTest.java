@@ -8,6 +8,7 @@ import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -16,6 +17,7 @@ import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
 
+@Ignore
 public class SCBackendServiceTest extends BaseTestCase {
 
     private static SpatialConnect sc;
@@ -32,7 +34,7 @@ public class SCBackendServiceTest extends BaseTestCase {
     @AfterClass
     public static void tearDown() throws Exception {
         HttpHandler.getInstance().cancelAllRequests();
-        deleteDatabases();
+//        deleteDatabases();
     }
 
     @Test

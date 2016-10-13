@@ -110,7 +110,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                         subscriber.onCompleted();
                     }
                     else {
-                        Log.w(LOG_TAG, "GeoPackage was not valid.");
+                        Log.w(LOG_TAG, "GeoPackage was not valid, "+ gpkg.getName());
                         adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
                         subscriber.onError(new Throwable("GeoPackage was not valid."));
                     }
@@ -139,7 +139,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                                                     subscriber.onCompleted();
                                                 }
                                                 else {
-                                                    Log.w(LOG_TAG, "GeoPackage was not valid.");
+                                                    Log.w(LOG_TAG, "GeoPackage was not valid, " + gpkg.getName());
                                                     adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
                                                     subscriber.onError(new Throwable("GeoPackage was not valid."));
                                                 }
@@ -167,7 +167,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                             subscriber.onCompleted();
                         }
                         else {
-                            Log.w(LOG_TAG, "GeoPackage was not valid.");
+                            Log.w(LOG_TAG, "GeoPackage was not valid, "+ gpkg.getName());
                             adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
                             subscriber.onError(new Throwable("GeoPackage was not valid."));
                         }

@@ -29,6 +29,7 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -38,7 +39,6 @@ import rx.observers.TestSubscriber;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
-
 public class GeoJsonTest extends BaseTestCase {
 
     private static SpatialConnect sc;
@@ -47,17 +47,15 @@ public class GeoJsonTest extends BaseTestCase {
     public static void setUp() throws Exception {
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        sc.addConfig(remoteConfigFile);
+        sc.addConfig(localConfigFile);
         sc.startAllServices();
-        sc.getAuthService().authenticate("admin@something.com", "admin");
-        waitForStoreToStart(RIO_GPKG_ID);
+        waitForStoreToStart(BARS_GEO_JSON_ID);
     }
 
     @AfterClass
     public static void tearDown() throws Exception {
         HttpHandler.getInstance().cancelAllRequests();
-        testContext.deleteFile("nola_polling_places.json");
-        deleteDatabases();
+        testContext.deleteFile(BARS_GEO_JSON_ID + ".json");
     }
 
     @Test
@@ -69,7 +67,7 @@ public class GeoJsonTest extends BaseTestCase {
             );
             if (store.getType().equals("geojson")) {
                 containsGeoJsonStore = true;
-                if (store.getStoreId().equals(GEOJSON_STORE_ID)) {
+                if (store.getStoreId().equals(BARS_GEO_JSON_ID)) {
                     assertTrue("The store's adapter should be connected",
                             store.getAdapter().getStatus().equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)
                     );
@@ -81,8 +79,8 @@ public class GeoJsonTest extends BaseTestCase {
 
     @Test
     public void testSearchGeoJsonStore() {
-        SCDataStore geoJsonStore = sc.getDataService().getStoreById(GEOJSON_STORE_ID);
-        SCBoundingBox bbox = new SCBoundingBox(-90.114326, 29.921762, -90.063558, 29.938573);
+        SCDataStore geoJsonStore = sc.getDataService().getStoreById(BARS_GEO_JSON_ID);
+        SCBoundingBox bbox = new SCBoundingBox(-77.11974,38.803149,-76.909393,38.995548);
         SCQueryFilter filter = new SCQueryFilter(
                 new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
         );
@@ -92,12 +90,12 @@ public class GeoJsonTest extends BaseTestCase {
         testSubscriber.assertCompleted();
         testSubscriber.assertNoErrors();
         assertEquals("The query should have returned 16 features.",
-                (Integer) 16,
+                (Integer) 30,
                 (Integer) testSubscriber.getOnNextEvents().size()
         );
         SCSpatialFeature feature = (SCSpatialFeature) testSubscriber.getOnNextEvents().get(0);
         assertEquals("The store id should be for the test geojson store.",
-                GEOJSON_STORE_ID,
+                BARS_GEO_JSON_ID,
                 feature.getKey().getStoreId()
         );
         assertEquals("The layer should be " + GeoJsonAdapter.DEFAULTLAYER,

@@ -18,7 +18,6 @@ import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
 
-@Ignore
 public class SCGpkgTileSourceTest extends BaseTestCase {
 
     private static SpatialConnect sc;
@@ -28,9 +27,8 @@ public class SCGpkgTileSourceTest extends BaseTestCase {
         deleteDatabases();
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        sc.addConfig(remoteConfigFile);
+        sc.addConfig(localConfigFile);
         sc.startAllServices();
-        sc.getAuthService().authenticate("admin@something.com", "admin");
         waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
 
@@ -50,12 +48,12 @@ public class SCGpkgTileSourceTest extends BaseTestCase {
                 "WhiteHorse",
                 whiteHorseTileSource.getTableName()
         );
-        assertEquals("The min zoom level of the WhiteHorse tile source should be 11.",
-                11,
+        assertEquals("The min zoom level of the WhiteHorse tile source should be 12.",
+                12,
                 (int) whiteHorseTileSource.getMinZoom()
         );
-        assertEquals("The max zoom level of the WhiteHorse tile source should be 18.",
-                18,
+        assertEquals("The max zoom level of the WhiteHorse tile source should be 12.",
+                12,
                 (int) whiteHorseTileSource.getMaxZoom()
         );
         assertEquals("The srs id of the WhiteHorse tile source should be 3857.",
