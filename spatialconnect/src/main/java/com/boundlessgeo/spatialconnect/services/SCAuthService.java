@@ -61,7 +61,7 @@ public class SCAuthService extends SCService {
 
     public static void logout() {
         // TODO: post to the API to logout and invalidate the auth token when it's implemented in the api
-        SCAuthService.loginStatus.onNext(false);
+        loginStatus.onNext(false);
     }
 
     /**
@@ -124,22 +124,27 @@ public class SCAuthService extends SCService {
                                     new Action1<Response>() {
                                         @Override
                                         public void call(Response response) {
-                                            try {
-                                                accessToken = new JSONObject(response.body().string())
+                                            if (response.isSuccessful()) {
+                                                try {
+                                                    accessToken = new JSONObject(response.body().string())
                                                         .getJSONObject("result").getString("token");
-                                                if (accessToken != null) {
-                                                    loginStatus.onNext(true);
+                                                    if (accessToken != null) {
+                                                        loginStatus.onNext(true);
+                                                    }
+                                                } catch (JSONException e) {
+                                                    e.printStackTrace();
+                                                } catch (IOException e) {
+                                                    e.printStackTrace();
                                                 }
-                                            } catch (JSONException e) {
-                                                e.printStackTrace();
-                                            } catch (IOException e) {
-                                                e.printStackTrace();
+                                            } else {
+                                                loginStatus.onNext(false);
                                             }
                                         }
                                 },
                                     new Action1<Throwable>() {
                                         @Override
                                         public void call(Throwable throwable) {
+                                            loginStatus.onNext(false);
                                             Log.e(LOG_TAG,"something went wrong refreshing token: " + throwable.getMessage());
                                         }
                                 });
