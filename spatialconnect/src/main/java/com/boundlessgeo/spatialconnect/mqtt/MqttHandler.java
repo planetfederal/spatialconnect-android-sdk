@@ -71,6 +71,7 @@ public class MqttHandler implements MqttCallback {
     public PublishSubject<Map<String, SCMessageOuterClass.SCMessage>> scMessageSubject = PublishSubject.create();
     public final static String REPLY_TO_TOPIC = String.format("/device/%s-replyTo", SCConfigService.getClientId());
     public static BehaviorSubject<Integer> clientConnected = BehaviorSubject.create(0);
+    private boolean isSecure;
 
     private MqttHandler(Context context) {
         this.context = context;
@@ -89,6 +90,11 @@ public class MqttHandler implements MqttCallback {
      */
     public void initialize(SCRemoteConfig config) {
         Log.d(LOG_TAG, "initializing MqttHander.");
+        if (config.getMqttHost().equalsIgnoreCase("ssl")) {
+            isSecure = true;
+        } else {
+            isSecure = false;
+        }
         String brokerUri = getMqttBrokerUri(config);
         client = new MqttAndroidClient(context, brokerUri, SCConfigService.getClientId());
         client.setCallback(this);
@@ -125,10 +131,13 @@ public class MqttHandler implements MqttCallback {
                         MqttConnectOptions options = new MqttConnectOptions();
                         options.setCleanSession(true);
                         options.setUserName(accessToken);
-                        options.setPassword("anypass".toCharArray());
-                        options.setSocketFactory(
-                            new SCSocketFactory(context.getResources().openRawResource(R.raw.ca))
-                        );
+
+                        if (isSecure) {
+                            options.setPassword("anypass".toCharArray());
+                            options.setSocketFactory(
+                                    new SCSocketFactory(context.getResources().openRawResource(R.raw.ca))
+                            );
+                        }
                         client.connect(options, context, new ConnectActionListener());
                     }
                     catch (MqttException e) {
