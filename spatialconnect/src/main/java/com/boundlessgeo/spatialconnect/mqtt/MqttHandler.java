@@ -90,7 +90,7 @@ public class MqttHandler implements MqttCallback {
      */
     public void initialize(SCRemoteConfig config) {
         Log.d(LOG_TAG, "initializing MqttHander.");
-        if (config.getMqttHost().equalsIgnoreCase("ssl")) {
+        if (config.getMqttProtocol().equalsIgnoreCase("ssl")) {
             isSecure = true;
         } else {
             isSecure = false;
@@ -132,7 +132,6 @@ public class MqttHandler implements MqttCallback {
                         options.setCleanSession(true);
                         options.setUserName(accessToken);
                         options.setPassword("anypass".toCharArray());
-
                         if (isSecure) {
                             options.setSocketFactory(
                                     new SCSocketFactory(context.getResources().openRawResource(R.raw.ca))
