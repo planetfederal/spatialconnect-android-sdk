@@ -65,7 +65,7 @@ public class WFSStoreTest extends BaseTestCase {
     public void testLayerNamesAreParsedFromCapabilities() {
         WFSStore store = (WFSStore) sc.getDataService().getStoreById(WFS_STORE_ID);
         assertTrue("There should be multiple layers.",
-                store.getLayerNames().size() > 0
+                store.layers().size() > 0
         );
     }
 

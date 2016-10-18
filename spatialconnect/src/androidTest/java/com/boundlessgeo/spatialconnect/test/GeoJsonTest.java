@@ -26,6 +26,7 @@ import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
+import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -85,7 +86,7 @@ public class GeoJsonTest extends BaseTestCase {
                 new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
         );
         TestSubscriber testSubscriber = new TestSubscriber();
-        geoJsonStore.query(filter).subscribe(testSubscriber);
+        ((SCSpatialStore) geoJsonStore).query(filter).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertCompleted();
         testSubscriber.assertNoErrors();
