@@ -4,6 +4,7 @@ import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
+import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
 import org.junit.AfterClass;
@@ -13,11 +14,13 @@ import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
 
+import rx.functions.Action1;
+import rx.functions.Func1;
 import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.TestCase.assertTrue;
 
-@Ignore
 public class SCBackendServiceTest extends BaseTestCase {
 
     private static SpatialConnect sc;
@@ -38,6 +41,25 @@ public class SCBackendServiceTest extends BaseTestCase {
     }
 
     @Test
+    public void testAuthCredentialsAreSaved() {
+        SCAuthService.loginStatus.filter(new Func1<Boolean, Boolean>() {
+            @Override public Boolean call(Boolean status) {
+                return status;
+            }
+        }).subscribe(new Action1<Boolean>() {
+            @Override public void call(Boolean aBoolean) {
+                assertTrue("Email should be saved in preferences.",
+                    SCAuthService.getEmail().equals("admin@something.com"));
+                assertTrue("Password should be saved in preferences.",
+                    SCAuthService.getPassword().equals("admin"));
+                assertTrue("Access token should be saved in preferences.",
+                    SCAuthService.getAccessToken() != null);
+            }
+        });
+    }
+
+    @Test
+    @Ignore
     public void testNewtworkServiceCanPublishAndSubscribe() {
         SCBackendService networkService = sc.getBackendService();
         SCMessageOuterClass.SCMessage.Builder builder =  SCMessageOuterClass.SCMessage.newBuilder();
