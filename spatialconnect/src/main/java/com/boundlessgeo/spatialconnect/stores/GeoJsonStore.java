@@ -42,10 +42,6 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
         this.setAdapter(new GeoJsonAdapter(context, scStoreConfig));
     }
 
-    public List<String> defaultLayers() {
-        return null;
-    }
-
     public List<String> layers() {
         return this.vectorLayers();
     }

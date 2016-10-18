@@ -59,10 +59,6 @@ public class GeoPackageStore extends SCDataStore implements SCSpatialStore, SCDa
         this.setAdapter(new GeoPackageAdapter(context, scStoreConfig));
     }
 
-    public List<String> defaultLayers() {
-        return null;
-    }
-
     public List<String> layers() {
         List<String> allLayers = new ArrayList<String>();
         allLayers.addAll(this.vectorLayers());

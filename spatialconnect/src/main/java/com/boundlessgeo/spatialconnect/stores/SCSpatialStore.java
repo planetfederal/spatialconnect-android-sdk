@@ -33,6 +33,4 @@ public interface SCSpatialStore
     Observable update(SCSpatialFeature scSpatialFeature);
     Observable delete(SCKeyTuple keyTuple);
     List<String> vectorLayers();
-    List<String> defaultLayers();
-
 }
