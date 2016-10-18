@@ -16,19 +16,16 @@ package com.boundlessgeo.spatialconnect.services;
 
 import android.content.Context;
 import android.util.Log;
-
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
+import com.github.rtoshiro.secure.SecureSharedPreferences;
 import java.io.IOException;
-
 import okhttp3.Authenticator;
 import okhttp3.Interceptor;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.Route;
+import org.json.JSONException;
+import org.json.JSONObject;
 import rx.functions.Action1;
 import rx.subjects.BehaviorSubject;
 
@@ -38,19 +35,24 @@ public class SCAuthService extends SCService {
     private static Context context;
     public static BehaviorSubject<Boolean> loginStatus = BehaviorSubject.create(false);
     public static final String AUTH_HEADER_NAME = "x-access-token";
-    public static String accessToken;
-    public static String email;
-    public static String password;
+    private static String accessToken;
+    private static String email;
+    private static String password;
+    private static SecureSharedPreferences settings;
 
     public SCAuthService(Context context) {
         this.context = context;
+        this.settings = new SecureSharedPreferences(context);
+        this.email = getEmail();
+        this.password = getPassword();
+        this.accessToken = getAccessToken();
+        if (this.accessToken != null) {
+            loginStatus.onNext(true);
+        }
     }
 
     public void authenticate(String email, String password) {
-        // TODO: save email and password in encrypted storage
-        // probably want to use the KeyStore: https://developer.android.com/training/articles/keystore.html
-        this.email = email;
-        this.password = password;
+        saveCredentials(email, password);
         try {
             refreshToken();
         }
@@ -97,6 +99,7 @@ public class SCAuthService extends SCService {
     public static class SCAuthenticator implements Authenticator {
         @Override
         public Request authenticate(Route route, Response response) throws IOException {
+            refreshToken();
             return response.request().newBuilder()
                     .addHeader(AUTH_HEADER_NAME, getAccessToken())
                     .build();
@@ -104,7 +107,7 @@ public class SCAuthService extends SCService {
     }
 
     /**
-     * Method that returns refreshes auth token.
+     * Method that refreshes the auth token.
      *
      * @return
      */
@@ -115,9 +118,7 @@ public class SCAuthService extends SCService {
             public void call(Boolean connected) {
                 if (connected) {
                     final String theUrl = SCBackendService.API_URL + "authenticate";
-                    // TODO: get the email and password from encrypted storage
-                    // probably want to use the KeyStore: https://developer.android.com/training/articles/keystore.html
-                    if (email != null && password != null) {
+                    if (getEmail() != null && getPassword() != null) {
                         HttpHandler.getInstance()
                             .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", email, password))
                                 .subscribe(
@@ -129,6 +130,7 @@ public class SCAuthService extends SCService {
                                                     accessToken = new JSONObject(response.body().string())
                                                         .getJSONObject("result").getString("token");
                                                     if (accessToken != null) {
+                                                        saveAccessToken(accessToken);
                                                         loginStatus.onNext(true);
                                                     }
                                                 } catch (JSONException e) {
@@ -155,7 +157,29 @@ public class SCAuthService extends SCService {
     }
 
     public static String getAccessToken() {
-        return accessToken;
+        return settings.getString(AUTH_HEADER_NAME, null);
     }
 
+    public static void saveAccessToken(String accessToken) {
+        SecureSharedPreferences.Editor editor = settings.edit();
+        editor.putString(AUTH_HEADER_NAME, accessToken);
+        editor.commit();
+    }
+
+    public void saveCredentials(String email, String password) {
+        SecureSharedPreferences.Editor editor = settings.edit();
+        editor.putString("email", email);
+        editor.putString("password", password);
+        editor.commit();
+    }
+
+    public static String getEmail() {
+        SecureSharedPreferences settings = new SecureSharedPreferences(context);
+        return settings.getString("email", null);
+    }
+
+    public static String getPassword() {
+        SecureSharedPreferences settings = new SecureSharedPreferences(context);
+        return settings.getString("password", null);
+    }
 }
