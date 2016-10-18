@@ -53,6 +53,7 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -357,6 +358,13 @@ public class GeoPackageAdapter extends SCDataAdapter {
                 @Override
                 public void call(Subscriber<? super SCSpatialFeature> subscriber) {
                     try {
+                        Set<String> columns = featureSource.getColumns().keySet();
+                        Map<String, Object> props = new HashMap<>();
+                        for (String col : columns) {
+                            if (!col.equals(featureSource.getGeomColumnName()) && !col.equals(featureSource.getPrimaryKeyName())) {
+                                props.put(col, null);
+                            }
+                        }
                         gpkg.executeAndTrigger(tableName,
                                 String.format("INSERT OR REPLACE INTO %s (%s) VALUES (%s)",
                                         tableName,

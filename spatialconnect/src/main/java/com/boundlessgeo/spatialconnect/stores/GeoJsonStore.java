@@ -24,10 +24,12 @@ import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 
+import java.util.List;
+
 import rx.Observable;
 import rx.Subscriber;
 
-public class GeoJsonStore extends SCDataStore implements  SCSpatialStore, SCDataStoreLifeCycle {
+public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataStoreLifeCycle {
 
     private static final String LOG_TAG = GeoJsonStore.class.getSimpleName();
     public static final String TYPE = "geojson";
@@ -40,6 +42,14 @@ public class GeoJsonStore extends SCDataStore implements  SCSpatialStore, SCData
         this.setAdapter(new GeoJsonAdapter(context, scStoreConfig));
     }
 
+    public List<String> layers() {
+        return this.vectorLayers();
+    }
+
+    public List<String> vectorLayers() {
+        GeoJsonAdapter geoJsonAdapter = (GeoJsonAdapter) this.getAdapter();
+        return geoJsonAdapter.layers();
+    }
 
     @Override
     public Observable<SCSpatialFeature> query(SCQueryFilter scFilter) {
