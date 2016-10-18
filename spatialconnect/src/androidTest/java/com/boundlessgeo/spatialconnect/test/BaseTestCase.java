@@ -77,16 +77,16 @@ public abstract class BaseTestCase {
             remoteConfigFile = File.createTempFile("config_remote.scfg", null, activity.getCacheDir());
             localConfigFile = File.createTempFile("config_local.scfg", null, activity.getCacheDir());
 
-            // read test scconfig_remote.json file from test resources directory
+            // read test remote.scfg file from test resources directory
             //set local test config
-            InputStream is = testContext.getResources().openRawResource(R.raw.scconfig_local);
+            InputStream is = testContext.getResources().openRawResource(R.raw.local);
             FileOutputStream fos = new FileOutputStream(localConfigFile);
             byte[] data = new byte[is.available()];
             is.read(data);
             fos.write(data);
 
             //set remote test config
-            is = testContext.getResources().openRawResource(R.raw.scconfig_remote);
+            is = testContext.getResources().openRawResource(R.raw.remote);
             fos = new FileOutputStream(remoteConfigFile);
             data = new byte[is.available()];
 
