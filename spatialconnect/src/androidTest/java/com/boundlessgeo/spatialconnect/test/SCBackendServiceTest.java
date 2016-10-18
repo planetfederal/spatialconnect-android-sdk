@@ -37,7 +37,7 @@ public class SCBackendServiceTest extends BaseTestCase {
     @AfterClass
     public static void tearDown() throws Exception {
         HttpHandler.getInstance().cancelAllRequests();
-//        deleteDatabases();
+        deleteDatabases();
     }
 
     @Test
@@ -58,27 +58,4 @@ public class SCBackendServiceTest extends BaseTestCase {
         });
     }
 
-    @Test
-    @Ignore
-    public void testNewtworkServiceCanPublishAndSubscribe() {
-        SCBackendService networkService = sc.getBackendService();
-        SCMessageOuterClass.SCMessage.Builder builder =  SCMessageOuterClass.SCMessage.newBuilder();
-        builder.setAction(0)
-                .setPayload("testing")
-                .setReplyTo(MqttHandler.REPLY_TO_TOPIC)
-                .build();
-        SCMessageOuterClass.SCMessage message = builder.build();
-        TestSubscriber<SCMessageOuterClass.SCMessage> testSubscriber = new TestSubscriber();
-        networkService.publishReplyTo("/ping", message)
-                .take(1)
-                .timeout(15, TimeUnit.SECONDS)
-                .subscribe(testSubscriber);
-        testSubscriber.awaitTerminalEvent();
-        testSubscriber.assertNoErrors();
-        testSubscriber.assertValueCount(1);
-        testSubscriber.assertCompleted();
-        assertEquals("The reply message payload should be 'pong'.",
-                "pong",
-                testSubscriber.getOnNextEvents().get(0).getPayload());
-    }
 }
