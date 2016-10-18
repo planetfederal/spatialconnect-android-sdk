@@ -51,6 +51,7 @@ public class WFSStore extends SCDataStore implements  SCSpatialStore, SCDataStor
     private static final String LOG_TAG = WFSStore.class.getSimpleName();
     private String baseUrl;
     private List<String> layerNames;
+    private List<String> defaultLayers;
     public static final String TYPE = "wfs";
 
     public WFSStore(Context context, SCStoreConfig scStoreConfig) {
@@ -65,12 +66,24 @@ public class WFSStore extends SCDataStore implements  SCSpatialStore, SCDataStor
         }
     }
 
+    public List<String> defaultLayers() {
+        return this.defaultLayers;
+    }
+
+    public List<String> layers() {
+        return this.vectorLayers();
+    }
+
+    public List<String> vectorLayers() {
+        return this.layerNames;
+    }
+
     @Override
     public Observable<SCSpatialFeature> query(SCQueryFilter scFilter) {
         // if there are no layer names supplied in the query filter, then search only on the default layers
         final List<String> layerNames = scFilter.getLayerIds().size() > 0 ?
                 scFilter.getLayerIds() :
-                getDefaultLayers();
+                defaultLayers();
 
         // TODO: when implmenting version 2.0.0, "maxFeatures" has been changed to "count"
         // see: http://docs.geoserver.org/latest/en/user/services/wfs/reference.html#getfeature
@@ -236,6 +249,11 @@ public class WFSStore extends SCDataStore implements  SCSpatialStore, SCDataStor
         return entries;
     }
 
+
+    private void setDefaultLayers(List<String> defaultLayers) {
+        this.defaultLayers = defaultLayers;
+    }
+
     private String readFeatureType(XmlPullParser parser) throws XmlPullParserException, IOException {
         parser.require(XmlPullParser.START_TAG, null, "FeatureType");
         String layerName = null;
@@ -311,8 +329,4 @@ public class WFSStore extends SCDataStore implements  SCSpatialStore, SCDataStor
         );
     }
 
-
-    public List<String> getLayerNames() {
-        return layerNames;
-    }
 }

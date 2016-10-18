@@ -27,7 +27,9 @@ import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.LocationStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreLifeCycle;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
+import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 import com.boundlessgeo.spatialconnect.stores.WFSStore;
 
@@ -187,7 +189,7 @@ public class SCDataService extends SCService {
     public void startStore(final SCDataStore store) {
         if (!store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
             Log.d(LOG_TAG, "Starting store " + store.getName() + " " + store.getStoreId());
-            store.start()
+            ((SCDataStoreLifeCycle) store).start()
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(new Action1<SCStoreStatusEvent>() {
                 @Override
@@ -219,7 +221,7 @@ public class SCDataService extends SCService {
     public void stopStore(final SCDataStore store) {
         if (store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
             Log.d(LOG_TAG, "Stopping store " + store.getName() + " " + store.getStoreId());
-            store.stop();
+            ((SCDataStoreLifeCycle) store).stop();
             storeEventSubject.onNext(
                     new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, store.getStoreId()));
             if (stores.size() > 0) {
@@ -284,7 +286,7 @@ public class SCDataService extends SCService {
         if (registerStoreByConfig(config)) {
             SCDataStore store = stores.get(config.getUniqueID());
             if (store != null) {
-                store.start();
+                ((SCDataStoreLifeCycle) store).start();
             }
         }
     }
@@ -454,7 +456,7 @@ public class SCDataService extends SCService {
                     @Override
                     public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
                         Log.d(LOG_TAG, "Querying store " + scDataStore.getName());
-                        return scDataStore.query(filter);
+                        return ((SCSpatialStore) scDataStore).query(filter);
                     }
                 });
     }
@@ -465,7 +467,7 @@ public class SCDataService extends SCService {
                     @Override
                     public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
                         Log.d(LOG_TAG, "Querying store " + scDataStore.getName());
-                        return scDataStore.query(filter);
+                        return ((SCSpatialStore) scDataStore).query(filter);
                     }
                 });
     }

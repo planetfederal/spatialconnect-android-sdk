@@ -17,16 +17,22 @@ package com.boundlessgeo.spatialconnect.stores;
 
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+
+import java.util.List;
+
 import rx.Observable;
 
 /**
  * Interface definition for the spatial store.
  */
-public interface SCSpatialStore extends SCDataStoreLifeCycle
+public interface SCSpatialStore
 {
     Observable query(SCQueryFilter scFilter);
     Observable queryById(SCKeyTuple keyTuple);
     Observable create(SCSpatialFeature scSpatialFeature);
     Observable update(SCSpatialFeature scSpatialFeature);
     Observable delete(SCKeyTuple keyTuple);
+    List<String> vectorLayers();
+    List<String> defaultLayers();
+
 }

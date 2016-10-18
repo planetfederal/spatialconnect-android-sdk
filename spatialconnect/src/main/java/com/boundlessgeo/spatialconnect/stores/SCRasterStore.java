@@ -11,5 +11,5 @@ public interface SCRasterStore {
 
     void overlayFromLayer(String layerName, GoogleMap map);
     SCPolygon getCoverage();
-    List<SCGpkgTileSource> rasterList();
+    List<String> rasterLayers();
 }

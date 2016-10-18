@@ -41,6 +41,7 @@ import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.boundlessgeo.spatialconnect.stores.SCRasterStore;
+import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
 import com.boundlessgeo.spatialconnect.tiles.GpkgRasterSource;
 import com.boundlessgeo.spatialconnect.tiles.GpkgTileProvider;
 import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
@@ -77,6 +78,7 @@ import java.util.List;
 
 import rx.Subscriber;
 import rx.functions.Action1;
+import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 /**
@@ -114,8 +116,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
                         for (SCDataStore store : stores) {
                             if(store instanceof GeoPackageStore && ((GeoPackageAdapter)store.getAdapter()).getTileSources().size() > 0) {
                                 SCRasterStore rs = new GpkgRasterSource((GeoPackageStore)store);
-                                for (SCGpkgTileSource ts : rs.rasterList()) {
-                                    rs.overlayFromLayer(ts.getTableName(), googleMap);
+                                for (String tableName : rs.rasterLayers()) {
+                                    rs.overlayFromLayer(tableName, googleMap);
                                 }
                             }
                         }
@@ -542,8 +544,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
             SCSpatialFeature featureToUpdate = getFeatureToUpdate(
                     convertMapToJson(message.getMap("payload").getMap("feature")).toString()
             );
-            sc.getDataService().getStoreById(featureToUpdate.getKey().getStoreId())
-                    .update(featureToUpdate)
+            SCDataStore store = sc.getDataService().getStoreById(featureToUpdate.getKey().getStoreId());
+            ((SCSpatialStore) store).update(featureToUpdate)
                     .subscribeOn(Schedulers.io())
                     .subscribe(
                             new Subscriber<SCSpatialFeature>() {
@@ -578,8 +580,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
         Log.d(LOG_TAG, "Handling DELETEFEATURE message :" + message.toString());
         try {
             SCKeyTuple featureKey = new SCKeyTuple(message.getString("payload"));
-            sc.getDataService().getStoreById(featureKey.getStoreId())
-                    .delete(featureKey)
+            SCDataStore store = sc.getDataService().getStoreById(featureKey.getStoreId());
+            ((SCSpatialStore) store).delete(featureKey)
                     .subscribeOn(Schedulers.io())
                     .subscribe(
                             new Subscriber<Boolean>() {
@@ -619,8 +621,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (newFeature.getKey().getStoreId() == null || newFeature.getKey().getStoreId().isEmpty()) {
                 newFeature.setStoreId(newFeature.getKey().getStoreId());
             }
-            sc.getDataService().getStoreById(newFeature.getKey().getStoreId())
-                    .create(newFeature)
+            SCDataStore store = sc.getDataService().getStoreById(newFeature.getKey().getStoreId());
+            ((SCSpatialStore) store).create(newFeature)
                     .subscribeOn(Schedulers.io())
                     .subscribe(
                             new Subscriber<SCSpatialFeature>() {
@@ -729,6 +731,20 @@ public class SCBridge extends ReactContextBaseJavaModule {
         params.putString("type", store.getType());
         params.putString("version", store.getVersion());
         params.putString("key", store.getKey());
+        if (store instanceof SCSpatialStore) {
+            WritableArray a = Arguments.createArray();
+            for (String vectorLayerName : ((SCSpatialStore) store).vectorLayers()) {
+                a.pushString(vectorLayerName);
+            }
+            params.putArray("vectorLayers", a);
+        }
+        if (store instanceof SCRasterStore) {
+            WritableArray a = Arguments.createArray();
+            for (String vectorLayerName : ((SCRasterStore) store).rasterLayers()) {
+                a.pushString(vectorLayerName);
+            }
+            params.putArray("rasterLayers", a);
+        }
         return params;
     }
 
