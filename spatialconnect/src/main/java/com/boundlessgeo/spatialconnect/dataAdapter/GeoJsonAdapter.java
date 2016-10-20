@@ -53,6 +53,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
     private Context context;
     private static final String LOG_TAG = GeoJsonAdapter.class.getSimpleName();
     private final String EXT = ".json";
+    private String geojsonFilePath;
 
     public GeoJsonAdapter(Context context, SCStoreConfig scStoreConfig) {
         super(NAME, TYPE, VERSION);
@@ -87,7 +88,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
                                             try {
                                                 // save response as file
                                                 FileUtils.copyInputStreamToFile(response.body().byteStream(), geoJsonFile);
-
+                                                geojsonFilePath = filePath;
                                                 adapterInstance.connected();
                                                 subscriber.onCompleted();
                                             } catch (IOException e) {
@@ -109,7 +110,8 @@ public class GeoJsonAdapter extends SCDataAdapter {
                         }
                     } else {
                         //attempt to find file local
-                        File f = new File(context.getFilesDir(), scStoreConfig.getUri().replace("file://", ""));
+                        final String localUriPath = scStoreConfig.getUri().replace("file://", "");
+                        File f = new File(context.getFilesDir(), localUriPath);
                         if (!f.exists()) {
                             Log.d(LOG_TAG, "File does not exist at " + scStoreConfig.getUri());
                             InputStream is = null;
@@ -123,6 +125,7 @@ public class GeoJsonAdapter extends SCDataAdapter {
                                 if (resourceId != 0) {
                                     is = context.getResources().openRawResource(resourceId);
                                     FileUtils.copyInputStreamToFile(is, f);
+                                    geojsonFilePath = localUriPath;
                                     adapterInstance.connected();
                                     subscriber.onCompleted();
                                 } else {
@@ -147,12 +150,14 @@ public class GeoJsonAdapter extends SCDataAdapter {
                             }
                         } else {
                             Log.d(LOG_TAG, "File already exists so set the status to connected.");
+                            geojsonFilePath = localUriPath;
                             adapterInstance.connected();
                             subscriber.onCompleted();
                         }
                     }
 
                 } else {
+                    geojsonFilePath = filePath;
                     adapterInstance.connected();
                     subscriber.onCompleted();
                 }
@@ -233,14 +238,12 @@ public class GeoJsonAdapter extends SCDataAdapter {
         InputStream is = null;
         StringBuilder stringBuilder = null;
         try {
-        final String filePath = scStoreConfig.getUniqueID() + EXT;
-        final File geoJsonFile = new File(context.getFilesDir(), filePath);
+            final File geoJsonFile = new File(context.getFilesDir(), geojsonFilePath);
+            is = FileUtils.openInputStream(geoJsonFile);
 
-        is = FileUtils.openInputStream(geoJsonFile);
-
-        BufferedReader bufferedreader = new BufferedReader(new InputStreamReader(is));
-        String line;
-         stringBuilder = new StringBuilder();
+            BufferedReader bufferedreader = new BufferedReader(new InputStreamReader(is));
+            String line;
+            stringBuilder = new StringBuilder();
 
             while ((line = bufferedreader.readLine()) != null) {
                 stringBuilder.append(line);
