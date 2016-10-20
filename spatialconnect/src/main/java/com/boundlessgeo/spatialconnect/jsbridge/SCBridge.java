@@ -307,6 +307,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (command.equals(SCCommand.NOTIFICATIONS)) {
                 handleNotificationSubscribe(message);
             }
+            if (command.equals(SCCommand.BACKENDSERVICE_HTTP_URI)) {
+                handleBackendServiceHTTPUri(message);
+            }
         }
     }
 
@@ -656,6 +659,21 @@ public class SCBridge extends ReactContextBaseJavaModule {
         catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Handles the {@link SCCommand#BACKENDSERVICE_HTTP_URI} command.
+     *
+     * @param message the message received from the Javascript
+     */
+    private void handleBackendServiceHTTPUri(ReadableMap message) {
+        String backendUri = SpatialConnect.getInstance()
+                .getBackendService()
+                .backendUri + "/api/";
+        WritableMap eventPayload = Arguments.createMap();
+        eventPayload.putString("backendUri", backendUri);
+        sendEvent(message.getInt("type"), message.getString("responseId"), eventPayload);
+
     }
 
     /**

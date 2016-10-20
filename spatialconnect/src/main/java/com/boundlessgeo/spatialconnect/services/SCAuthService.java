@@ -117,7 +117,7 @@ public class SCAuthService extends SCService {
             @Override
             public void call(Boolean connected) {
                 if (connected) {
-                    final String theUrl = SCBackendService.API_URL + "authenticate";
+                    final String theUrl = SCBackendService.backendUri + "/api/authenticate";
                     if (getEmail() != null && getPassword() != null) {
                         HttpHandler.getInstance()
                             .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", email, password))
