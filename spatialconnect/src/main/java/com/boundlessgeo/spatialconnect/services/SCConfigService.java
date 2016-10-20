@@ -27,6 +27,8 @@ import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.github.rtoshiro.secure.SecureSharedPreferences;
 
 import java.io.File;
 import java.io.IOException;
@@ -133,6 +135,7 @@ public class SCConfigService extends SCService {
         registerForms(config.getFormConfigs());
         registerDataStores(config.getStoreConfigs());
         if (config.getRemote() != null) {
+            saveConfigToCache(config);
             SpatialConnect.getInstance().connectBackend(config.getRemote());
         }
     }
@@ -224,5 +227,32 @@ public class SCConfigService extends SCService {
         String release = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
         return "Android SDK: " + sdkVersion + " (" + release + ")";
+    }
+
+    private void saveConfigToCache(SCConfig config) {
+        try {
+            String configJson = ObjectMappers.getMapper().writeValueAsString(config);
+            Log.e(LOG_TAG,"saving config json: " + configJson);
+            SecureSharedPreferences cache = new SecureSharedPreferences(context);
+            SecureSharedPreferences.Editor editor = cache.edit();
+            editor.putString("config", configJson);
+            editor.commit();
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void loadConfigFromCache() {
+        SCConfig config = null;
+        try {
+            SecureSharedPreferences cache = new SecureSharedPreferences(context);
+            String configJson = cache.getString("config","");
+            config = ObjectMappers.getMapper().readValue(
+                    configJson,
+                    SCConfig.class);
+            loadConfig(config);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

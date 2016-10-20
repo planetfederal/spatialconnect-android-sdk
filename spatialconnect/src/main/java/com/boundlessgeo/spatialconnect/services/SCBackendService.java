@@ -90,6 +90,8 @@ public class SCBackendService extends SCService {
             public void call(Boolean authenticated) {
                 if (authenticated) {
                     registerAndFetchConfig();
+                } else {
+                    SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
                 }
             }
         });

@@ -18,6 +18,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
@@ -29,6 +30,8 @@ import com.boundlessgeo.spatialconnect.services.SCService;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+
+import rx.functions.Action1;
 
 /**
  * When instantiated, SpatialConnect adds the default services and registers all stores
@@ -129,12 +132,38 @@ public class SpatialConnect {
         }
     }
 
-    public void connectBackend(SCRemoteConfig remoteConfig) {
+    public void connectBackend(final SCRemoteConfig remoteConfig) {
         if (remoteConfig != null && backendService == null) {
             Log.d(LOG_TAG, "connecting backend");
             backendService = new SCBackendService(context);
-            backendService.initialize(remoteConfig);
-            backendService.start();
+
+            /*
+              if backendSvc available
+                if no internet
+                   load local cached remote config if present
+                else
+                       attempt to auth
+                    if auth fails
+                    load cache remote config if present
+                    else
+                    update remote config cache
+             */
+            SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
+                @Override
+                public void call(Boolean connected) {
+                    if (connected) {
+                        Log.d(LOG_TAG, "connecting get remote from server");
+                        backendService.initialize(remoteConfig);
+                    } else {
+                        //load config from cache
+                        Log.d(LOG_TAG, "No internet get cached remote config");
+                        SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+
+                    }
+
+                    backendService.start();
+                }
+            });
         }
     }
 
