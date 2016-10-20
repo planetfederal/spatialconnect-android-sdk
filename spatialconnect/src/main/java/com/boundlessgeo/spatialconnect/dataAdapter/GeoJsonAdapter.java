@@ -238,7 +238,6 @@ public class GeoJsonAdapter extends SCDataAdapter {
         InputStream is = null;
         StringBuilder stringBuilder = null;
         try {
-            final String filePath = scStoreConfig.getUniqueID() + EXT;
             final File geoJsonFile = new File(context.getFilesDir(), geojsonFilePath);
             is = FileUtils.openInputStream(geoJsonFile);
 
