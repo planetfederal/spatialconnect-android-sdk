@@ -148,22 +148,24 @@ public class SpatialConnect {
                     else
                     update remote config cache
              */
-            SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
-                @Override
-                public void call(Boolean connected) {
-                    if (connected) {
-                        Log.d(LOG_TAG, "connecting get remote from server");
-                        backendService.initialize(remoteConfig);
-                    } else {
-                        //load config from cache
-                        Log.d(LOG_TAG, "No internet get cached remote config");
-                        SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
-
-                    }
-
-                    backendService.start();
-                }
-            });
+//            SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
+//                @Override
+//                public void call(Boolean connected) {
+//                    if (connected) {
+//                        Log.d(LOG_TAG, "connecting get remote from server");
+//
+//                    } else {
+//                        //load config from cache
+//                        Log.d(LOG_TAG, "No internet get cached remote config");
+//                        //SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+//
+//                    }
+//
+//
+//                }
+//            });
+            backendService.initialize(remoteConfig);
+            backendService.start();
         }
     }
 

@@ -85,16 +85,28 @@ public class SCBackendService extends SCService {
     @Override
     public void start() {
         mqttHandler.connect();
-        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
-            @Override
-            public void call(Boolean authenticated) {
-                if (authenticated) {
-                    registerAndFetchConfig();
-                } else {
-                    SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
-                }
-            }
-        });
+        /*
+              if backendSvc available
+                if no internet
+                   load local cached remote config if present
+                else
+                       attempt to auth
+                    if auth fails
+                    load cache remote config if present
+                    else
+                    update remote config cache
+         */
+
+//        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
+//            @Override
+//            public void call(Boolean authenticated) {
+//                if (authenticated) {
+//                    registerAndFetchConfig();
+//                } else {
+//                    SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+//                }
+//            }
+//        });
         Log.d(LOG_TAG, "Subscribing to network connectivity updates.");
         ReactiveNetwork.observeNetworkConnectivity(context)
                 .subscribe(new Action1<Connectivity>() {
@@ -104,6 +116,32 @@ public class SCBackendService extends SCService {
                         networkConnected.onNext(connectivity.getState().equals(NetworkInfo.State.CONNECTED));
                     }
                 });
+
+        networkConnected.subscribe(new Action1<Boolean>() {
+                @Override
+                public void call(Boolean connected) {
+                    if (connected) {
+                        Log.d(LOG_TAG, "waiting on auth to get remote from server");
+                        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
+                            @Override
+                            public void call(Boolean authenticated) {
+                                if (authenticated) {
+                                    registerAndFetchConfig();
+                                } else {
+                                    SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+                                }
+                            }
+                        });
+                    } else {
+                        //load config from cache
+                        Log.d(LOG_TAG, "No internet get cached remote config");
+                        SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+
+                    }
+
+
+                }
+            });
     }
 
     private void setupSubscriptions() {
@@ -129,7 +167,7 @@ public class SCBackendService extends SCService {
     }
 
     private void fetchConfig() {
-        Log.d(LOG_TAG, "fetching config from mqtt config topic");
+        Log.e(LOG_TAG, "fetching config from mqtt config topic");
         SCMessageOuterClass.SCMessage getConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
                 .setAction(SCCommand.CONFIG_FULL.value()).build();
         publishReplyTo("/config", getConfigMsg)
@@ -163,8 +201,11 @@ public class SCBackendService extends SCService {
                         try {
                             SCStoreConfig config = ObjectMappers.getMapper()
                                     .readValue(scMessage.getPayload(), SCStoreConfig.class);
+                            SpatialConnect.getInstance().getConfigService()
+                                    .addStoreConfigCache(config);
                             SpatialConnect.getInstance().getDataService()
                                     .registerAndStartStoreByConfig(config);
+
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -173,6 +214,8 @@ public class SCBackendService extends SCService {
                         try {
                             SCStoreConfig config = ObjectMappers.getMapper()
                                     .readValue(scMessage.getPayload(), SCStoreConfig.class);
+                            SpatialConnect.getInstance().getConfigService()
+                                    .updateStoreConfigCache(config);
                             SpatialConnect.getInstance().getDataService()
                                     .updateStoresByConfig(config);
                         } catch (IOException e) {
@@ -181,6 +224,8 @@ public class SCBackendService extends SCService {
                         break;
                     case CONFIG_REMOVE_STORE:
                         SCDataStore store = SpatialConnect.getInstance().getDataService().getStoreById(scMessage.getPayload());
+                        SpatialConnect.getInstance().getConfigService()
+                                .removeStoreConfigFromCache(scMessage.getPayload());
                         SpatialConnect.getInstance().getDataService()
                                 .unregisterStore(store);
                         break;
@@ -283,6 +328,7 @@ public class SCBackendService extends SCService {
 
     private void loadConfig(SCMessageOuterClass.SCMessage message) {
         Log.d(LOG_TAG, "mqtt message received on thread " + Thread.currentThread().getName());
+        Log.e(LOG_TAG, "Loading config received from mqtt broker: " + message.getPayload());
         try {
             SCConfig config = ObjectMappers.getMapper().readValue(
                     message.getPayload(),
@@ -290,6 +336,7 @@ public class SCBackendService extends SCService {
             );
             configReceived.onNext(true);
             Log.d(LOG_TAG, "Loading config received from mqtt broker");
+            SpatialConnect.getInstance().getConfigService().saveConfigToCache(config);
             SpatialConnect.getInstance().getConfigService().loadConfig(config);
         }
         catch (IOException e) {

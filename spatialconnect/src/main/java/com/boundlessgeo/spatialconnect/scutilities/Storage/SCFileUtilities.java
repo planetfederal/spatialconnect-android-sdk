@@ -32,24 +32,24 @@ public class SCFileUtilities {
     public SCFileUtilities() {
     }
 
-    public static boolean isStorageAvailable(Context context, SCStoreConfig scStoreConfig) {
-        boolean storageStatus = false;
-        if (!scStoreConfig.isMainBundle()) {
-            // since the file is not packaged with the app, we check if external storage is available
-            storageStatus = isExternalStorageAvailable();
-            if (storageStatus) {
-                File f = new File(scStoreConfig.getUri());
-                if (!f.exists()) storageStatus = false;
-            }
-        }
-        else {
-            if (context != null) {
-                File f = new File(context.getFilesDir(), scStoreConfig.getUri());
-                if (!f.exists()) storageStatus = false;
-            }
-        }
-        return storageStatus;
-    }
+//    public static boolean isStorageAvailable(Context context, SCStoreConfig scStoreConfig) {
+//        boolean storageStatus = false;
+//        if (!scStoreConfig.isMainBundle()) {
+//            // since the file is not packaged with the app, we check if external storage is available
+//            storageStatus = isExternalStorageAvailable();
+//            if (storageStatus) {
+//                File f = new File(scStoreConfig.getUri());
+//                if (!f.exists()) storageStatus = false;
+//            }
+//        }
+//        else {
+//            if (context != null) {
+//                File f = new File(context.getFilesDir(), scStoreConfig.getUri());
+//                if (!f.exists()) storageStatus = false;
+//            }
+//        }
+//        return storageStatus;
+//    }
 
     public static File getInternalFileObject(String uri, Context context) {
         if (!uri.contains(File.pathSeparator)) {

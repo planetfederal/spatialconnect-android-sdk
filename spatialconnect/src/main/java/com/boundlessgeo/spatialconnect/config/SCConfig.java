@@ -33,7 +33,7 @@ public class SCConfig {
     public SCConfig() {
     }
 
-    public List<SCStoreConfig> getStoreConfigs() {
+    public List<SCStoreConfig> getStores() {
         return stores;
     }
 
@@ -41,7 +41,7 @@ public class SCConfig {
         this.stores = configs;
     }
 
-    public List<SCFormConfig> getFormConfigs() {
+    public List<SCFormConfig> getForms() {
         return forms;
     }
 
