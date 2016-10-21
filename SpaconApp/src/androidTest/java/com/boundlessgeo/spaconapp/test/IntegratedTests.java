@@ -70,18 +70,9 @@ public class IntegratedTests {
             localConfigFile = File.createTempFile("config_local.scfg", null, activity.getCacheDir());
 
             // read test scconfig_remote.json file from test resources directory
-            //set local test config
-            InputStream is = testContext.getResources().openRawResource(R.raw.scconfig_local);
-            FileOutputStream fos = new FileOutputStream(localConfigFile);
+            InputStream is = testContext.getResources().openRawResource(R.raw.scconfig_remote);
+            FileOutputStream fos = new FileOutputStream(remoteConfigFile);
             byte[] data = new byte[is.available()];
-            is.read(data);
-            fos.write(data);
-
-            //set remote test config
-            is = testContext.getResources().openRawResource(R.raw.scconfig_remote);
-            fos = new FileOutputStream(remoteConfigFile);
-            data = new byte[is.available()];
-
             is.read(data);
             fos.write(data);
 
@@ -131,12 +122,12 @@ public class IntegratedTests {
     public void testSpatialConnectCanLoadLocalConfigs() {
         sc.getDataService()
                 .hasStores
-                .buffer(5)
+                .buffer(2)
                 .subscribe(new Action1<List<Boolean>>() {
                     @Override
                     public void call(List<Boolean> booleen) {
-                        assertEquals("The remote config file has at least 5 stores",
-                                5, sc.getDataService().getAllStores().size());
+                        assertEquals("The remote config file has at least 2 stores",
+                                2, sc.getDataService().getAllStores().size());
                     }
         });
     }
