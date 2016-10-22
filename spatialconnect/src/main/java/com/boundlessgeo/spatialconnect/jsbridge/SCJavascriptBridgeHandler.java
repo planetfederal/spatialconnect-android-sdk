@@ -29,6 +29,7 @@ import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
+import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -168,8 +169,8 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 SCSpatialFeature featureToUpdate = getFeatureToUpdate(
                   bridgeMessage.get("payload").get("feature").asText()
                 );
-                manager.getDataService().getStoreById(featureToUpdate.getKey().getStoreId())
-                  .update(featureToUpdate)
+                SCDataStore store = manager.getDataService().getStoreById(featureToUpdate.getKey().getStoreId());
+                  ((SCSpatialStore) store).update(featureToUpdate)
                   .subscribeOn(Schedulers.io())
                   .subscribe(
                     new Subscriber<Boolean>() {
@@ -197,8 +198,8 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
             if (command.equals(SCCommand.DATASERVICE_DELETEFEATURE)) {
               try {
                 SCKeyTuple featureKey = new SCKeyTuple(bridgeMessage.get("payload").asText());
-                manager.getDataService().getStoreById(featureKey.getStoreId())
-                  .delete(featureKey)
+                SCDataStore store = manager.getDataService().getStoreById(featureKey.getStoreId());
+                  ((SCSpatialStore) store).delete(featureKey)
                   .subscribeOn(Schedulers.io())
                   .subscribe(
                     new Subscriber<Boolean>() {
@@ -226,8 +227,8 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
             if (command.equals(SCCommand.DATASERVICE_CREATEFEATURE)) {
               try {
                 SCSpatialFeature newFeature = getNewFeature(bridgeMessage.get("payload"));
-                manager.getDataService().getStoreById(newFeature.getKey().getStoreId())
-                  .create(newFeature)
+                SCDataStore store = manager.getDataService().getStoreById(newFeature.getKey().getStoreId());
+                  ((SCSpatialStore) store).create(newFeature)
                   .subscribeOn(Schedulers.io())
                   .subscribe(
                     new Subscriber<SCSpatialFeature>() {

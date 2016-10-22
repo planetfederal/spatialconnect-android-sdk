@@ -34,7 +34,7 @@ import java.util.UUID;
  * Some implementations may throw {@link SCDataStoreException} if a problem arises that the client cannot recover from.
  * For example, trying to write to a table that doesn't exist will throw a {@link SCDataStoreException}.
  */
-public abstract class SCDataStore implements SCSpatialStore {
+public abstract class SCDataStore {
 
     private SCDataAdapter adapter;
     private String storeId;
@@ -43,7 +43,6 @@ public abstract class SCDataStore implements SCSpatialStore {
     private String type;
     private Context context;
     private SCDataStoreStatus status = SCDataStoreStatus.SC_DATA_STORE_STOPPED;
-    private List<String> defaultLayers;
 
     public SCDataStore(Context context, SCStoreConfig scStoreConfig) {
         this.context = context;
@@ -115,12 +114,8 @@ public abstract class SCDataStore implements SCSpatialStore {
         this.status = status;
     }
 
-    public List<String> getDefaultLayers() {
-        return defaultLayers;
-    }
-
-    public void setDefaultLayers(List<String> defaultLayers) {
-        this.defaultLayers = defaultLayers;
+    public List<String> layers() {
+        return null;
     }
 
     public String versionKey() {
@@ -134,7 +129,6 @@ public abstract class SCDataStore implements SCSpatialStore {
         storeMap.put("type", this.type);
         storeMap.put("version", this.version);
         storeMap.put("key", getKey());
-        storeMap.put("defaultLayers", TextUtils.join(",", getDefaultLayers()));
         return storeMap;
     }
 

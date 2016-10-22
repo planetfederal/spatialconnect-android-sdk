@@ -47,7 +47,6 @@ public class IntegratedTests {
      * Test context
      */
     protected static File remoteConfigFile;
-    protected static File localConfigFile;
 
     private static SpatialConnect sc;
 
@@ -118,13 +117,13 @@ public class IntegratedTests {
     public void testSpatialConnectCanLoadLocalConfigs() {
         sc.getDataService()
                 .hasStores
-                .buffer(5)
+                .buffer(2)
                 .subscribe(new Action1<List<Boolean>>() {
                     @Override
                     public void call(List<Boolean> booleen) {
-                        assertEquals("The remote config file has at least 5 stores",
-                                5, sc.getDataService().getAllStores().size());
+                        assertEquals("The remote config file has at least 2 stores",
+                                2, sc.getDataService().getAllStores().size());
                     }
-                });
+        });
     }
 }

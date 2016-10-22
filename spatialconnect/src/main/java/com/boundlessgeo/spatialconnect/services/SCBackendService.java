@@ -53,10 +53,7 @@ public class SCBackendService extends SCService {
     private Observable<SCNotification> notifications;
     public static BehaviorSubject<Boolean> configReceived = BehaviorSubject.create(false);
     public static BehaviorSubject<Boolean> networkConnected = BehaviorSubject.create(false);
-    /**
-     * The API_URL of the spatialconnect-service rest api.  This will always end with a trailing slash, "/api/"
-     */
-    public static String API_URL = null;
+    public static String backendUri = null;
 
     public SCBackendService(final Context context) {
         this.context = context;
@@ -70,9 +67,9 @@ public class SCBackendService extends SCService {
      * @param config
      */
     public void initialize(SCRemoteConfig config) {
-        if (API_URL == null) {
-            API_URL = String.format(
-                    "%s://%s:%s/api/",
+        if (backendUri == null) {
+            backendUri = String.format(
+                    "%s://%s:%s",
                     config.getHttpProtocol(),
                     config.getHttpHost(),
                     config.getHttpPort().toString()
