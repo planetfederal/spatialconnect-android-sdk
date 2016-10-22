@@ -142,7 +142,7 @@ public class SCBackendService extends SCService {
     }
 
     private void fetchConfig() {
-        Log.e(LOG_TAG, "fetching config from mqtt config topic");
+        Log.d(LOG_TAG, "fetching config from mqtt config topic");
         SCMessageOuterClass.SCMessage getConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
                 .setAction(SCCommand.CONFIG_FULL.value()).build();
         publishReplyTo("/config", getConfigMsg)

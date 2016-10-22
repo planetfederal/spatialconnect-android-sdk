@@ -28,7 +28,6 @@ import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.github.rtoshiro.secure.SecureSharedPreferences;
 
 import java.io.File;
 import java.io.IOException;
@@ -229,17 +228,8 @@ public class SCConfigService extends SCService {
     }
 
     public void loadConfigFromCache() {
-        try {
-            SCConfig config = null;
-            SecureSharedPreferences cache = new SecureSharedPreferences(context);
-            String configJson = cache.getString("config","");
-            config = ObjectMappers.getMapper().readValue(
-                    configJson,
-                    SCConfig.class);
-            loadConfig(config);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        SCConfig config = getCachedConfig();
+        loadConfig(config);
     }
 
     public void setCachedConfig(SCConfig config) {
