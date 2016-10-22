@@ -18,7 +18,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
-import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
+import com.boundlessgeo.spatialconnect.scutilities.SCCache;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
@@ -30,8 +30,6 @@ import com.boundlessgeo.spatialconnect.services.SCService;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
-
-import rx.functions.Action1;
 
 /**
  * When instantiated, SpatialConnect adds the default services and registers all stores
@@ -48,6 +46,7 @@ public class SpatialConnect {
     private SCConfigService configService;
     private SCBackendService backendService;
     private SCAuthService authService;
+    private SCCache cache;
 
     private Context context;
 
@@ -76,6 +75,7 @@ public class SpatialConnect {
         this.kvpStoreService = new SCKVPStoreService(context);
         this.configService = new SCConfigService(context);
         this.authService = new SCAuthService(context);
+        this.cache = new SCCache(context);
         this.context = context;
         addDefaultServices();
     }
@@ -207,6 +207,10 @@ public class SpatialConnect {
 
     public SCAuthService getAuthService() {
         return authService;
+    }
+
+    public SCCache getCache() {
+        return cache;
     }
 }
 

@@ -56,4 +56,48 @@ public class SCConfig {
     public void setRemote(SCRemoteConfig remote) {
         this.remote = remote;
     }
+
+    public void addStore(SCStoreConfig storeConfig) {
+        stores.add(storeConfig);
+    }
+
+    public void updateStore(SCStoreConfig storeConfig) {
+        for (int i = 0; i < stores.size(); i++) {
+            if (stores.get(i).getUniqueID().equalsIgnoreCase(storeConfig.getUniqueID())) {
+                stores.add(i, storeConfig);
+                break;
+            }
+        }
+    }
+
+    public void removeStore(String id) {
+        for (int i = 0; i < stores.size(); i++) {
+            if (stores.get(i).getUniqueID().equalsIgnoreCase(id)) {
+                stores.remove(i);
+                break;
+            }
+        }
+    }
+
+    public void addForm(SCFormConfig formConfig) {
+        forms.add(formConfig);
+    }
+
+    public void updateForm(SCFormConfig formConfig) {
+        for (int i = 0; i < forms.size(); i++) {
+            if (forms.get(i).getFormKey().equalsIgnoreCase(formConfig.getFormKey())) {
+                forms.add(i, formConfig);
+                break;
+            }
+        }
+    }
+
+    public void removeForm(String id) {
+        for (int i = 0; i < forms.size(); i++) {
+            if (forms.get(i).getFormKey().equalsIgnoreCase(id)) {
+                forms.remove(i);
+                break;
+            }
+        }
+    }
 }

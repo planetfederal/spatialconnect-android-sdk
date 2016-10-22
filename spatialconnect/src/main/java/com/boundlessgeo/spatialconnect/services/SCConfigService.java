@@ -27,7 +27,6 @@ import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
-import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.github.rtoshiro.secure.SecureSharedPreferences;
 
@@ -229,22 +228,6 @@ public class SCConfigService extends SCService {
         return "Android SDK: " + sdkVersion + " (" + release + ")";
     }
 
-    public void saveConfigToCache(SCConfig config) {
-        try {
-            String configJson = ObjectMappers.getMapper().writeValueAsString(config);
-            Log.e(LOG_TAG,"saving config json: ");
-            SecureSharedPreferences cache = new SecureSharedPreferences(context);
-            SecureSharedPreferences.Editor editor = cache.edit();
-            editor.putString("config", configJson);
-            editor.commit();
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            Log.e(LOG_TAG, "saving config to cache error:" + e.getMessage());
-        } catch (Exception e) {
-            Log.e(LOG_TAG, "saving config to cache error:" + e.getMessage());
-        }
-    }
-
     public void loadConfigFromCache() {
         try {
             SCConfig config = null;
@@ -253,76 +236,37 @@ public class SCConfigService extends SCService {
             config = ObjectMappers.getMapper().readValue(
                     configJson,
                     SCConfig.class);
-            Log.e(LOG_TAG,"loaded config json from CACHE: ");
-//            registerForms(config.getForms());
-            //registerDataStores(config.getStores());
+            loadConfig(config);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-    public SCConfig getConfigFromCache() {
-        SCConfig config = null;
+
+    public void setCachedConfig(SCConfig config) {
+
         try {
-            SecureSharedPreferences cache = new SecureSharedPreferences(context);
-            String configJson = cache.getString("config","");
-            config = ObjectMappers.getMapper().readValue(
+            SpatialConnect sc = SpatialConnect.getInstance();
+            String configJson = ObjectMappers.getMapper().writeValueAsString(config);
+            sc.getCache().setValue(configJson, "spatialconnect.config.remote.cached");
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public SCConfig getCachedConfig() {
+        SCConfig returnConfig = null;
+        try {
+            SpatialConnect sc = SpatialConnect.getInstance();
+            String configJson = sc.getCache().getStringValue("spatialconnect.config.remote.cached");
+            returnConfig = ObjectMappers.getMapper().readValue(
                     configJson,
                     SCConfig.class);
-            Log.e(LOG_TAG,"GET config json from CACHE: ");
+
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        return config;
-    }
-
-    public void addStoreConfigCache(SCStoreConfig store) {
-        SCConfig cachedConfig = getConfigFromCache();
-        if (cachedConfig != null) {
-            cachedConfig.getStores().add(store);
-            saveConfigToCache(cachedConfig);
-        }
-    }
-
-    public void removeStoreConfigFromCache(String storeId) {
-        SCConfig cachedConfig = getConfigFromCache();
-        SCStoreConfig foundStore = null;
-        for (SCStoreConfig cachedStore : cachedConfig.getStores()) {
-            if (storeId.equalsIgnoreCase(cachedStore.getUniqueID())) {
-                foundStore = cachedStore;
-                break;
-            }
-        }
-
-        if (foundStore != null) {
-            cachedConfig.getStores().remove(foundStore);
-            saveConfigToCache(cachedConfig);
-        } else {
-            Log.e(LOG_TAG, "Store not found in cache for id:  " + storeId);
-        }
-
-    }
-
-    public void updateStoreConfigCache(SCStoreConfig store) {
-        SCConfig cachedConfig = getConfigFromCache();
-        boolean foundStore = false;
-        for (SCStoreConfig cachedStore : cachedConfig.getStores()) {
-            if (store.getUniqueID().equalsIgnoreCase(cachedStore.getUniqueID())) {
-                foundStore = true;
-                cachedStore.setDefaultLayers(store.getDefaultLayers());
-                cachedStore.setName(store.getName());
-                cachedStore.setType(store.getType());
-                cachedStore.setUri(store.getUri());
-                cachedStore.setVersion(store.getVersion());
-                break;
-            }
-        }
-
-        if (foundStore) {
-            saveConfigToCache(cachedConfig);
-        } else {
-            Log.e(LOG_TAG, "Unable to update config cache for store: " + store.getName());
-        }
-
+        return returnConfig;
     }
 }
