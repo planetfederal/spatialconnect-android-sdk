@@ -7,7 +7,7 @@ import android.util.Log;
 
 public class SCCache {
     private String LOG_TAG = SCCache.class.getSimpleName();
-    private static final String CACHE_FILE = "signal";
+    private static final String CACHE_FILE = "spatialconnect";
     private SharedPreferences.Editor mEditor;
     private SharedPreferences mPrefs;
 
