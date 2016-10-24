@@ -16,16 +16,20 @@ package com.boundlessgeo.spatialconnect.services;
 
 import android.content.Context;
 import android.util.Log;
+
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.github.rtoshiro.secure.SecureSharedPreferences;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
+
 import okhttp3.Authenticator;
 import okhttp3.Interceptor;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.Route;
-import org.json.JSONException;
-import org.json.JSONObject;
 import rx.functions.Action1;
 import rx.subjects.BehaviorSubject;
 
@@ -120,7 +124,7 @@ public class SCAuthService extends SCService {
                     final String theUrl = SCBackendService.backendUri + "/api/authenticate";
                     if (getEmail() != null && getPassword() != null) {
                         HttpHandler.getInstance()
-                            .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", email, password))
+                            .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", getEmail(), getPassword()))
                                 .subscribe(
                                     new Action1<Response>() {
                                         @Override

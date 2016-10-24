@@ -229,7 +229,9 @@ public class SCConfigService extends SCService {
 
     public void loadConfigFromCache() {
         SCConfig config = getCachedConfig();
-        loadConfig(config);
+        if (config != null) {
+            loadConfig(config);
+        }
     }
 
     public void setCachedConfig(SCConfig config) {
@@ -249,9 +251,11 @@ public class SCConfigService extends SCService {
         try {
             SpatialConnect sc = SpatialConnect.getInstance();
             String configJson = sc.getCache().getStringValue("spatialconnect.config.remote.cached");
-            returnConfig = ObjectMappers.getMapper().readValue(
-                    configJson,
-                    SCConfig.class);
+            if (configJson != null) {
+                returnConfig = ObjectMappers.getMapper().readValue(
+                        configJson,
+                        SCConfig.class);
+            }
 
         } catch (IOException e) {
             e.printStackTrace();

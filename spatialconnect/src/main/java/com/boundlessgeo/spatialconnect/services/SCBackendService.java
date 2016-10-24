@@ -104,6 +104,7 @@ public class SCBackendService extends SCService {
                                     registerAndFetchConfig();
                                 } else {
                                     SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+                                    configReceived.onNext(true);
                                 }
                             }
                         });
@@ -111,6 +112,7 @@ public class SCBackendService extends SCService {
                         //load config from cache
                         Log.d(LOG_TAG, "No internet get cached remote config");
                         SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+                        configReceived.onNext(true);
 
                     }
 
