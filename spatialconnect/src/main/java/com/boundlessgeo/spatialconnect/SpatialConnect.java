@@ -136,34 +136,6 @@ public class SpatialConnect {
         if (remoteConfig != null && backendService == null) {
             Log.d(LOG_TAG, "connecting backend");
             backendService = new SCBackendService(context);
-
-            /*
-              if backendSvc available
-                if no internet
-                   load local cached remote config if present
-                else
-                       attempt to auth
-                    if auth fails
-                    load cache remote config if present
-                    else
-                    update remote config cache
-             */
-//            SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
-//                @Override
-//                public void call(Boolean connected) {
-//                    if (connected) {
-//                        Log.d(LOG_TAG, "connecting get remote from server");
-//
-//                    } else {
-//                        //load config from cache
-//                        Log.d(LOG_TAG, "No internet get cached remote config");
-//                        //SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
-//
-//                    }
-//
-//
-//                }
-//            });
             backendService.initialize(remoteConfig);
             backendService.start();
         }
