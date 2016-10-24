@@ -103,7 +103,6 @@ public class SCAuthService extends SCService {
     public static class SCAuthenticator implements Authenticator {
         @Override
         public Request authenticate(Route route, Response response) throws IOException {
-            refreshToken();
             return response.request().newBuilder()
                     .addHeader(AUTH_HEADER_NAME, getAccessToken())
                     .build();
