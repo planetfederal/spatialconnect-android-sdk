@@ -7,11 +7,9 @@ import android.support.test.runner.AndroidJUnit4;
 
 import com.boundlessgeo.spaconapp.MainActivity;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.SpatialConnectActivity;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
-import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 
 import org.junit.After;
 import org.junit.BeforeClass;
@@ -27,7 +25,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import rx.functions.Action1;
-import rx.functions.Func1;
 import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
@@ -50,7 +47,6 @@ public class IntegratedTests {
      * Test context
      */
     protected static File remoteConfigFile;
-    protected static File localConfigFile;
 
     private static SpatialConnect sc;
 
@@ -67,7 +63,6 @@ public class IntegratedTests {
         );
         try {
             remoteConfigFile = File.createTempFile("config_remote.scfg", null, activity.getCacheDir());
-            localConfigFile = File.createTempFile("config_local.scfg", null, activity.getCacheDir());
 
             // read test scconfig_remote.json file from test resources directory
             InputStream is = testContext.getResources().openRawResource(R.raw.scconfig_remote);
@@ -96,7 +91,7 @@ public class IntegratedTests {
     }
 
     @Test
-    public void testNewtworkServiceCanPublishAndSubscribe() {
+    public void testNetworkServiceCanPublishAndSubscribe() {
         SCBackendService networkService = sc.getBackendService();
         SCMessageOuterClass.SCMessage.Builder builder =  SCMessageOuterClass.SCMessage.newBuilder();
         builder.setAction(0)

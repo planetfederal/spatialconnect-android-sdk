@@ -18,9 +18,13 @@ import android.content.Context;
 import android.os.Environment;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
 /**
  * Utility class for reading and writing to the filesystem.
@@ -30,25 +34,6 @@ public class SCFileUtilities {
     private static final File[] NO_FILES = {};
 
     public SCFileUtilities() {
-    }
-
-    public static boolean isStorageAvailable(Context context, SCStoreConfig scStoreConfig) {
-        boolean storageStatus = false;
-        if (!scStoreConfig.isMainBundle()) {
-            // since the file is not packaged with the app, we check if external storage is available
-            storageStatus = isExternalStorageAvailable();
-            if (storageStatus) {
-                File f = new File(scStoreConfig.getUri());
-                if (!f.exists()) storageStatus = false;
-            }
-        }
-        else {
-            if (context != null) {
-                File f = new File(context.getFilesDir(), scStoreConfig.getUri());
-                if (!f.exists()) storageStatus = false;
-            }
-        }
-        return storageStatus;
     }
 
     public static File getInternalFileObject(String uri, Context context) {

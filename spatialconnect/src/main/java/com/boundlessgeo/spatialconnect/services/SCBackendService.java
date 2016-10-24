@@ -82,14 +82,6 @@ public class SCBackendService extends SCService {
     @Override
     public void start() {
         mqttHandler.connect();
-        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
-            @Override
-            public void call(Boolean authenticated) {
-                if (authenticated) {
-                    registerAndFetchConfig();
-                }
-            }
-        });
         Log.d(LOG_TAG, "Subscribing to network connectivity updates.");
         ReactiveNetwork.observeNetworkConnectivity(context)
                 .subscribe(new Action1<Connectivity>() {
@@ -99,6 +91,34 @@ public class SCBackendService extends SCService {
                         networkConnected.onNext(connectivity.getState().equals(NetworkInfo.State.CONNECTED));
                     }
                 });
+
+        networkConnected.subscribe(new Action1<Boolean>() {
+                @Override
+                public void call(Boolean connected) {
+                    if (connected) {
+                        Log.d(LOG_TAG, "waiting on auth to get remote from server");
+                        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
+                            @Override
+                            public void call(Boolean authenticated) {
+                                if (authenticated) {
+                                    registerAndFetchConfig();
+                                } else {
+                                    SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+                                    configReceived.onNext(true);
+                                }
+                            }
+                        });
+                    } else {
+                        //load config from cache
+                        Log.d(LOG_TAG, "No internet get cached remote config");
+                        SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+                        configReceived.onNext(true);
+
+                    }
+
+
+                }
+            });
     }
 
     private void setupSubscriptions() {
@@ -152,14 +172,19 @@ public class SCBackendService extends SCService {
         listenOnTopic("/config/update").subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
             @Override
             public void call(SCMessageOuterClass.SCMessage scMessage) {
-                Log.e("FormStore","action: " + scMessage.getAction());
+                Log.d("FormStore","action: " + scMessage.getAction());
+                SpatialConnect sc = SpatialConnect.getInstance();
+                SCConfigService cs = sc.getConfigService();
+                SCConfig cachedConfig = cs.getCachedConfig();
+
                 switch (SCCommand.fromActionNumber(scMessage.getAction())) {
                     case CONFIG_ADD_STORE:
                         try {
                             SCStoreConfig config = ObjectMappers.getMapper()
                                     .readValue(scMessage.getPayload(), SCStoreConfig.class);
-                            SpatialConnect.getInstance().getDataService()
-                                    .registerAndStartStoreByConfig(config);
+                            cachedConfig.addStore(config);
+                            sc.getDataService().registerAndStartStoreByConfig(config);
+
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -168,24 +193,23 @@ public class SCBackendService extends SCService {
                         try {
                             SCStoreConfig config = ObjectMappers.getMapper()
                                     .readValue(scMessage.getPayload(), SCStoreConfig.class);
-                            SpatialConnect.getInstance().getDataService()
-                                    .updateStoresByConfig(config);
+                            cachedConfig.updateStore(config);
+                            sc.getDataService().updateStoresByConfig(config);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
                         break;
                     case CONFIG_REMOVE_STORE:
-                        SCDataStore store = SpatialConnect.getInstance().getDataService().getStoreById(scMessage.getPayload());
-                        SpatialConnect.getInstance().getDataService()
-                                .unregisterStore(store);
+                        SCDataStore store = sc.getDataService().getStoreById(scMessage.getPayload());
+                        cachedConfig.removeStore(scMessage.getPayload());
+                        sc.getDataService().unregisterStore(store);
                         break;
                     case CONFIG_ADD_FORM:
                         try {
                             SCFormConfig config = ObjectMappers.getMapper()
                                     .readValue(scMessage.getPayload(), SCFormConfig.class);
-                            SpatialConnect.getInstance()
-                                    .getDataService()
-                                    .getFormStore().registerFormByConfig(config);
+                            cachedConfig.addForm(config);
+                            sc.getDataService().getFormStore().registerFormByConfig(config);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -194,21 +218,22 @@ public class SCBackendService extends SCService {
                         try {
                             SCFormConfig config = ObjectMappers.getMapper()
                                     .readValue(scMessage.getPayload(), SCFormConfig.class);
-                            SpatialConnect.getInstance()
-                                    .getDataService()
-                                    .getFormStore().updateFormByConfig(config);
+                            cachedConfig.updateForm(config);
+                            sc.getDataService().getFormStore().updateFormByConfig(config);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
                         break;
                     case CONFIG_REMOVE_FORM:
-                            SpatialConnect.getInstance()
-                                    .getDataService()
+                            cachedConfig.removeForm(scMessage.getPayload());
+                            sc.getDataService()
                                     .getFormStore()
-                                    .unregisterFormByKey(scMessage.getPayload().toString());
+                                    .unregisterFormByKey(scMessage.getPayload());
                         break;
 
                 }
+
+                cs.setCachedConfig(cachedConfig);
             }
         });
     }
@@ -283,9 +308,11 @@ public class SCBackendService extends SCService {
                     message.getPayload(),
                     SCConfig.class
             );
-            configReceived.onNext(true);
             Log.d(LOG_TAG, "Loading config received from mqtt broker");
+            configReceived.onNext(true);
+            SpatialConnect.getInstance().getConfigService().setCachedConfig(config);
             SpatialConnect.getInstance().getConfigService().loadConfig(config);
+
         }
         catch (IOException e) {
             e.printStackTrace();

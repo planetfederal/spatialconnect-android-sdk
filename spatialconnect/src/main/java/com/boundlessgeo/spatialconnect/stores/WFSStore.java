@@ -25,6 +25,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
+import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -170,29 +171,35 @@ public class WFSStore extends SCDataStore implements  SCSpatialStore, SCDataStor
             @Override
             public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
                 // try to connect to WFS store to get the layers from the capabilities documents
-                try {
-                    HttpHandler.getInstance().get(getGetCapabilitiesUrl())
-                            .subscribe(new Action1<Response>() {
-                                @Override
-                                public void call(Response response) {
-                                    layerNames = getLayerNames(response.body().byteStream());
-                                    if (layerNames != null) {
-                                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                                        subscriber.onNext(
-                                                new SCStoreStatusEvent(
-                                                        SCDataStoreStatus.SC_DATA_STORE_RUNNING,
-                                                        storeInstance.getStoreId()
-                                                )
-                                        );
-                                        subscriber.onCompleted();
-                                    }
-                                }
-                            });
-                }
-                catch (IOException e) {
-                    Log.e(LOG_TAG, "Could not start store with url" + baseUrl);
-                    subscriber.onError(e);
-                }
+                SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
+                    @Override
+                    public void call(Boolean connected) {
+                        if (connected) {
+                            try {
+                                HttpHandler.getInstance().get(getGetCapabilitiesUrl())
+                                        .subscribe(new Action1<Response>() {
+                                            @Override
+                                            public void call(Response response) {
+                                                layerNames = getLayerNames(response.body().byteStream());
+                                                if (layerNames != null) {
+                                                    storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                                    subscriber.onNext(
+                                                            new SCStoreStatusEvent(
+                                                                    SCDataStoreStatus.SC_DATA_STORE_RUNNING,
+                                                                    storeInstance.getStoreId()
+                                                            )
+                                                    );
+                                                    subscriber.onCompleted();
+                                                }
+                                            }
+                                        });
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                    }
+                });
             }
         });
     }

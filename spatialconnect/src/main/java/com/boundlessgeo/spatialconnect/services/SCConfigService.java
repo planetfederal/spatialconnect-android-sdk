@@ -27,6 +27,7 @@ import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.io.File;
 import java.io.IOException;
@@ -130,8 +131,8 @@ public class SCConfigService extends SCService {
     }
 
     public void loadConfig(SCConfig config) {
-        registerForms(config.getFormConfigs());
-        registerDataStores(config.getStoreConfigs());
+        registerForms(config.getForms());
+        registerDataStores(config.getStores());
         if (config.getRemote() != null) {
             SpatialConnect.getInstance().connectBackend(config.getRemote());
         }
@@ -224,5 +225,42 @@ public class SCConfigService extends SCService {
         String release = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
         return "Android SDK: " + sdkVersion + " (" + release + ")";
+    }
+
+    public void loadConfigFromCache() {
+        SCConfig config = getCachedConfig();
+        if (config != null) {
+            loadConfig(config);
+        }
+    }
+
+    public void setCachedConfig(SCConfig config) {
+
+        try {
+            SpatialConnect sc = SpatialConnect.getInstance();
+            String configJson = ObjectMappers.getMapper().writeValueAsString(config);
+            sc.getCache().setValue(configJson, "spatialconnect.config.remote.cached");
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public SCConfig getCachedConfig() {
+        SCConfig returnConfig = null;
+        try {
+            SpatialConnect sc = SpatialConnect.getInstance();
+            String configJson = sc.getCache().getStringValue("spatialconnect.config.remote.cached");
+            if (configJson != null) {
+                returnConfig = ObjectMappers.getMapper().readValue(
+                        configJson,
+                        SCConfig.class);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return returnConfig;
     }
 }
