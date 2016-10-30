@@ -18,6 +18,7 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -29,6 +30,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 import okio.Buffer;
+import okio.BufferedSink;
 import okio.BufferedSource;
 import okio.ForwardingSource;
 import okio.Okio;
@@ -58,6 +60,15 @@ public class HttpHandler {
                 .addNetworkInterceptor(new LoggingInterceptor())
                 .addNetworkInterceptor(new SCAuthService.AuthHeaderInterceptor())
                 .authenticator(new SCAuthService.SCAuthenticator())
+                .addInterceptor(new Interceptor() {
+                    @Override public Response intercept(Chain chain) throws IOException {
+                        Response originalResponse = chain.proceed(chain.request());
+                        return originalResponse.newBuilder()
+                                .body(new ProgressResponseBody( originalResponse.request().url().toString(),
+                                        originalResponse.body(), progressListener))
+                                .build();
+                    }
+                })
                 .build();
     }
 
@@ -77,6 +88,53 @@ public class HttpHandler {
                         subscriber.onCompleted();
                     }
                 } catch (IOException e) {
+                    subscriber.onError(e);
+                }
+            }
+        })
+        .subscribeOn(Schedulers.io());
+    }
+
+    public Observable<Integer> getWithProgress(final String url, final File file) throws IOException {
+        return Observable.create(new Observable.OnSubscribe<Integer>() {
+            @Override
+            public void call(Subscriber<? super Integer> subscriber) {
+                int DOWNLOAD_CHUNK_SIZE = 2048; //Same as Okio Segment.SIZE
+
+                try {
+                    //"https://s3.amazonaws.com/test.spacon/rio.gpkg"
+                    Request request = new Request.Builder().url(url).build();
+
+                    Response response = client.newCall(request).execute();
+                    ResponseBody body = response.body();
+                    long contentLength = body.contentLength();
+                    BufferedSource source = body.source();
+
+                    //File file = new File(context.getFilesDir(), "android.gpkg");
+                    BufferedSink sink = Okio.buffer(Okio.sink(file));
+
+                    long totalRead = 0;
+                    long totalSinceLastPublish = 0;
+                    long read;
+                    //Log.e(LOG_TAG,"contentLength: " + contentLength / 4);
+                    while ((read = (source.read(sink.buffer(), DOWNLOAD_CHUNK_SIZE))) != -1) {
+                        totalRead += read;
+                        totalSinceLastPublish += read;
+                        int progress = (int) ((totalRead * 100) / contentLength);
+                        if (totalSinceLastPublish > (contentLength / 4)) {
+                            totalSinceLastPublish = 0;
+                            Log.e(LOG_TAG, "progress: " + progress);
+                            subscriber.onNext(progress);
+                        }
+                    }
+                    sink.writeAll(source);
+                    sink.flush();
+                    sink.close();
+                    subscriber.onNext(100);
+                    Log.e(LOG_TAG,"progress: DONE");
+                    subscriber.onCompleted();
+                } catch (IOException e) {
+                    Log.e(LOG_TAG,"progress: Error: "+ e.getMessage());
                     subscriber.onError(e);
                 }
             }
@@ -153,10 +211,13 @@ public class HttpHandler {
         private final ResponseBody responseBody;
         private final ProgressListener progressListener;
         private BufferedSource bufferedSource;
+        private final String url;
 
-        public ProgressResponseBody(ResponseBody responseBody, ProgressListener progressListener) {
+        public ProgressResponseBody(String url, ResponseBody responseBody, ProgressListener progressListener) {
+            Log.e(LOG_TAG,"ProgressREsonseBody");
             this.responseBody = responseBody;
             this.progressListener = progressListener;
+            this.url = url;
         }
 
         @Override
@@ -171,6 +232,7 @@ public class HttpHandler {
 
         @Override
         public BufferedSource source() {
+            Log.e(LOG_TAG,"BufferedSource");
             if (bufferedSource == null) {
                 bufferedSource = Okio.buffer(source(responseBody.source()));
             }
@@ -178,6 +240,7 @@ public class HttpHandler {
         }
 
         private Source source(Source source) {
+            Log.e(LOG_TAG,"source");
             return new ForwardingSource(source) {
                 long totalBytesRead = 0L;
 
@@ -185,6 +248,7 @@ public class HttpHandler {
                 public long read(Buffer sink, long byteCount) throws IOException {
                     long bytesRead = super.read(sink, byteCount);
                     // read() returns the number of bytes read, or -1 if this source is exhausted.
+                    Log.e(LOG_TAG,"read....." + url) ;
                     totalBytesRead += bytesRead != -1 ? bytesRead : 0;
                     progressListener.update(totalBytesRead, responseBody.contentLength(), bytesRead == -1);
                     return bytesRead;
@@ -202,7 +266,7 @@ public class HttpHandler {
         public void update(long bytesRead, long contentLength, boolean done) {
             // TODO: consider wrapping the  update in an observable that you can throttle
             // something like this: https://groups.google.com/forum/#!msg/rxjava/aqDM7Eq3zT8/PCF_7pdlGgAJ
-//                Log.v(LOG_TAG, String.format("%d%% done\n", (100 * bytesRead) / contentLength));
+                Log.e(LOG_TAG, String.format("%d%% done\n", (100 * bytesRead) / contentLength));
         }
     };
 }

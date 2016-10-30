@@ -16,7 +16,6 @@ package com.boundlessgeo.spatialconnect.stores;
 
 
 import android.content.Context;
-import android.text.TextUtils;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapter;
@@ -43,6 +42,8 @@ public abstract class SCDataStore {
     private String type;
     private Context context;
     private SCDataStoreStatus status = SCDataStoreStatus.SC_DATA_STORE_STOPPED;
+    private int downloadProgress;
+
 
     public SCDataStore(Context context, SCStoreConfig scStoreConfig) {
         this.context = context;
@@ -112,6 +113,14 @@ public abstract class SCDataStore {
 
     public void setStatus(SCDataStoreStatus status) {
         this.status = status;
+    }
+
+    public int getDownloadProgress() {
+        return downloadProgress;
+    }
+
+    public void setDownloadProgress(int downloadProgress) {
+        this.downloadProgress = downloadProgress;
     }
 
     public List<String> layers() {

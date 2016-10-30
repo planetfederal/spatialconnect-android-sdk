@@ -188,12 +188,25 @@ public class SCDataService extends SCService {
 
     public void startStore(final SCDataStore store) {
         if (!store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
-            Log.d(LOG_TAG, "Starting store " + store.getName() + " " + store.getStoreId());
+            Log.e(LOG_TAG, "Starting store " + store.getName() + " " + store.getStoreId());
+//            ((SCDataStoreLifeCycle) store).start()
+//                    .observeOn(AndroidSchedulers.mainThread())
+//                    .subscribe(new Action1<SCStoreStatusEvent>() {
+//                        @Override
+//                        public void call(SCStoreStatusEvent scStoreStatusEvent) {
+//                            storeEventSubject.onNext(
+//                                new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS, store.getStoreId()));
+//                        }
+//                    });
             ((SCDataStoreLifeCycle) store).start()
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(new Action1<SCStoreStatusEvent>() {
                 @Override
                 public void call(SCStoreStatusEvent s) {
+                    Log.e(LOG_TAG, "Starting store " + store.getName() + " " + store.getStoreId());
+                    Log.e(LOG_TAG,"ScStoreStatusEvent " + s);
+                    storeEventSubject.onNext(
+                                new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS, store.getStoreId()));
                 }
             }, new Action1<Throwable>() {
                 @Override
@@ -201,7 +214,7 @@ public class SCDataService extends SCService {
                     Log.d(LOG_TAG, t.getLocalizedMessage());
                     // onError can happen if we cannot start the store b/c of some error or runtime exception
                     storeEventSubject.onNext(
-                            new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, store.getStoreId())
+                            new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_START_FAILED, store.getStoreId())
                     );
                 }
             }, new Action0() {
@@ -222,8 +235,9 @@ public class SCDataService extends SCService {
         if (store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
             Log.d(LOG_TAG, "Stopping store " + store.getName() + " " + store.getStoreId());
             ((SCDataStoreLifeCycle) store).stop();
+            stores.remove(store);
             storeEventSubject.onNext(
-                    new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, store.getStoreId()));
+                    new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_REMOVED, store.getStoreId()));
             if (stores.size() > 0) {
                 hasStores.onNext(true);
             }

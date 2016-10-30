@@ -17,14 +17,11 @@ package com.boundlessgeo.spatialconnect.jsbridge;
 import android.location.Location;
 import android.support.annotation.Nullable;
 import android.util.Log;
-import android.view.View;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
-import com.boundlessgeo.spatialconnect.dataAdapter.GeoJsonAdapter;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
-import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
@@ -42,9 +39,8 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.boundlessgeo.spatialconnect.stores.SCRasterStore;
 import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
+import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 import com.boundlessgeo.spatialconnect.tiles.GpkgRasterSource;
-import com.boundlessgeo.spatialconnect.tiles.GpkgTileProvider;
-import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
@@ -57,11 +53,10 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.WritableNativeArray;
 import com.facebook.react.bridge.WritableNativeMap;
-import com.facebook.react.uimanager.UIManagerModule;
-import com.facebook.react.uimanager.UIBlock;
-import com.facebook.react.uimanager.NativeViewHierarchyManager;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
-
+import com.facebook.react.uimanager.NativeViewHierarchyManager;
+import com.facebook.react.uimanager.UIBlock;
+import com.facebook.react.uimanager.UIManagerModule;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -70,7 +65,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -78,7 +72,6 @@ import java.util.List;
 
 import rx.Subscriber;
 import rx.functions.Action1;
-import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 /**
@@ -276,6 +269,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (command.equals(SCCommand.DATASERVICE_ACTIVESTOREBYID)) {
                 handleActiveStoreById(message);
             }
+            if (command.equals(SCCommand.DATASERVICE_STORELIST)) {
+                handleStoreList(message);
+            }
             if (command.equals(SCCommand.DATASERVICE_GEOSPATIALQUERY)
                     || command.equals(SCCommand.DATASERVICE_SPATIALQUERY)) {
                 handleQuery(message);
@@ -441,6 +437,17 @@ public class SCBridge extends ReactContextBaseJavaModule {
         return eventPayload;
     }
 
+    private WritableMap getAllStoresPayload() {
+        List<SCDataStore> stores = sc.getDataService().getAllStores();
+        WritableMap eventPayload = Arguments.createMap();
+        WritableArray storesArray = Arguments.createArray();
+        for (SCDataStore store : stores) {
+            storesArray.pushMap(getStoreMap(store));
+        }
+        eventPayload.putArray("stores", storesArray);
+        return eventPayload;
+    }
+
     /**
      * Handles the {@link SCCommand#DATASERVICE_FORMLIST} command.
      */
@@ -478,6 +485,23 @@ public class SCBridge extends ReactContextBaseJavaModule {
         String storeId = message.getMap("payload").getString("storeId");
         SCDataStore store = sc.getDataService().getStoreById(storeId);
         sendEvent(message.getInt("type"), getStoreMap(store));
+    }
+
+    /**
+     * Handles all the {@link SCCommand#DATASERVICE_STORELIST} commands.
+     *
+     * @param message
+     */
+    private void handleStoreList(final ReadableMap message) {
+        Log.d(LOG_TAG, "Handling STORELIST message :" + message.toString());
+        sendEvent(message.getInt("type"), message.getString("responseId"), getAllStoresPayload());
+
+        sc.getDataService().storeEvents.subscribe(new Action1<SCStoreStatusEvent>() {
+            @Override
+            public void call(SCStoreStatusEvent scStoreStatusEvent) {
+                sendEvent(message.getInt("type"), message.getString("responseId"), getAllStoresPayload());
+            }
+        });
     }
 
     /**

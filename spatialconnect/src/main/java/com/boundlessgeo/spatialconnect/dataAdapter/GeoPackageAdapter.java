@@ -19,12 +19,11 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.db.GeoPackageContents;
 import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
-import com.boundlessgeo.spatialconnect.tiles.GpkgTileProvider;
-import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
@@ -34,9 +33,12 @@ import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
+import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
+import com.boundlessgeo.spatialconnect.tiles.GpkgTileProvider;
+import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.squareup.sqlbrite.BriteDatabase;
 import com.squareup.sqlbrite.SqlBrite;
@@ -89,14 +91,14 @@ public class GeoPackageAdapter extends SCDataAdapter {
     }
 
     @Override
-    public Observable<SCDataAdapterStatus> connect() {
+    public Observable<SCStoreStatusEvent> connect() {
         final GeoPackageAdapter adapterInstance = this;
         Log.d(LOG_TAG, "Connecting adapter for store " + scStoreConfig.getName());
 
-        return Observable.create(new Observable.OnSubscribe<SCDataAdapterStatus>() {
+        return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
 
             @Override
-            public void call(final Subscriber<? super SCDataAdapterStatus> subscriber) {
+            public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
 
                 Log.d(LOG_TAG, "Connecting to " + context.getDatabasePath(scStoreConfig.getUniqueID()).getPath());
                 adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTING);
@@ -122,38 +124,73 @@ public class GeoPackageAdapter extends SCDataAdapter {
                     if (scStoreConfig.getUri().startsWith("http")) {
                         try {
                             theUrl = new URL(scStoreConfig.getUri());
-                            downloadGeoPackage(theUrl)
-                                    .subscribe(new Action1<Response>() {
-                                        @Override
-                                        public void call(Response response) {
-                                            if (!response.isSuccessful()) {
-                                                adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
-                                                subscriber.onError(new IOException("Unexpected code " + response));
-                                            }
-                                            try {
-                                                // save the file to the databases directory
-                                                saveFileToFilesystem(response.body().byteStream());
-                                                // create new GeoPackage instance now that we've saved the file
-                                                gpkg = new GeoPackage(context, scStoreConfig.getUniqueID());
-                                                if (gpkg.isValid()) {
-                                                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
-                                                    subscriber.onCompleted();
+                            gpkg = new GeoPackage(context, scStoreConfig.getUniqueID());
+                            try {
+                                HttpHandler.getInstance()
+                                        .getWithProgress(theUrl.toString(), context.getDatabasePath(scStoreConfig.getUniqueID()))
+                                        .subscribe(new Action1<Integer>() {
+                                            @Override
+                                            public void call(Integer progress) {
+                                                GeoPackageStore parentStore =
+                                                        (GeoPackageStore)SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
+                                                parentStore.setDownloadProgress(progress);
+                                                Log.e(LOG_TAG,"progress: " + progress);
+                                                if (progress != 100) {
+                                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS);
+                                                    Log.e(LOG_TAG,"sending onNext scstoreStatus event SC_DATA_STORE_DOWNLOAD_PROGRESS");
+                                                    subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS));
+                                                } else {
+                                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                                    Log.e(LOG_TAG,"sending onCompleted scstoreStatus event SC_DATA_STORE_RUNNING");
+                                                    if (gpkg.isValid()) {
+                                                        adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
+                                                        subscriber.onCompleted();
+                                                    }
+                                                    else {
+                                                        Log.w(LOG_TAG, "GeoPackage was not valid, " + gpkg.getName());
+                                                        adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+                                                        subscriber.onError(new Throwable("GeoPackage was not valid."));
+                                                    }
+//                                                    subscriber.onCompleted();
                                                 }
-                                                else {
-                                                    Log.w(LOG_TAG, "GeoPackage was not valid, " + gpkg.getName());
-                                                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
-                                                    subscriber.onError(new Throwable("GeoPackage was not valid."));
-                                                }
                                             }
-                                            catch (IOException e) {
-                                                adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
-                                                subscriber.onError(e);
-                                            }
-                                            finally {
-                                                response.body().close();
-                                            }
-                                        }
-                                    });
+                                        });
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+
+//                            downloadGeoPackage(theUrl)
+//                                    .subscribe(new Action1<Response>() {
+//                                        @Override
+//                                        public void call(Response response) {
+//                                            if (!response.isSuccessful()) {
+//                                                adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+//                                                subscriber.onError(new IOException("Unexpected code " + response));
+//                                            }
+//                                            try {
+//                                                // save the file to the databases directory
+//                                                saveFileToFilesystem(response.body().byteStream());
+//                                                // create new GeoPackage instance now that we've saved the file
+//                                                gpkg = new GeoPackage(context, scStoreConfig.getUniqueID());
+//                                                if (gpkg.isValid()) {
+//                                                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
+//                                                    subscriber.onCompleted();
+//                                                }
+//                                                else {
+//                                                    Log.w(LOG_TAG, "GeoPackage was not valid, " + gpkg.getName());
+//                                                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+//                                                    subscriber.onError(new Throwable("GeoPackage was not valid."));
+//                                                }
+//                                            }
+//                                            catch (IOException e) {
+//                                                adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+//                                                subscriber.onError(e);
+//                                            }
+//                                            finally {
+//                                                response.body().close();
+//                                            }
+//                                        }
+//                                    });
                         }
                         catch (MalformedURLException e) {
                             Log.e(LOG_TAG, "URL was malformed. Check the syntax: " + theUrl);

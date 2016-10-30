@@ -24,6 +24,10 @@ public class SCStoreStatusEvent {
         this.storeId = storeId;
     }
 
+    public SCStoreStatusEvent(SCDataStoreStatus status) {
+        this.status = status;
+    }
+
     public SCDataStoreStatus getStatus() {
         return this.status;
     }

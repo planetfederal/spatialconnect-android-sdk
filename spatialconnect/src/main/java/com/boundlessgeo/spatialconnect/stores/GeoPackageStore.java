@@ -19,7 +19,6 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
-import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
 import com.boundlessgeo.spatialconnect.geometries.SCPolygon;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -27,12 +26,11 @@ import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.google.android.gms.maps.GoogleMap;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 
 import rx.Observable;
-import rx.Subscriber;
 
 /**
  * Provides capabilities for interacting with a single GeoPackage.
@@ -126,32 +124,35 @@ public class GeoPackageStore extends SCDataStore implements SCSpatialStore, SCDa
         Log.d(LOG_TAG, "Starting store " + this.getName());
         storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
 
-        return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
-            @Override
-            public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
+        return storeInstance.getAdapter().connect();
 
-                // subscribe to an Observable/stream that lets us know when the adapter is connected or disconnected
-                storeInstance.getAdapter().connect().subscribe(new Subscriber<SCDataAdapterStatus>() {
-
-                    @Override
-                    public void onCompleted() {
-                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                        subscriber.onCompleted();
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        Log.w(LOG_TAG, "Could not activate data store " + storeId);
-                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-                        subscriber.onError(e);
-                    }
-
-                    @Override
-                    public void onNext(SCDataAdapterStatus status) {
-                    }
-                });
-            }
-        });
+//        return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
+//            @Override
+//            public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
+//
+//                // subscribe to an Observable/stream that lets us know when the adapter is connected or disconnected
+//                storeInstance.getAdapter().connect().subscribe(new Subscriber<SCDataAdapterStatus>() {
+//
+//                    @Override
+//                    public void onCompleted() {
+//                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+//                        subscriber.onCompleted();
+//                    }
+//
+//                    @Override
+//                    public void onError(Throwable e) {
+//                        Log.w(LOG_TAG, "Could not activate data store " + storeId);
+//                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+//                        subscriber.onError(e);
+//                    }
+//
+//                    @Override
+//                    public void onNext(SCDataAdapterStatus status) {
+//                        subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS, storeId));
+//                    }
+//                });
+//            }
+//        });
 
     }
 

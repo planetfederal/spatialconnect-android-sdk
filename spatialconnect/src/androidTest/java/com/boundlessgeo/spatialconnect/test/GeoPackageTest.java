@@ -15,11 +15,11 @@
 package com.boundlessgeo.spatialconnect.test;
 
 import android.database.Cursor;
+import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
-import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
@@ -28,7 +28,6 @@ import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
-import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
@@ -80,7 +79,7 @@ public class GeoPackageTest extends BaseTestCase {
     @AfterClass
     public static void tearDown() throws Exception {
         HttpHandler.getInstance().cancelAllRequests();
-        testContext.deleteDatabase(HAITI_GPKG_ID);
+        //testContext.deleteDatabase(HAITI_GPKG_ID);
     }
 
     @Test
@@ -480,6 +479,9 @@ public class GeoPackageTest extends BaseTestCase {
                                 .subscribe(new Action1<SCStoreStatusEvent>() {
                                     @Override
                                     public void call(SCStoreStatusEvent event) {
+                                        Log.e("GeoPackaeTEst", event.getStatus().toString());
+                                        Log.e("GeoPackaeTEst", "eventStoreId " + event.getStoreId());
+                                        Log.e("GeoPackaeTEst", "storeId " + storeId);
                                         if (event.getStoreId().equals(storeId) &&
                                                 event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
                                             subscriber.onCompleted();
