@@ -90,8 +90,8 @@ public class GeoJsonAdapter extends SCDataAdapter {
                                                     (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
                                             parentStore.setDownloadProgress(progress);
                                             if (progress < 1) {
-                                                parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS);
-                                                subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS));
+                                                parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING_DATA);
+                                                subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING_DATA));
                                             } else {
                                                 parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
                                                 geojsonFilePath = filePath;

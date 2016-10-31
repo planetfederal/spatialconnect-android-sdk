@@ -20,7 +20,7 @@ public enum SCDataStoreStatus
     SC_DATA_STORE_RUNNING, // when the store is running an ready to be used
     SC_DATA_STORE_PAUSED,
     SC_DATA_STORE_STOPPED, // before the store is initialized OR if was unsuccessful trying to get to the running state
-    SC_DATA_STORE_DOWNLOADING, // when the store needs to download data from a remote location
+    SC_DATA_STORE_DOWNLOADING_DATA, // when the store needs to download data from a remote location
     SC_DATA_STORE_DOWNLOAD_FAIL,
     SC_DATA_STORE_START_FAILED,
     SC_DATA_STORE_STATUS_CHANGE,
