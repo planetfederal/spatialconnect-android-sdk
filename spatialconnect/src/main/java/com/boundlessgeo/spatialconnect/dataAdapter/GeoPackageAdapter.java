@@ -124,7 +124,6 @@ public class GeoPackageAdapter extends SCDataAdapter {
                     if (scStoreConfig.getUri().startsWith("http")) {
                         try {
                             theUrl = new URL(scStoreConfig.getUri());
-                            gpkg = new GeoPackage(context, scStoreConfig.getUniqueID());
                             try {
                                 HttpHandler.getInstance()
                                         .getWithProgress(theUrl.toString(), context.getDatabasePath(scStoreConfig.getUniqueID()))
@@ -141,6 +140,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                                                     subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS));
                                                 } else {
                                                     parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                                    gpkg = new GeoPackage(context, scStoreConfig.getUniqueID());
                                                     Log.e(LOG_TAG,"sending onCompleted scstoreStatus event SC_DATA_STORE_RUNNING");
                                                     if (gpkg.isValid()) {
                                                         adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
@@ -151,7 +151,6 @@ public class GeoPackageAdapter extends SCDataAdapter {
                                                         adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
                                                         subscriber.onError(new Throwable("GeoPackage was not valid."));
                                                     }
-//                                                    subscriber.onCompleted();
                                                 }
                                             }
                                         });

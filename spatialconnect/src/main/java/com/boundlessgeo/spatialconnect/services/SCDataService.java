@@ -203,8 +203,6 @@ public class SCDataService extends SCService {
                     .subscribe(new Action1<SCStoreStatusEvent>() {
                 @Override
                 public void call(SCStoreStatusEvent s) {
-                    Log.e(LOG_TAG, "Starting store " + store.getName() + " " + store.getStoreId());
-                    Log.e(LOG_TAG,"ScStoreStatusEvent " + s);
                     storeEventSubject.onNext(
                                 new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS, store.getStoreId()));
                 }
@@ -221,6 +219,7 @@ public class SCDataService extends SCService {
                 @Override
                 public void call() {
                     Log.d(LOG_TAG, "Store " + store.getName() + " is running.");
+                    store.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
                     storeEventSubject.onNext(
                             new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, store.getStoreId())
                     );

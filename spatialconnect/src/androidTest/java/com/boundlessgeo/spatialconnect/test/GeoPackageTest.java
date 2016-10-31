@@ -79,7 +79,7 @@ public class GeoPackageTest extends BaseTestCase {
     @AfterClass
     public static void tearDown() throws Exception {
         HttpHandler.getInstance().cancelAllRequests();
-        //testContext.deleteDatabase(HAITI_GPKG_ID);
+        testContext.deleteDatabase(HAITI_GPKG_ID);
     }
 
     @Test
