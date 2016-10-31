@@ -42,7 +42,7 @@ public abstract class SCDataStore {
     private String type;
     private Context context;
     private SCDataStoreStatus status = SCDataStoreStatus.SC_DATA_STORE_STOPPED;
-    private int downloadProgress;
+    private float downloadProgress;
 
 
     public SCDataStore(Context context, SCStoreConfig scStoreConfig) {
@@ -115,11 +115,11 @@ public abstract class SCDataStore {
         this.status = status;
     }
 
-    public int getDownloadProgress() {
+    public float getDownloadProgress() {
         return downloadProgress;
     }
 
-    public void setDownloadProgress(int downloadProgress) {
+    public void setDownloadProgress(float downloadProgress) {
         this.downloadProgress = downloadProgress;
     }
 

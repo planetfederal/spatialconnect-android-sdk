@@ -60,15 +60,6 @@ public class HttpHandler {
                 .addNetworkInterceptor(new LoggingInterceptor())
                 .addNetworkInterceptor(new SCAuthService.AuthHeaderInterceptor())
                 .authenticator(new SCAuthService.SCAuthenticator())
-                .addInterceptor(new Interceptor() {
-                    @Override public Response intercept(Chain chain) throws IOException {
-                        Response originalResponse = chain.proceed(chain.request());
-                        return originalResponse.newBuilder()
-                                .body(new ProgressResponseBody( originalResponse.request().url().toString(),
-                                        originalResponse.body(), progressListener))
-                                .build();
-                    }
-                })
                 .build();
     }
 
@@ -95,11 +86,11 @@ public class HttpHandler {
         .subscribeOn(Schedulers.io());
     }
 
-    public Observable<Integer> getWithProgress(final String url, final File file) throws IOException {
-        return Observable.create(new Observable.OnSubscribe<Integer>() {
+    public Observable<Float> getWithProgress(final String url, final File file) throws IOException {
+        return Observable.create(new Observable.OnSubscribe<Float>() {
             @Override
-            public void call(Subscriber<? super Integer> subscriber) {
-                int DOWNLOAD_CHUNK_SIZE = 2048; //Same as Okio Segment.SIZE
+            public void call(Subscriber<? super Float> subscriber) {
+                int DOWNLOAD_CHUNK_SIZE = 2028;//2048; //Same as Okio Segment.SIZE
 
                 try {
                     //"https://s3.amazonaws.com/test.spacon/rio.gpkg"
@@ -116,22 +107,19 @@ public class HttpHandler {
                     long totalRead = 0;
                     long totalSinceLastPublish = 0;
                     long read;
-                    //Log.e(LOG_TAG,"contentLength: " + contentLength / 4);
                     while ((read = (source.read(sink.buffer(), DOWNLOAD_CHUNK_SIZE))) != -1) {
                         totalRead += read;
                         totalSinceLastPublish += read;
-                        int progress = (int) ((totalRead * 100) / contentLength);
-                        if (totalSinceLastPublish > (contentLength / 4)) {
+                        long progress = ((totalRead * 100) / contentLength);
+                        if (totalSinceLastPublish > (contentLength / 16)) {
                             totalSinceLastPublish = 0;
-                            Log.e(LOG_TAG, "progress: " + progress);
-                            subscriber.onNext(progress);
+                            subscriber.onNext((float) progress / 100);
                         }
                     }
                     sink.writeAll(source);
                     sink.flush();
                     sink.close();
-                    subscriber.onNext(100);
-                    Log.e(LOG_TAG,"progress: DONE");
+                    subscriber.onNext(1f);
                     subscriber.onCompleted();
                 } catch (IOException e) {
                     Log.e(LOG_TAG,"progress: Error: "+ e.getMessage());

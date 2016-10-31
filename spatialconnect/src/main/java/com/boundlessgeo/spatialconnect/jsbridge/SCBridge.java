@@ -493,12 +493,13 @@ public class SCBridge extends ReactContextBaseJavaModule {
      * @param message
      */
     private void handleStoreList(final ReadableMap message) {
-        Log.d(LOG_TAG, "Handling STORELIST message :" + message.toString());
+        Log.e(LOG_TAG, "Handling STORELIST message :" + message.toString());
         sendEvent(message.getInt("type"), message.getString("responseId"), getAllStoresPayload());
 
-        sc.getDataService().storeEvents.subscribe(new Action1<SCStoreStatusEvent>() {
+        sc.getDataService().storeEventSubject.subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
             public void call(SCStoreStatusEvent scStoreStatusEvent) {
+                Log.e(LOG_TAG, "Handling STORELIST message listening on storeEvents:");
                 sendEvent(message.getInt("type"), message.getString("responseId"), getAllStoresPayload());
             }
         });
@@ -773,6 +774,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
         params.putString("type", store.getType());
         params.putString("version", store.getVersion());
         params.putString("key", store.getKey());
+        params.putInt("status", store.getStatus().ordinal());
+        params.putDouble("downloadProgress", store.getDownloadProgress());
         if (store instanceof SCSpatialStore) {
             WritableArray a = Arguments.createArray();
             for (String vectorLayerName : ((SCSpatialStore) store).vectorLayers()) {

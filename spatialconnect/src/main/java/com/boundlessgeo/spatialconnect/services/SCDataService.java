@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
 import rx.Subscriber;
@@ -65,7 +66,7 @@ public class SCDataService extends SCService {
      * The storeEventSubject is like an internal event bus, its job is to receive {@link SCStoreStatusEvent}s
      * published by a {@link SCDataStore}.
      */
-    protected BehaviorSubject<SCStoreStatusEvent> storeEventSubject;
+    public BehaviorSubject<SCStoreStatusEvent> storeEventSubject;
 
     /**
      * This is the Observable that subscribers in your app will subscribe to so that they can receive {@link
@@ -188,18 +189,10 @@ public class SCDataService extends SCService {
 
     public void startStore(final SCDataStore store) {
         if (!store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
-            Log.e(LOG_TAG, "Starting store " + store.getName() + " " + store.getStoreId());
-//            ((SCDataStoreLifeCycle) store).start()
-//                    .observeOn(AndroidSchedulers.mainThread())
-//                    .subscribe(new Action1<SCStoreStatusEvent>() {
-//                        @Override
-//                        public void call(SCStoreStatusEvent scStoreStatusEvent) {
-//                            storeEventSubject.onNext(
-//                                new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS, store.getStoreId()));
-//                        }
-//                    });
+
             ((SCDataStoreLifeCycle) store).start()
                     .observeOn(AndroidSchedulers.mainThread())
+                    .sample(2, TimeUnit.SECONDS)
                     .subscribe(new Action1<SCStoreStatusEvent>() {
                 @Override
                 public void call(SCStoreStatusEvent s) {

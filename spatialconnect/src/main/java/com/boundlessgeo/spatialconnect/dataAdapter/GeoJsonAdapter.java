@@ -83,14 +83,14 @@ public class GeoJsonAdapter extends SCDataAdapter {
                             URL theUrl = new URL(scStoreConfig.getUri());
                             HttpHandler.getInstance()
                                     .getWithProgress(theUrl.toString(), geoJsonFile)
-                                    .subscribe(new Action1<Integer>() {
+                                    .subscribe(new Action1<Float>() {
                                         @Override
-                                        public void call(Integer progress) {
+                                        public void call(Float progress) {
                                             GeoJsonStore parentStore =
                                                     (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
                                             parentStore.setDownloadProgress(progress);
                                             Log.e(LOG_TAG,"progress: " + progress);
-                                            if (progress != 100) {
+                                            if (progress < 1) {
                                                 parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS);
                                                 Log.e(LOG_TAG,"sending onNext scstoreStatus event SC_DATA_STORE_DOWNLOAD_PROGRESS");
                                                 subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS));
@@ -149,14 +149,16 @@ public class GeoJsonAdapter extends SCDataAdapter {
                             InputStream is = null;
                             // if the doesn't exist, then we attempt to create it by copying it from the raw
                             // resources to the destination specified in the config
+                            GeoJsonStore parentStore =
+                                    (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
                             try {
                                 Log.d(LOG_TAG, "Attempting to connect to " + scStoreConfig.getUri().split("\\.")[0]);
                                 int resourceId = context.getResources().getIdentifier(
                                         scStoreConfig.getUri().split("\\.")[0], "raw", context.getPackageName()
                                 );
+
+
                                 if (resourceId != 0) {
-                                    GeoJsonStore parentStore =
-                                            (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
                                     is = context.getResources().openRawResource(resourceId);
                                     FileUtils.copyInputStreamToFile(is, f);
                                     geojsonFilePath = localUriPath;
@@ -167,11 +169,15 @@ public class GeoJsonAdapter extends SCDataAdapter {
                                     String errorString = "The config specified a store that should exist on the " +
                                             "filesystem but it could not be located.";
                                     Log.w(LOG_TAG, errorString);
+                                    adapterInstance.disconnect();
+                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
                                     subscriber.onError(new Throwable(errorString));
                                 }
                             } catch (Exception e) {
                                 Log.w(LOG_TAG, "Couldn't connect to geojson store.", e);
                                 adapterInstance.disconnect();
+                                adapterInstance.disconnect();
+                                parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
                                 e.printStackTrace();
                                 subscriber.onError(e);
                             } finally {
