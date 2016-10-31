@@ -199,13 +199,10 @@ public class HttpHandler {
         private final ResponseBody responseBody;
         private final ProgressListener progressListener;
         private BufferedSource bufferedSource;
-        private final String url;
 
-        public ProgressResponseBody(String url, ResponseBody responseBody, ProgressListener progressListener) {
-            Log.e(LOG_TAG,"ProgressREsonseBody");
+        public ProgressResponseBody(ResponseBody responseBody, ProgressListener progressListener) {
             this.responseBody = responseBody;
             this.progressListener = progressListener;
-            this.url = url;
         }
 
         @Override
@@ -220,7 +217,6 @@ public class HttpHandler {
 
         @Override
         public BufferedSource source() {
-            Log.e(LOG_TAG,"BufferedSource");
             if (bufferedSource == null) {
                 bufferedSource = Okio.buffer(source(responseBody.source()));
             }
@@ -228,7 +224,6 @@ public class HttpHandler {
         }
 
         private Source source(Source source) {
-            Log.e(LOG_TAG,"source");
             return new ForwardingSource(source) {
                 long totalBytesRead = 0L;
 
@@ -236,7 +231,6 @@ public class HttpHandler {
                 public long read(Buffer sink, long byteCount) throws IOException {
                     long bytesRead = super.read(sink, byteCount);
                     // read() returns the number of bytes read, or -1 if this source is exhausted.
-                    Log.e(LOG_TAG,"read....." + url) ;
                     totalBytesRead += bytesRead != -1 ? bytesRead : 0;
                     progressListener.update(totalBytesRead, responseBody.contentLength(), bytesRead == -1);
                     return bytesRead;

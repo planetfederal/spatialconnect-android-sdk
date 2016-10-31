@@ -15,7 +15,6 @@
 package com.boundlessgeo.spatialconnect.test;
 
 import android.database.Cursor;
-import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
@@ -479,9 +478,6 @@ public class GeoPackageTest extends BaseTestCase {
                                 .subscribe(new Action1<SCStoreStatusEvent>() {
                                     @Override
                                     public void call(SCStoreStatusEvent event) {
-                                        Log.e("GeoPackaeTEst", event.getStatus().toString());
-                                        Log.e("GeoPackaeTEst", "eventStoreId " + event.getStoreId());
-                                        Log.e("GeoPackaeTEst", "storeId " + storeId);
                                         if (event.getStoreId().equals(storeId) &&
                                                 event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
                                             subscriber.onCompleted();

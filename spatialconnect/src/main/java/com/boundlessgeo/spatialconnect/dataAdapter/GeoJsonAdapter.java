@@ -122,8 +122,6 @@ public class GeoJsonAdapter extends SCDataAdapter {
                                 int resourceId = context.getResources().getIdentifier(
                                         scStoreConfig.getUri().split("\\.")[0], "raw", context.getPackageName()
                                 );
-
-
                                 if (resourceId != 0) {
                                     is = context.getResources().openRawResource(resourceId);
                                     FileUtils.copyInputStreamToFile(is, f);
