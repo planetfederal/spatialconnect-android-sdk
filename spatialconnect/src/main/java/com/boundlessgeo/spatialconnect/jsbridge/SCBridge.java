@@ -493,7 +493,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
      * @param message
      */
     private void handleStoreList(final ReadableMap message) {
-        Log.e(LOG_TAG, "Handling STORELIST message :" + message.toString());
+        Log.d(LOG_TAG, "Handling STORELIST message :" + message.toString());
         sendEvent(message.getInt("type"), message.getString("responseId"), getAllStoresPayload());
 
         sc.getDataService().storeEventSubject.subscribe(new Action1<SCStoreStatusEvent>() {

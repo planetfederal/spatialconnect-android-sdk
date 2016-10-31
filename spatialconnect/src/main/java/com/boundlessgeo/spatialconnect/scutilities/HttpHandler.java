@@ -90,18 +90,15 @@ public class HttpHandler {
         return Observable.create(new Observable.OnSubscribe<Float>() {
             @Override
             public void call(Subscriber<? super Float> subscriber) {
-                int DOWNLOAD_CHUNK_SIZE = 2028;//2048; //Same as Okio Segment.SIZE
+                int DOWNLOAD_CHUNK_SIZE = 2028; //Same as Okio Segment.SIZE
 
                 try {
-                    //"https://s3.amazonaws.com/test.spacon/rio.gpkg"
                     Request request = new Request.Builder().url(url).build();
 
                     Response response = client.newCall(request).execute();
                     ResponseBody body = response.body();
                     long contentLength = body.contentLength();
                     BufferedSource source = body.source();
-
-                    //File file = new File(context.getFilesDir(), "android.gpkg");
                     BufferedSink sink = Okio.buffer(Okio.sink(file));
 
                     long totalRead = 0;
@@ -248,7 +245,7 @@ public class HttpHandler {
         public void update(long bytesRead, long contentLength, boolean done) {
             // TODO: consider wrapping the  update in an observable that you can throttle
             // something like this: https://groups.google.com/forum/#!msg/rxjava/aqDM7Eq3zT8/PCF_7pdlGgAJ
-                Log.e(LOG_TAG, String.format("%d%% done\n", (100 * bytesRead) / contentLength));
+//                Log.v(LOG_TAG, String.format("%d%% done\n", (100 * bytesRead) / contentLength));
         }
     };
 }
