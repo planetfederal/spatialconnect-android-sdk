@@ -130,36 +130,6 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
         storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
 
         return storeInstance.getAdapter().connect();
-//        return Observable.create(
-//                new Observable.OnSubscribe<SCStoreStatusEvent>() {
-//                    @Override
-//                    public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
-//                        Log.d(LOG_TAG, "Connecting to GeoJson adapter for store " + storeInstance.getName());
-//
-//                        // subscribe to an Observable/stream that lets us know when the adapter is connected or disconnected
-//                        storeInstance.getAdapter().connect().subscribe(new Subscriber<SCDataAdapterStatus>() {
-//
-//                            @Override
-//                            public void onCompleted() {
-//                                storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-//                                subscriber.onCompleted();
-//                            }
-//
-//                            @Override
-//                            public void onError(Throwable e) {
-//                                Log.w(LOG_TAG, "Could not activate data store " + storeId);
-//                                storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-//                                subscriber.onError(e);
-//                            }
-//
-//                            @Override
-//                            public void onNext(SCDataAdapterStatus status) {
-//                            }
-//                        });
-//                    }
-//                }
-//        );
-
     }
 
     public void stop() {

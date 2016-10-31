@@ -125,35 +125,6 @@ public class GeoPackageStore extends SCDataStore implements SCSpatialStore, SCDa
         storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
 
         return storeInstance.getAdapter().connect();
-
-//        return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
-//            @Override
-//            public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
-//
-//                // subscribe to an Observable/stream that lets us know when the adapter is connected or disconnected
-//                storeInstance.getAdapter().connect().subscribe(new Subscriber<SCDataAdapterStatus>() {
-//
-//                    @Override
-//                    public void onCompleted() {
-//                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-//                        subscriber.onCompleted();
-//                    }
-//
-//                    @Override
-//                    public void onError(Throwable e) {
-//                        Log.w(LOG_TAG, "Could not activate data store " + storeId);
-//                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-//                        subscriber.onError(e);
-//                    }
-//
-//                    @Override
-//                    public void onNext(SCDataAdapterStatus status) {
-//                        subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS, storeId));
-//                    }
-//                });
-//            }
-//        });
-
     }
 
     @Override
