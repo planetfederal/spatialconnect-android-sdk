@@ -13,7 +13,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class DefaultStore extends GeoPackageStore {
+public class DefaultStore extends GeoPackageStore implements  SCSpatialStore, SCDataStoreLifeCycle {
 
     private final String LOG_TAG = DefaultStore.class.getSimpleName();
     public static final String NAME = "DEFAULT_STORE";

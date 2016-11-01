@@ -36,7 +36,6 @@ public class FormStoreTest extends BaseTestCase {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        deleteDatabases();
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
         sc.addConfig(localConfigFile);
@@ -47,7 +46,7 @@ public class FormStoreTest extends BaseTestCase {
     @AfterClass
     public static void tearDown() throws Exception {
         HttpHandler.getInstance().cancelAllRequests();
-        deleteDatabases();
+        testContext.deleteDatabase(FormStore.NAME);
     }
 
     @Test

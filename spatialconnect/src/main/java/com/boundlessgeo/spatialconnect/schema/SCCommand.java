@@ -6,6 +6,7 @@ public enum SCCommand {
 	START_ALL_SERVICES(1),
 	DATASERVICE_ACTIVESTORESLIST(100),
 	DATASERVICE_ACTIVESTOREBYID(101),
+	DATASERVICE_STORELIST(102),
 	DATASERVICE_SPATIALQUERY(110),
 	DATASERVICE_SPATIALQUERYALL(111),
 	DATASERVICE_GEOSPATIALQUERY(112),
@@ -34,27 +35,28 @@ public enum SCCommand {
 	NOTIFICATIONS(600),
 	NOTIFICATION_ALERT(601),
 	NOTIFICATION_INFO(602),
-	NOTIFICATION_CONTENT_AVAILABLE(602);
+	NOTIFICATION_CONTENT_AVAILABLE(602),
+	BACKENDSERVICE_HTTP_URI(701);
 
-    private final int actionNumber;
+	private final int actionNumber;
 
-    SCCommand(int actionNumber) {
-        this.actionNumber = actionNumber;
-    }
+	SCCommand(int actionNumber) {
+		this.actionNumber = actionNumber;
+	}
 
-    public int value() {
-        return actionNumber;
-    }
+	public int value() {
+		return actionNumber;
+	}
 
-    public static SCCommand fromActionNumber(int actionNumber) {
-        for (SCCommand v : values()) {
-            if (v.actionNumber == actionNumber) {
-                return v;
-            }
-        }
-        throw new IllegalArgumentException(
-            String.valueOf(actionNumber) + " is not an action number associated with a SCCommand."
-        );
-    }
-    
+	public static SCCommand fromActionNumber(int actionNumber) {
+		for (SCCommand v : values()) {
+			if (v.actionNumber == actionNumber) {
+				return v;
+			}
+		}
+		throw new IllegalArgumentException(
+				String.valueOf(actionNumber) + " is not an action number associated with a SCCommand."
+		);
+	}
+
 };

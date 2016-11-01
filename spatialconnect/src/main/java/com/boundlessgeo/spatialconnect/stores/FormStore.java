@@ -37,7 +37,7 @@ import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.subjects.BehaviorSubject;
 
-public class FormStore extends GeoPackageStore {
+public class FormStore extends GeoPackageStore implements  SCSpatialStore, SCDataStoreLifeCycle {
 
     private final String LOG_TAG = FormStore.class.getSimpleName();
     public static final String NAME = "FORM_STORE";
@@ -101,8 +101,8 @@ public class FormStore extends GeoPackageStore {
                 SCFormConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
                 formId = c.getId();
                 if (formId != null) {
-                    final String theUrl = SCBackendService.API_URL + "forms/" + formId + "/submit";
-                    if (SCBackendService.API_URL != null) {
+                    final String theUrl = SCBackendService.backendUri + "/api/forms/" + formId + "/submit";
+                    if (SCBackendService.backendUri != null) {
                         SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
                             @Override
                             public void call(Boolean connected) {

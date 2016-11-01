@@ -21,13 +21,14 @@ import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertTrue;
 
-
+@Ignore
 public class SensorServiceTest extends BaseTestCase {
 
     @Suppress // suppressing until there is an "all services started" event that we can subscribe to

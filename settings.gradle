@@ -1,1 +1,1 @@
-include ':spatialconnect'
+include ':spatialconnect', ':SpaconApp'

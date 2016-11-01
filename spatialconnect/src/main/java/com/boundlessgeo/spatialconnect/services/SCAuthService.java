@@ -18,6 +18,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
+import com.github.rtoshiro.secure.SecureSharedPreferences;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -38,19 +39,24 @@ public class SCAuthService extends SCService {
     private static Context context;
     public static BehaviorSubject<Boolean> loginStatus = BehaviorSubject.create(false);
     public static final String AUTH_HEADER_NAME = "x-access-token";
-    public static String accessToken;
-    public static String email;
-    public static String password;
+    private static String accessToken;
+    private static String email;
+    private static String password;
+    private static SecureSharedPreferences settings;
 
     public SCAuthService(Context context) {
         this.context = context;
+        this.settings = new SecureSharedPreferences(context);
+        this.email = getEmail();
+        this.password = getPassword();
+        this.accessToken = getAccessToken();
+        if (this.accessToken != null) {
+            loginStatus.onNext(true);
+        }
     }
 
     public void authenticate(String email, String password) {
-        // TODO: save email and password in encrypted storage
-        // probably want to use the KeyStore: https://developer.android.com/training/articles/keystore.html
-        this.email = email;
-        this.password = password;
+        saveCredentials(email, password);
         try {
             refreshToken();
         }
@@ -61,7 +67,7 @@ public class SCAuthService extends SCService {
 
     public static void logout() {
         // TODO: post to the API to logout and invalidate the auth token when it's implemented in the api
-        SCAuthService.loginStatus.onNext(false);
+        loginStatus.onNext(false);
     }
 
     /**
@@ -104,7 +110,7 @@ public class SCAuthService extends SCService {
     }
 
     /**
-     * Method that returns refreshes auth token.
+     * Method that refreshes the auth token.
      *
      * @return
      */
@@ -114,32 +120,36 @@ public class SCAuthService extends SCService {
             @Override
             public void call(Boolean connected) {
                 if (connected) {
-                    final String theUrl = SCBackendService.API_URL + "authenticate";
-                    // TODO: get the email and password from encrypted storage
-                    // probably want to use the KeyStore: https://developer.android.com/training/articles/keystore.html
-                    if (email != null && password != null) {
+                    final String theUrl = SCBackendService.backendUri + "/api/authenticate";
+                    if (getEmail() != null && getPassword() != null) {
                         HttpHandler.getInstance()
-                            .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", email, password))
+                            .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", getEmail(), getPassword()))
                                 .subscribe(
                                     new Action1<Response>() {
                                         @Override
                                         public void call(Response response) {
-                                            try {
-                                                accessToken = new JSONObject(response.body().string())
+                                            if (response.isSuccessful()) {
+                                                try {
+                                                    accessToken = new JSONObject(response.body().string())
                                                         .getJSONObject("result").getString("token");
-                                                if (accessToken != null) {
-                                                    loginStatus.onNext(true);
+                                                    if (accessToken != null) {
+                                                        saveAccessToken(accessToken);
+                                                        loginStatus.onNext(true);
+                                                    }
+                                                } catch (JSONException e) {
+                                                    e.printStackTrace();
+                                                } catch (IOException e) {
+                                                    e.printStackTrace();
                                                 }
-                                            } catch (JSONException e) {
-                                                e.printStackTrace();
-                                            } catch (IOException e) {
-                                                e.printStackTrace();
+                                            } else {
+                                                loginStatus.onNext(false);
                                             }
                                         }
                                 },
                                     new Action1<Throwable>() {
                                         @Override
                                         public void call(Throwable throwable) {
+                                            loginStatus.onNext(false);
                                             Log.e(LOG_TAG,"something went wrong refreshing token: " + throwable.getMessage());
                                         }
                                 });
@@ -149,9 +159,30 @@ public class SCAuthService extends SCService {
         });
     }
 
-    public static String getAccessToken() throws IOException {
-        return accessToken;
+    public static String getAccessToken() {
+        return settings.getString(AUTH_HEADER_NAME, null);
     }
 
+    public static void saveAccessToken(String accessToken) {
+        SecureSharedPreferences.Editor editor = settings.edit();
+        editor.putString(AUTH_HEADER_NAME, accessToken);
+        editor.commit();
+    }
 
+    public void saveCredentials(String email, String password) {
+        SecureSharedPreferences.Editor editor = settings.edit();
+        editor.putString("email", email);
+        editor.putString("password", password);
+        editor.commit();
+    }
+
+    public static String getEmail() {
+        SecureSharedPreferences settings = new SecureSharedPreferences(context);
+        return settings.getString("email", null);
+    }
+
+    public static String getPassword() {
+        SecureSharedPreferences settings = new SecureSharedPreferences(context);
+        return settings.getString("password", null);
+    }
 }

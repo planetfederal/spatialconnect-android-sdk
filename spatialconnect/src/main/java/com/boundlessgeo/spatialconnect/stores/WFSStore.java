@@ -25,6 +25,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
+import com.boundlessgeo.spatialconnect.services.SCBackendService;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -46,11 +47,12 @@ import rx.functions.Action1;
  * <p></p>
  * Note that all features will be queried and created in a workspace named <i>spatialconnect</i>.
  */
-public class WFSStore extends SCDataStore {
+public class WFSStore extends SCDataStore implements  SCSpatialStore, SCDataStoreLifeCycle {
 
     private static final String LOG_TAG = WFSStore.class.getSimpleName();
     private String baseUrl;
     private List<String> layerNames;
+    private List<String> defaultLayers;
     public static final String TYPE = "wfs";
 
     public WFSStore(Context context, SCStoreConfig scStoreConfig) {
@@ -65,12 +67,24 @@ public class WFSStore extends SCDataStore {
         }
     }
 
+    public List<String> defaultLayers() {
+        return this.defaultLayers;
+    }
+
+    public List<String> layers() {
+        return this.vectorLayers();
+    }
+
+    public List<String> vectorLayers() {
+        return this.layerNames;
+    }
+
     @Override
     public Observable<SCSpatialFeature> query(SCQueryFilter scFilter) {
         // if there are no layer names supplied in the query filter, then search only on the default layers
         final List<String> layerNames = scFilter.getLayerIds().size() > 0 ?
                 scFilter.getLayerIds() :
-                getDefaultLayers();
+                defaultLayers();
 
         // TODO: when implmenting version 2.0.0, "maxFeatures" has been changed to "count"
         // see: http://docs.geoserver.org/latest/en/user/services/wfs/reference.html#getfeature
@@ -157,29 +171,35 @@ public class WFSStore extends SCDataStore {
             @Override
             public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
                 // try to connect to WFS store to get the layers from the capabilities documents
-                try {
-                    HttpHandler.getInstance().get(getGetCapabilitiesUrl())
-                            .subscribe(new Action1<Response>() {
-                                @Override
-                                public void call(Response response) {
-                                    layerNames = getLayerNames(response.body().byteStream());
-                                    if (layerNames != null) {
-                                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                                        subscriber.onNext(
-                                                new SCStoreStatusEvent(
-                                                        SCDataStoreStatus.SC_DATA_STORE_RUNNING,
-                                                        storeInstance.getStoreId()
-                                                )
-                                        );
-                                        subscriber.onCompleted();
-                                    }
-                                }
-                            });
-                }
-                catch (IOException e) {
-                    Log.e(LOG_TAG, "Could not start store with url" + baseUrl);
-                    subscriber.onError(e);
-                }
+                SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
+                    @Override
+                    public void call(Boolean connected) {
+                        if (connected) {
+                            try {
+                                HttpHandler.getInstance().get(getGetCapabilitiesUrl())
+                                        .subscribe(new Action1<Response>() {
+                                            @Override
+                                            public void call(Response response) {
+                                                layerNames = getLayerNames(response.body().byteStream());
+                                                if (layerNames != null) {
+                                                    storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                                    subscriber.onNext(
+                                                            new SCStoreStatusEvent(
+                                                                    SCDataStoreStatus.SC_DATA_STORE_RUNNING,
+                                                                    storeInstance.getStoreId()
+                                                            )
+                                                    );
+                                                    subscriber.onCompleted();
+                                                }
+                                            }
+                                        });
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                    }
+                });
             }
         });
     }
@@ -234,6 +254,11 @@ public class WFSStore extends SCDataStore {
             }
         }
         return entries;
+    }
+
+
+    private void setDefaultLayers(List<String> defaultLayers) {
+        this.defaultLayers = defaultLayers;
     }
 
     private String readFeatureType(XmlPullParser parser) throws XmlPullParserException, IOException {
@@ -311,8 +336,4 @@ public class WFSStore extends SCDataStore {
         );
     }
 
-
-    public List<String> getLayerNames() {
-        return layerNames;
-    }
 }

@@ -17,11 +17,27 @@ package com.boundlessgeo.spatialconnect.mqtt;
 import android.content.Context;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.R;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
 
+import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SecureRandom;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import javax.net.SocketFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
@@ -55,6 +71,7 @@ public class MqttHandler implements MqttCallback {
     public PublishSubject<Map<String, SCMessageOuterClass.SCMessage>> scMessageSubject = PublishSubject.create();
     public final static String REPLY_TO_TOPIC = String.format("/device/%s-replyTo", SCConfigService.getClientId());
     public static BehaviorSubject<Integer> clientConnected = BehaviorSubject.create(0);
+    private boolean isSecure;
 
     private MqttHandler(Context context) {
         this.context = context;
@@ -73,6 +90,11 @@ public class MqttHandler implements MqttCallback {
      */
     public void initialize(SCRemoteConfig config) {
         Log.d(LOG_TAG, "initializing MqttHander.");
+        if (config.getMqttProtocol().equalsIgnoreCase("ssl")) {
+            isSecure = true;
+        } else {
+            isSecure = false;
+        }
         String brokerUri = getMqttBrokerUri(config);
         client = new MqttAndroidClient(context, brokerUri, SCConfigService.getClientId());
         client.setCallback(this);
@@ -103,25 +125,36 @@ public class MqttHandler implements MqttCallback {
             @Override
             public void call(Boolean authenticated) {
                 if (authenticated) {
+                    String accessToken = SCAuthService.getAccessToken();
                     try {
                         // set the clean session to remove any previous connection the broker may have for this client
                         MqttConnectOptions options = new MqttConnectOptions();
                         options.setCleanSession(true);
-//                        String authToken = SCAuthService.getAccessToken();
-//                        options.setUserName(authToken);
-//                        options.setPassword("anypass".toCharArray());
+                        options.setUserName(accessToken);
+                        options.setPassword("anypass".toCharArray());
+                        if (isSecure) {
+                            options.setSocketFactory(
+                                    new SCSocketFactory(context.getResources().openRawResource(R.raw.ca))
+                            );
+                        }
                         client.connect(options, context, new ConnectActionListener());
                     }
                     catch (MqttException e) {
                         Log.e(LOG_TAG, "could not connect to mqtt broker.", e.getCause());
+                    } catch (IOException e) {
+                        Log.e(LOG_TAG, "could not connect to mqtt broker.", e.getCause());
+                    } catch (CertificateException e) {
+                        Log.e(LOG_TAG, "could not connect to mqtt broker.", e.getCause());
+                    } catch (NoSuchAlgorithmException e) {
+                        Log.e(LOG_TAG, "could not connect to mqtt broker.", e.getCause());
+                    } catch (KeyStoreException e) {
+                        Log.e(LOG_TAG, "could not connect to mqtt broker.", e.getCause());
+                    } catch (KeyManagementException e) {
+                        Log.e(LOG_TAG, "could not connect to mqtt broker.", e.getCause());
                     }
-//                    catch (IOException e) {
-//                        Log.e(LOG_TAG, "could not connect to mqtt broker.", e.getCause());
-//                    }
                 }
             }
         });
-
     }
 
     /**

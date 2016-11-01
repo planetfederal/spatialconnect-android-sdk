@@ -19,19 +19,23 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
-import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
+import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
+import com.boundlessgeo.spatialconnect.geometries.SCPolygon;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
+import com.google.android.gms.maps.GoogleMap;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import rx.Observable;
-import rx.Subscriber;
 
 /**
  * Provides capabilities for interacting with a single GeoPackage.
  */
-public class GeoPackageStore extends SCDataStore {
+public class GeoPackageStore extends SCDataStore implements SCSpatialStore, SCDataStoreLifeCycle, SCRasterStore {
 
     private static final String LOG_TAG = GeoPackageStore.class.getSimpleName();
     public static final String TYPE = "gpkg";
@@ -53,6 +57,26 @@ public class GeoPackageStore extends SCDataStore {
         this.setAdapter(new GeoPackageAdapter(context, scStoreConfig));
     }
 
+    public List<String> layers() {
+        List<String> allLayers = new ArrayList<String>();
+        allLayers.addAll(this.vectorLayers());
+        allLayers.addAll(this.rasterLayers());
+        return allLayers;
+    }
+
+    public List<String> vectorLayers() {
+        GeoPackageAdapter adapter = (GeoPackageAdapter) this.getAdapter();
+        Map<String, SCGpkgFeatureSource> fs =  adapter.getFeatureSources();
+        List<String> layerNames = new ArrayList<>(fs.keySet());
+        return layerNames;
+    }
+
+    public List<String> rasterLayers() {
+        GeoPackageAdapter adapter = (GeoPackageAdapter) this.getAdapter();
+        Map<String, SCGpkgTileSource> fs =  adapter.getTileSources();
+        List<String> layerNames = new ArrayList<>(fs.keySet());
+        return layerNames;
+    }
 
     public void addLayer(String layer, Map<String,String>  fields) {
         ((GeoPackageAdapter) getAdapter()).addLayer(layer, fields);
@@ -100,33 +124,7 @@ public class GeoPackageStore extends SCDataStore {
         Log.d(LOG_TAG, "Starting store " + this.getName());
         storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
 
-        return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
-            @Override
-            public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
-
-                // subscribe to an Observable/stream that lets us know when the adapter is connected or disconnected
-                storeInstance.getAdapter().connect().subscribe(new Subscriber<SCDataAdapterStatus>() {
-
-                    @Override
-                    public void onCompleted() {
-                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                        subscriber.onCompleted();
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        Log.w(LOG_TAG, "Could not activate data store " + storeId);
-                        storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-                        subscriber.onError(e);
-                    }
-
-                    @Override
-                    public void onNext(SCDataAdapterStatus status) {
-                    }
-                });
-            }
-        });
-
+        return storeInstance.getAdapter().connect();
     }
 
     @Override
@@ -143,4 +141,15 @@ public class GeoPackageStore extends SCDataStore {
     public void pause() {
 
     }
+
+    @Override
+    public void overlayFromLayer(String layerName, GoogleMap map) {
+        ((GeoPackageAdapter) getAdapter()).overlayFromLayer(layerName, map);
+    }
+
+    @Override
+    public SCPolygon getCoverage() {
+        return null;
+    }
+
 }

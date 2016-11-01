@@ -23,6 +23,7 @@ import com.boundlessgeo.spatialconnect.SpatialConnectActivity;
 import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.stores.DefaultStore;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
+import com.boundlessgeo.spatialconnect.stores.LocationStore;
 
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -52,10 +53,11 @@ public abstract class BaseTestCase {
     protected static File remoteConfigFile;
     protected static File localConfigFile;
 
-    protected final static String RIO_GPKG_ID = "5729cac9-cf37-476a-997d-f9c687b4df67";
-    protected final static String HAITI_GPKG_ID = "27ed943c-8fc9-4d18-a7f0-4dfc03a460d6";
-    protected final static String WHITEHORSE_GPKG_ID = "fad33ae1-f529-4c79-affc-befc37c104ae";
-    protected final static String GEOJSON_STORE_ID = "50402599-3ad3-439f-9c49-3c8a7579933b";
+    protected final static String RIO_GPKG_ID = "9d415438-08c5-48f5-b80b-d5bc9c810b3d";
+    protected final static String HAITI_GPKG_ID = "c96c0155-31b3-434a-8171-beb36fb24512";
+    protected final static String WHITEHORSE_GPKG_ID = "deba6ab8-016e-4e0a-8010-c2e77d72d0a1";
+    protected final static String POLYGONS_GPKG_ID = "45d45141-e1a3-4044-95f0-7d4a37cf23e1";
+    protected final static String BARS_GEO_JSON_ID = "3dc5afc9-393b-444c-8581-582e2c2d98a3";
 
     public BaseTestCase() {
     }
@@ -75,16 +77,16 @@ public abstract class BaseTestCase {
             remoteConfigFile = File.createTempFile("config_remote.scfg", null, activity.getCacheDir());
             localConfigFile = File.createTempFile("config_local.scfg", null, activity.getCacheDir());
 
-            // read test scconfig_remote.json file from test resources directory
+            // read test remote.scfg file from test resources directory
             //set local test config
-            InputStream is = testContext.getResources().openRawResource(R.raw.scconfig_local);
+            InputStream is = testContext.getResources().openRawResource(R.raw.local);
             FileOutputStream fos = new FileOutputStream(localConfigFile);
             byte[] data = new byte[is.available()];
             is.read(data);
             fos.write(data);
 
             //set remote test config
-            is = testContext.getResources().openRawResource(R.raw.scconfig_remote);
+            is = testContext.getResources().openRawResource(R.raw.remote);
             fos = new FileOutputStream(remoteConfigFile);
             data = new byte[is.available()];
 
@@ -99,12 +101,13 @@ public abstract class BaseTestCase {
     }
 
    protected static void deleteDatabases() {
-       testContext.deleteDatabase("Rio");
-       testContext.deleteDatabase("Haiti");
-       testContext.deleteDatabase("Whitehorse");
+       testContext.deleteDatabase(POLYGONS_GPKG_ID);
+       testContext.deleteDatabase(HAITI_GPKG_ID);
+       testContext.deleteDatabase(WHITEHORSE_GPKG_ID);
        testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
        testContext.deleteDatabase(DefaultStore.NAME);
        testContext.deleteDatabase(FormStore.NAME);
+       testContext.deleteDatabase(LocationStore.NAME);
    }
 
 }

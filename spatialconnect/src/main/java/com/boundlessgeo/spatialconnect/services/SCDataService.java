@@ -27,7 +27,9 @@ import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.LocationStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreLifeCycle;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
+import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 import com.boundlessgeo.spatialconnect.stores.WFSStore;
 
@@ -37,6 +39,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
 import rx.Subscriber;
@@ -63,7 +66,7 @@ public class SCDataService extends SCService {
      * The storeEventSubject is like an internal event bus, its job is to receive {@link SCStoreStatusEvent}s
      * published by a {@link SCDataStore}.
      */
-    protected BehaviorSubject<SCStoreStatusEvent> storeEventSubject;
+    public BehaviorSubject<SCStoreStatusEvent> storeEventSubject;
 
     /**
      * This is the Observable that subscribers in your app will subscribe to so that they can receive {@link
@@ -186,12 +189,15 @@ public class SCDataService extends SCService {
 
     public void startStore(final SCDataStore store) {
         if (!store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
-            Log.d(LOG_TAG, "Starting store " + store.getName() + " " + store.getStoreId());
-            store.start()
+
+            ((SCDataStoreLifeCycle) store).start()
                     .observeOn(AndroidSchedulers.mainThread())
+                    .sample(2, TimeUnit.SECONDS)
                     .subscribe(new Action1<SCStoreStatusEvent>() {
                 @Override
                 public void call(SCStoreStatusEvent s) {
+                    storeEventSubject.onNext(
+                                new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOAD_PROGRESS, store.getStoreId()));
                 }
             }, new Action1<Throwable>() {
                 @Override
@@ -199,13 +205,14 @@ public class SCDataService extends SCService {
                     Log.d(LOG_TAG, t.getLocalizedMessage());
                     // onError can happen if we cannot start the store b/c of some error or runtime exception
                     storeEventSubject.onNext(
-                            new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, store.getStoreId())
+                            new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_START_FAILED, store.getStoreId())
                     );
                 }
             }, new Action0() {
                 @Override
                 public void call() {
                     Log.d(LOG_TAG, "Store " + store.getName() + " is running.");
+                    store.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
                     storeEventSubject.onNext(
                             new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RUNNING, store.getStoreId())
                     );
@@ -219,9 +226,10 @@ public class SCDataService extends SCService {
     public void stopStore(final SCDataStore store) {
         if (store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
             Log.d(LOG_TAG, "Stopping store " + store.getName() + " " + store.getStoreId());
-            store.stop();
+            ((SCDataStoreLifeCycle) store).stop();
+            stores.remove(store);
             storeEventSubject.onNext(
-                    new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_STOPPED, store.getStoreId()));
+                    new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_REMOVED, store.getStoreId()));
             if (stores.size() > 0) {
                 hasStores.onNext(true);
             }
@@ -284,7 +292,7 @@ public class SCDataService extends SCService {
         if (registerStoreByConfig(config)) {
             SCDataStore store = stores.get(config.getUniqueID());
             if (store != null) {
-                store.start();
+                ((SCDataStoreLifeCycle) store).start();
             }
         }
     }
@@ -454,7 +462,7 @@ public class SCDataService extends SCService {
                     @Override
                     public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
                         Log.d(LOG_TAG, "Querying store " + scDataStore.getName());
-                        return scDataStore.query(filter);
+                        return ((SCSpatialStore) scDataStore).query(filter);
                     }
                 });
     }
@@ -465,7 +473,7 @@ public class SCDataService extends SCService {
                     @Override
                     public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
                         Log.d(LOG_TAG, "Querying store " + scDataStore.getName());
-                        return scDataStore.query(filter);
+                        return ((SCSpatialStore) scDataStore).query(filter);
                     }
                 });
     }

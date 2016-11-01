@@ -12,6 +12,7 @@ import com.boundlessgeo.spatialconnect.stores.WFSStore;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -24,13 +25,13 @@ import static junit.framework.Assert.assertTrue;
 public class WFSStoreTest extends BaseTestCase {
 
     private static SpatialConnect sc;
-    private static final String WFS_STORE_ID = "af4a0dc8-2077-4cfc-a4e0-b513d8c14a71";
+    private static final String WFS_STORE_ID = "71522e9b-3ec6-48c3-8d5c-57c8d14baf6a";
 
     @BeforeClass
     public static void setUp() throws Exception {
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        sc.addConfig(remoteConfigFile);
+        sc.addConfig(localConfigFile);
         sc.startAllServices();
     }
 
@@ -55,7 +56,7 @@ public class WFSStoreTest extends BaseTestCase {
     public void testGetCapabilitesUrlIsBuiltCorrectly() {
         WFSStore store = (WFSStore) sc.getDataService().getStoreById(WFS_STORE_ID);
         assertEquals("The WFS store url was not built correctly.",
-                "http://efc-dev.boundlessgeo.com:8080/geoserver/ows?service=WFS&version=1.1.0&request=GetCapabilities",
+                "http://efc-dev.boundlessgeo.com:8080/geoserver/spatialconnect/ows?service=WFS&version=1.1.0&request=GetCapabilities",
                 store.getGetCapabilitiesUrl()
         );
     }
@@ -64,7 +65,7 @@ public class WFSStoreTest extends BaseTestCase {
     public void testLayerNamesAreParsedFromCapabilities() {
         WFSStore store = (WFSStore) sc.getDataService().getStoreById(WFS_STORE_ID);
         assertTrue("There should be multiple layers.",
-                store.getLayerNames().size() > 0
+                store.layers().size() > 0
         );
     }
 

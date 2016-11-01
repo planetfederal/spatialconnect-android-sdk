@@ -19,11 +19,11 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.db.GeoPackageContents;
 import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
-import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
@@ -33,7 +33,13 @@ import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
+import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
+import com.boundlessgeo.spatialconnect.tiles.GpkgTileProvider;
+import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.squareup.sqlbrite.BriteDatabase;
 import com.squareup.sqlbrite.SqlBrite;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -49,6 +55,7 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -84,14 +91,14 @@ public class GeoPackageAdapter extends SCDataAdapter {
     }
 
     @Override
-    public Observable<SCDataAdapterStatus> connect() {
+    public Observable<SCStoreStatusEvent> connect() {
         final GeoPackageAdapter adapterInstance = this;
         Log.d(LOG_TAG, "Connecting adapter for store " + scStoreConfig.getName());
 
-        return Observable.create(new Observable.OnSubscribe<SCDataAdapterStatus>() {
+        return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
 
             @Override
-            public void call(final Subscriber<? super SCDataAdapterStatus> subscriber) {
+            public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
 
                 Log.d(LOG_TAG, "Connecting to " + context.getDatabasePath(scStoreConfig.getUniqueID()).getPath());
                 adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTING);
@@ -106,7 +113,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                         subscriber.onCompleted();
                     }
                     else {
-                        Log.w(LOG_TAG, "GeoPackage was not valid.");
+                        Log.w(LOG_TAG, "GeoPackage was not valid, "+ gpkg.getName());
                         adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
                         subscriber.onError(new Throwable("GeoPackage was not valid."));
                     }
@@ -117,38 +124,36 @@ public class GeoPackageAdapter extends SCDataAdapter {
                     if (scStoreConfig.getUri().startsWith("http")) {
                         try {
                             theUrl = new URL(scStoreConfig.getUri());
-                            downloadGeoPackage(theUrl)
-                                    .subscribe(new Action1<Response>() {
-                                        @Override
-                                        public void call(Response response) {
-                                            if (!response.isSuccessful()) {
-                                                adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
-                                                subscriber.onError(new IOException("Unexpected code " + response));
-                                            }
-                                            try {
-                                                // save the file to the databases directory
-                                                saveFileToFilesystem(response.body().byteStream());
-                                                // create new GeoPackage instance now that we've saved the file
-                                                gpkg = new GeoPackage(context, scStoreConfig.getUniqueID());
-                                                if (gpkg.isValid()) {
-                                                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
-                                                    subscriber.onCompleted();
+                            try {
+                                HttpHandler.getInstance()
+                                        .getWithProgress(theUrl.toString(), context.getDatabasePath(scStoreConfig.getUniqueID()))
+                                        .subscribe(new Action1<Float>() {
+                                            @Override
+                                            public void call(Float progress) {
+                                                GeoPackageStore parentStore =
+                                                        (GeoPackageStore)SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
+                                                parentStore.setDownloadProgress(progress);
+                                                if (progress < 1) {
+                                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING_DATA);
+                                                    subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING_DATA));
+                                                } else {
+                                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                                    gpkg = new GeoPackage(context, scStoreConfig.getUniqueID());
+                                                    if (gpkg.isValid()) {
+                                                        adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED);
+                                                        subscriber.onCompleted();
+                                                    }
+                                                    else {
+                                                        Log.w(LOG_TAG, "GeoPackage was not valid, " + gpkg.getName());
+                                                        adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
+                                                        subscriber.onError(new Throwable("GeoPackage was not valid."));
+                                                    }
                                                 }
-                                                else {
-                                                    Log.w(LOG_TAG, "GeoPackage was not valid.");
-                                                    adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
-                                                    subscriber.onError(new Throwable("GeoPackage was not valid."));
-                                                }
                                             }
-                                            catch (IOException e) {
-                                                adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
-                                                subscriber.onError(e);
-                                            }
-                                            finally {
-                                                response.body().close();
-                                            }
-                                        }
-                                    });
+                                        });
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
                         }
                         catch (MalformedURLException e) {
                             Log.e(LOG_TAG, "URL was malformed. Check the syntax: " + theUrl);
@@ -163,7 +168,7 @@ public class GeoPackageAdapter extends SCDataAdapter {
                             subscriber.onCompleted();
                         }
                         else {
-                            Log.w(LOG_TAG, "GeoPackage was not valid.");
+                            Log.w(LOG_TAG, "GeoPackage was not valid, "+ gpkg.getName());
                             adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
                             subscriber.onError(new Throwable("GeoPackage was not valid."));
                         }
@@ -353,6 +358,13 @@ public class GeoPackageAdapter extends SCDataAdapter {
                 @Override
                 public void call(Subscriber<? super SCSpatialFeature> subscriber) {
                     try {
+                        Set<String> columns = featureSource.getColumns().keySet();
+                        Map<String, Object> props = new HashMap<>();
+                        for (String col : columns) {
+                            if (!col.equals(featureSource.getGeomColumnName()) && !col.equals(featureSource.getPrimaryKeyName())) {
+                                props.put(col, null);
+                            }
+                        }
                         gpkg.executeAndTrigger(tableName,
                                 String.format("INSERT OR REPLACE INTO %s (%s) VALUES (%s)",
                                         tableName,
@@ -466,11 +478,32 @@ public class GeoPackageAdapter extends SCDataAdapter {
     }
 
     public Map<String, SCGpkgFeatureSource> getFeatureSources() {
-        return gpkg.getFeatureSources();
+        if (gpkg != null) {
+            return gpkg.getFeatureSources();
+        } else {
+            return new HashMap<>();
+        }
     }
 
     public Map<String, SCGpkgTileSource> getTileSources() {
-        return gpkg.getTileSources();
+        if (gpkg !=null) {
+            return gpkg.getTileSources();
+        } else {
+            return new HashMap<>();
+        }
+    }
+
+    public void overlayFromLayer(String layer, GoogleMap mapView) {
+        Map<String, SCGpkgTileSource> tileSources = getTileSources();
+        if (tileSources.size() > 0) {
+            if (tileSources.keySet().contains(layer)) {
+                mapView.addTileOverlay(
+                        new TileOverlayOptions().tileProvider(
+                                new GpkgTileProvider(tileSources.get(layer))
+                        )
+                );
+            }
+        }
     }
 
     /**

@@ -29,6 +29,7 @@ import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
+import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
@@ -42,7 +43,7 @@ import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Action1;
 
-public class LocationStore extends GeoPackageStore {
+public class LocationStore extends GeoPackageStore implements  SCSpatialStore, SCDataStoreLifeCycle {
 
     private static final String LOG_TAG = LocationStore.class.getSimpleName();
     private final String LAST_KNOWN_TABLE = "last_known_location";
@@ -122,15 +123,22 @@ public class LocationStore extends GeoPackageStore {
         return super.create(point);
     }
 
-    private void publishLocation(SCPoint point) {
-        Log.d(LOG_TAG, "posting new location to tracking topic " + point.toJson());
-        SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
-                .setAction(SCCommand.NO_ACTION.value())
-                .setPayload(point.toJson())
-                .build();
-        SpatialConnect.getInstance()
-                .getBackendService()
-                .publish("/store/tracking", message, QoS.AT_MOST_ONCE);
+    private void publishLocation(final SCPoint point) {
+        SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
+            @Override
+            public void call(Boolean connected) {
+                if (connected) {
+                    Log.d(LOG_TAG, "posting new location to tracking topic " + point.toJson());
+                    SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
+                            .setAction(SCCommand.NO_ACTION.value())
+                            .setPayload(point.toJson())
+                            .build();
+                    SpatialConnect.getInstance()
+                            .getBackendService()
+                            .publish("/store/tracking", message, QoS.AT_MOST_ONCE);
+                }
+            }
+        });
     }
 
     public Observable<SCSpatialFeature> update(final SCSpatialFeature scSpatialFeature) {

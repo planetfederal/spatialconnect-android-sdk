@@ -20,6 +20,7 @@ import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 
 import org.junit.AfterClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static junit.framework.Assert.assertEquals;

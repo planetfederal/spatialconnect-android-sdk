@@ -39,7 +39,7 @@ public class GpkgRasterSource implements SCRasterStore {
     }
 
     @Override
-    public List<SCGpkgTileSource> rasterList() {
-        return new ArrayList<SCGpkgTileSource>(((GeoPackageAdapter)gpkgStore.getAdapter()).getTileSources().values());
+    public List<String> rasterLayers() {
+        return gpkgStore.rasterLayers();
     }
 }

@@ -29,11 +29,15 @@ env:
    # install timeout in minutes (2 minutes by default)
     - ADB_INSTALL_TIMEOUT=8
 
+install:
+  - npm install -g npm@2
+  - npm install react-native@0.34.0
+
 # Emulator Management: Create, Start and Wait
 before_script:
   - android list targets
   - echo no | android create avd --force -n test -t android-23 --abi armeabi-v7a
-  - emulator -avd test -no-audio -no-window -memory 2048 -partition-size 2048 &
+  - emulator -avd test -no-audio -no-window -memory 2048 -wipe-data -partition-size 2048 &
   - android-wait-for-emulator
   - adb shell input keyevent 82 &
 
