@@ -18,6 +18,7 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -29,6 +30,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 import okio.Buffer;
+import okio.BufferedSink;
 import okio.BufferedSource;
 import okio.ForwardingSource;
 import okio.Okio;
@@ -77,6 +79,47 @@ public class HttpHandler {
                         subscriber.onCompleted();
                     }
                 } catch (IOException e) {
+                    subscriber.onError(e);
+                }
+            }
+        })
+        .subscribeOn(Schedulers.io());
+    }
+
+    public Observable<Float> getWithProgress(final String url, final File file) throws IOException {
+        return Observable.create(new Observable.OnSubscribe<Float>() {
+            @Override
+            public void call(Subscriber<? super Float> subscriber) {
+                int DOWNLOAD_CHUNK_SIZE = 2048; //Same as Okio Segment.SIZE
+
+                try {
+                    Request request = new Request.Builder().url(url).build();
+
+                    Response response = client.newCall(request).execute();
+                    ResponseBody body = response.body();
+                    long contentLength = body.contentLength();
+                    BufferedSource source = body.source();
+                    BufferedSink sink = Okio.buffer(Okio.sink(file));
+
+                    long totalRead = 0;
+                    long totalSinceLastPublish = 0;
+                    long read;
+                    while ((read = (source.read(sink.buffer(), DOWNLOAD_CHUNK_SIZE))) != -1) {
+                        totalRead += read;
+                        totalSinceLastPublish += read;
+                        long progress = ((totalRead * 100) / contentLength);
+                        if (totalSinceLastPublish > (contentLength / 16)) {
+                            totalSinceLastPublish = 0;
+                            subscriber.onNext((float) progress / 100);
+                        }
+                    }
+                    sink.writeAll(source);
+                    sink.flush();
+                    sink.close();
+                    subscriber.onNext(1f);
+                    subscriber.onCompleted();
+                } catch (IOException e) {
+                    Log.e(LOG_TAG,"progress: Error: "+ e.getMessage());
                     subscriber.onError(e);
                 }
             }

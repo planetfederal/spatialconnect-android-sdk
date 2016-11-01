@@ -20,7 +20,6 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.GeoJsonAdapter;
-import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 
@@ -125,40 +124,12 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
         });
     }
 
-    public Observable start() {
+    public Observable<SCStoreStatusEvent> start() {
         final String storeId = this.getStoreId();
         final GeoJsonStore storeInstance = this;
         storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
-        return Observable.create(
-                new Observable.OnSubscribe<SCStoreStatusEvent>() {
-                    @Override
-                    public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
-                        Log.d(LOG_TAG, "Connecting to GeoJson adapter for store " + storeInstance.getName());
 
-                        // subscribe to an Observable/stream that lets us know when the adapter is connected or disconnected
-                        storeInstance.getAdapter().connect().subscribe(new Subscriber<SCDataAdapterStatus>() {
-
-                            @Override
-                            public void onCompleted() {
-                                storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                                subscriber.onCompleted();
-                            }
-
-                            @Override
-                            public void onError(Throwable e) {
-                                Log.w(LOG_TAG, "Could not activate data store " + storeId);
-                                storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
-                                subscriber.onError(e);
-                            }
-
-                            @Override
-                            public void onNext(SCDataAdapterStatus status) {
-                            }
-                        });
-                    }
-                }
-        );
-
+        return storeInstance.getAdapter().connect();
     }
 
     public void stop() {

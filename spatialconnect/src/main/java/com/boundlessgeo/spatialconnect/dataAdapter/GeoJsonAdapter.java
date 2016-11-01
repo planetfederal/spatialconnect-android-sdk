@@ -18,6 +18,7 @@ package com.boundlessgeo.spatialconnect.dataAdapter;
 import android.content.Context;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryCollection;
@@ -25,6 +26,9 @@ import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
+import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
+import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 
 import org.apache.commons.io.FileUtils;
 
@@ -33,12 +37,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 
-import okhttp3.Response;
 import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Action1;
@@ -61,11 +63,11 @@ public class GeoJsonAdapter extends SCDataAdapter {
         this.scStoreConfig = scStoreConfig;
     }
 
-    public Observable connect() {
+    public Observable<SCStoreStatusEvent> connect() {
         final GeoJsonAdapter adapterInstance = this;
         Log.d(LOG_TAG, "Attempting to connect GeoJson store at " + scStoreConfig.getUri());
 
-        return Observable.create(new Observable.OnSubscribe<Void>() {
+        return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
             @Override
             public void call(final Subscriber subscriber) {
                 adapterInstance.connect();
@@ -76,37 +78,33 @@ public class GeoJsonAdapter extends SCDataAdapter {
                 if (!geoJsonFile.exists()) {
                     if (scStoreConfig.getUri().startsWith("http")) {
                         //download from web
+
                         try {
                             URL theUrl = new URL(scStoreConfig.getUri());
-                            HttpHandler.getInstance().get(theUrl.toString())
-                                    .subscribe(new Action1<Response>() {
+                            HttpHandler.getInstance()
+                                    .getWithProgress(theUrl.toString(), geoJsonFile)
+                                    .subscribe(new Action1<Float>() {
                                         @Override
-                                        public void call(Response response) {
-                                            if (!response.isSuccessful()) {
-                                                adapterInstance.disconnect();
-                                            }
-                                            try {
-                                                // save response as file
-                                                FileUtils.copyInputStreamToFile(response.body().byteStream(), geoJsonFile);
+                                        public void call(Float progress) {
+                                            GeoJsonStore parentStore =
+                                                    (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
+                                            parentStore.setDownloadProgress(progress);
+                                            if (progress < 1) {
+                                                parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING_DATA);
+                                                subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING_DATA));
+                                            } else {
+                                                parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
                                                 geojsonFilePath = filePath;
                                                 adapterInstance.connected();
                                                 subscriber.onCompleted();
-                                            } catch (IOException e) {
-                                                Log.w(LOG_TAG, "Couldn't download geojson store.", e);
-                                                adapterInstance.disconnect();
-                                                e.printStackTrace();
-                                                subscriber.onError(e);
-                                            } finally {
-                                                response.body().close();
                                             }
                                         }
                                     });
-                        } catch (MalformedURLException e) {
-                            Log.e(LOG_TAG, "URL was malformed. Check the syntax: " + scStoreConfig.getUri());
-                            adapterInstance.setStatus(SCDataAdapterStatus.DATA_ADAPTER_DISCONNECTED);
-                            subscriber.onError(e);
                         } catch (IOException e) {
+                            Log.w(LOG_TAG, "Couldn't download geojson store.", e);
+                            adapterInstance.disconnect();
                             e.printStackTrace();
+                            subscriber.onError(e);
                         }
                     } else {
                         //attempt to find file local
@@ -117,6 +115,8 @@ public class GeoJsonAdapter extends SCDataAdapter {
                             InputStream is = null;
                             // if the doesn't exist, then we attempt to create it by copying it from the raw
                             // resources to the destination specified in the config
+                            GeoJsonStore parentStore =
+                                    (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
                             try {
                                 Log.d(LOG_TAG, "Attempting to connect to " + scStoreConfig.getUri().split("\\.")[0]);
                                 int resourceId = context.getResources().getIdentifier(
@@ -127,16 +127,21 @@ public class GeoJsonAdapter extends SCDataAdapter {
                                     FileUtils.copyInputStreamToFile(is, f);
                                     geojsonFilePath = localUriPath;
                                     adapterInstance.connected();
+                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
                                     subscriber.onCompleted();
                                 } else {
                                     String errorString = "The config specified a store that should exist on the " +
                                             "filesystem but it could not be located.";
                                     Log.w(LOG_TAG, errorString);
+                                    adapterInstance.disconnect();
+                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
                                     subscriber.onError(new Throwable(errorString));
                                 }
                             } catch (Exception e) {
                                 Log.w(LOG_TAG, "Couldn't connect to geojson store.", e);
                                 adapterInstance.disconnect();
+                                adapterInstance.disconnect();
+                                parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
                                 e.printStackTrace();
                                 subscriber.onError(e);
                             } finally {
@@ -157,6 +162,9 @@ public class GeoJsonAdapter extends SCDataAdapter {
                     }
 
                 } else {
+                    GeoJsonStore parentStore =
+                            (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
+                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
                     geojsonFilePath = filePath;
                     adapterInstance.connected();
                     subscriber.onCompleted();
