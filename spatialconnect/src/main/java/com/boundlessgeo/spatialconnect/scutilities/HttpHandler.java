@@ -90,7 +90,7 @@ public class HttpHandler {
         return Observable.create(new Observable.OnSubscribe<Float>() {
             @Override
             public void call(Subscriber<? super Float> subscriber) {
-                int DOWNLOAD_CHUNK_SIZE = 2028; //Same as Okio Segment.SIZE
+                int DOWNLOAD_CHUNK_SIZE = 2048; //Same as Okio Segment.SIZE
 
                 try {
                     Request request = new Request.Builder().url(url).build();
