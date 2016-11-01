@@ -499,7 +499,6 @@ public class SCBridge extends ReactContextBaseJavaModule {
         sc.getDataService().storeEventSubject.subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
             public void call(SCStoreStatusEvent scStoreStatusEvent) {
-                Log.e(LOG_TAG, "Handling STORELIST message listening on storeEvents:");
                 sendEvent(message.getInt("type"), message.getString("responseId"), getAllStoresPayload());
             }
         });
