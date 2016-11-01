@@ -50,7 +50,6 @@ public abstract class BaseTestCase {
     /**
      * Test context
      */
-    protected static File remoteConfigFile;
     protected static File localConfigFile;
 
     protected final static String RIO_GPKG_ID = "9d415438-08c5-48f5-b80b-d5bc9c810b3d";
@@ -74,22 +73,13 @@ public abstract class BaseTestCase {
                 Context.CONTEXT_IGNORE_SECURITY
         );
         try {
-            remoteConfigFile = File.createTempFile("config_remote.scfg", null, activity.getCacheDir());
             localConfigFile = File.createTempFile("config_local.scfg", null, activity.getCacheDir());
 
             // read test remote.scfg file from test resources directory
             //set local test config
-            InputStream is = testContext.getResources().openRawResource(R.raw.local);
+            InputStream is = testContext.getResources().openRawResource(R.raw.config);
             FileOutputStream fos = new FileOutputStream(localConfigFile);
             byte[] data = new byte[is.available()];
-            is.read(data);
-            fos.write(data);
-
-            //set remote test config
-            is = testContext.getResources().openRawResource(R.raw.remote);
-            fos = new FileOutputStream(remoteConfigFile);
-            data = new byte[is.available()];
-
             is.read(data);
             fos.write(data);
 
