@@ -111,6 +111,7 @@ public class HttpHandler {
                         if (totalSinceLastPublish > (contentLength / 16)) {
                             totalSinceLastPublish = 0;
                             subscriber.onNext((float) progress / 100);
+                            sink.emitCompleteSegments();
                         }
                     }
                     sink.writeAll(source);
