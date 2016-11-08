@@ -51,7 +51,7 @@ public class WFSStore extends SCDataStore implements  SCSpatialStore, SCDataStor
 
     private static final String LOG_TAG = WFSStore.class.getSimpleName();
     private String baseUrl;
-    private List<String> layerNames;
+    private List<String> layerNames = new ArrayList<>();
     private List<String> defaultLayers;
     public static final String TYPE = "wfs";
 
@@ -315,7 +315,7 @@ public class WFSStore extends SCDataStore implements  SCSpatialStore, SCDataStor
 
     @Override
     public void stop() {
-
+        this.layerNames.clear();
     }
 
     @Override
