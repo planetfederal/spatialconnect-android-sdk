@@ -21,6 +21,10 @@ import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
 
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -126,6 +130,48 @@ public class HttpHandler {
             }
         })
         .subscribeOn(Schedulers.io());
+    }
+
+    public Observable<Triplet<Float, byte[], Integer>> getWithProgress2(final String url) {
+        return Observable.create(new Observable.OnSubscribe<Triplet<Float, byte[], Integer>>() {
+            @Override
+            public void call(Subscriber<? super Triplet<Float, byte[], Integer>> subscriber) {
+                try {
+                    final URL downloadFileUrl = new URL(url);
+                    final HttpURLConnection connection = (HttpURLConnection) downloadFileUrl.openConnection();
+                    connection.setRequestMethod("GET");
+                    connection.setDoInput(true);
+                    connection.setConnectTimeout(10000);
+                    connection.setReadTimeout(10000);
+                    connection.connect();
+
+                    int contentLength = connection.getContentLength();
+                    final byte buffer[] = new byte[2048];
+                    final InputStream inputStream = connection.getInputStream();
+
+                    long total = 0;
+                    int count;
+                    float progress;
+
+                    while ((count = inputStream.read(buffer)) != -1) {
+                        total += count;
+                        progress = (total / (float)contentLength);
+                        subscriber.onNext((Triplet<Float, byte[], Integer>)new Triplet(progress, buffer, count));
+                    }
+
+                    subscriber.onNext((Triplet<Float, byte[], Integer>)new Triplet(1f, buffer, count));
+                    subscriber.onCompleted();
+
+                } catch (MalformedURLException mue) {
+                    mue.printStackTrace();
+                } catch (ProtocolException pe) {
+                    pe.printStackTrace();
+                } catch (IOException ioe) {
+                    ioe.printStackTrace();
+                }
+            }
+
+        });
     }
 
     public InputStream getResponseAsInputStream(String url) throws IOException {
@@ -249,4 +295,5 @@ public class HttpHandler {
 //                Log.v(LOG_TAG, String.format("%d%% done\n", (100 * bytesRead) / contentLength));
         }
     };
+
 }

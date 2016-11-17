@@ -19,11 +19,15 @@ import android.content.Context;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapter;
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
+import com.boundlessgeo.spatialconnect.scutilities.Triplet;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import rx.Observable;
 
 /**
  * Subclasses of SCDataStore provide read/write access to a single data store using an {@link SCDataAdapter}.  Instances
@@ -148,5 +152,9 @@ public abstract class SCDataStore {
 
     public enum DataStorePermissionEnum {
         READ, READ_WRITE
+    }
+
+    public Observable<Triplet<Float, byte[], Integer>> downloadWithProgress(String url) {
+        return HttpHandler.getInstance().getWithProgress2(url);
     }
 }

@@ -18,27 +18,51 @@ package com.boundlessgeo.spatialconnect.stores;
 import android.content.Context;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
-import com.boundlessgeo.spatialconnect.dataAdapter.GeoJsonAdapter;
+import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
+import com.boundlessgeo.spatialconnect.geometries.SCGeometryCollection;
+import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.scutilities.Triplet;
 
+import org.apache.commons.io.FileUtils;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
 
 import rx.Observable;
 import rx.Subscriber;
+import rx.functions.Action1;
+import rx.functions.Func1;
 
 public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataStoreLifeCycle {
 
     private static final String LOG_TAG = GeoJsonStore.class.getSimpleName();
     public static final String TYPE = "geojson";
+    protected SCStoreConfig scStoreConfig;
+    private static final int VERSION = 1;
+    public static final String DEFAULTLAYER = "default";
+    private Context context;
+    private final String EXT = ".json";
+    private String geojsonFilePath;
 
     public GeoJsonStore(Context context, SCStoreConfig scStoreConfig) {
         super(context, scStoreConfig);
+        this.context = context;
         this.setName(scStoreConfig.getName());
         this.setType(TYPE);
         this.setVersion(scStoreConfig.getVersion());
-        this.setAdapter(new GeoJsonAdapter(context, scStoreConfig));
+        this.scStoreConfig = scStoreConfig;
     }
 
     public List<String> layers() {
@@ -46,14 +70,42 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
     }
 
     public List<String> vectorLayers() {
-        GeoJsonAdapter geoJsonAdapter = (GeoJsonAdapter) this.getAdapter();
-        return geoJsonAdapter.layers();
+        return Arrays.asList(DEFAULTLAYER);
     }
 
     @Override
-    public Observable<SCSpatialFeature> query(SCQueryFilter scFilter) {
-        GeoJsonAdapter geoJsonAdapter = (GeoJsonAdapter) this.getAdapter();
-        return geoJsonAdapter.query(scFilter);
+    public Observable<SCSpatialFeature> query(final SCQueryFilter filter) {
+
+        SCGeometryFactory factory = new SCGeometryFactory();
+        // TODO: updated the Json --> SCSpatialFetures code to use InputStreams instead of Strings
+        final SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(
+                getResourceAsString()
+        );
+
+        return Observable.from(collection.getFeatures())
+                .filter(
+                        new Func1<SCSpatialFeature, Boolean>() {
+                            @Override
+                            public Boolean call(SCSpatialFeature feature) {
+                                if (feature instanceof SCGeometry &&
+                                        ((SCGeometry) feature).getGeometry() != null &&
+                                        filter.getPredicate().applyFilter((SCGeometry) feature)) {
+                                    return true;
+                                }
+                                else {
+                                    return false;
+                                }
+                            }
+                        }
+                ).map(new Func1<SCSpatialFeature, SCSpatialFeature>() {
+                    @Override
+                    public SCSpatialFeature call(SCSpatialFeature scSpatialFeature) {
+                        scSpatialFeature.setStoreId(scStoreConfig.getUniqueID());
+                        scSpatialFeature.setLayerId(DEFAULTLAYER);
+                        scSpatialFeature.setId(scSpatialFeature.getId());
+                        return scSpatialFeature;
+                    }
+                });
     }
 
     @Override
@@ -63,8 +115,6 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
 
     @Override
     public Observable<Boolean> create(final SCSpatialFeature scSpatialFeature) {
-        GeoJsonAdapter geoJsonAdapter = (GeoJsonAdapter) this.getAdapter();
-        geoJsonAdapter.create(scSpatialFeature);
         return Observable.create(new Observable.OnSubscribe<Boolean>() {
 
             @Override
@@ -84,8 +134,6 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
 
     @Override
     public Observable<Boolean> update(final SCSpatialFeature scSpatialFeature) {
-        GeoJsonAdapter geoJsonAdapter = (GeoJsonAdapter) this.getAdapter();
-        geoJsonAdapter.update(scSpatialFeature);
         return Observable.create(new Observable.OnSubscribe<Boolean>() {
 
             @Override
@@ -105,8 +153,6 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
 
     @Override
     public Observable<Boolean> delete(final SCKeyTuple keyTuple) {
-        GeoJsonAdapter geoJsonAdapter = (GeoJsonAdapter) this.getAdapter();
-        geoJsonAdapter.delete(keyTuple.getFeatureId());
         return Observable.create(new Observable.OnSubscribe<Boolean>() {
 
             @Override
@@ -129,7 +175,117 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
         final GeoJsonStore storeInstance = this;
         storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
 
-        return storeInstance.getAdapter().connect();
+        return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
+            @Override
+            public void call(final Subscriber subscriber) {
+                //adapterInstance.connect();
+                final String filePath = scStoreConfig.getUniqueID() + EXT;
+                final File geoJsonFile = new File(context.getFilesDir(), filePath); //new File(filePath);
+
+                if (!geoJsonFile.exists()) {
+                    if (scStoreConfig.getUri().startsWith("http")) {
+                        //download from web
+                        try {
+                            final OutputStream output = new FileOutputStream(geoJsonFile, true);
+                            URL theUrl = new URL(scStoreConfig.getUri());
+                            downloadWithProgress(theUrl.toString())
+                                    .subscribe(new Action1<Triplet<Float, byte[], Integer>>() {
+                                        @Override
+                                        public void call(Triplet<Float, byte[], Integer> downloadTuple) {
+                                            try {
+                                                GeoJsonStore parentStore =
+                                                        (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
+                                                parentStore.setDownloadProgress(downloadTuple.first());
+                                                if (downloadTuple.first() < 1) {
+                                                    output.write(downloadTuple.second(), 0, downloadTuple.third());
+                                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING_DATA);
+                                                    subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING_DATA));
+                                                } else {
+                                                    output.write(downloadTuple.second(), 0, downloadTuple.third());
+                                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                                    geojsonFilePath = filePath;
+
+                                                    subscriber.onCompleted();
+                                                    output.flush();
+                                                    output.close();
+                                                }
+                                            } catch (IOException e) {
+                                                e.printStackTrace();
+                                            }
+                                        }
+                                    });
+                        } catch (IOException e) {
+                            Log.w(LOG_TAG, "Couldn't download geojson store.", e);
+                            GeoJsonStore parentStore =
+                                    (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
+                            parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+                            e.printStackTrace();
+                            subscriber.onError(e);
+                        }
+                    } else {
+                        //attempt to find file local
+                        final String localUriPath = scStoreConfig.getUri().replace("file://", "");
+                        File f = new File(context.getFilesDir(), localUriPath);
+                        if (!f.exists()) {
+                            Log.d(LOG_TAG, "File does not exist at " + scStoreConfig.getUri());
+                            InputStream is = null;
+                            // if the doesn't exist, then we attempt to create it by copying it from the raw
+                            // resources to the destination specified in the config
+                            GeoJsonStore parentStore =
+                                    (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
+                            try {
+                                Log.d(LOG_TAG, "Attempting to connect to " + scStoreConfig.getUri().split("\\.")[0]);
+                                int resourceId = context.getResources().getIdentifier(
+                                        scStoreConfig.getUri().split("\\.")[0], "raw", context.getPackageName()
+                                );
+                                if (resourceId != 0) {
+                                    is = context.getResources().openRawResource(resourceId);
+                                    FileUtils.copyInputStreamToFile(is, f);
+                                    geojsonFilePath = localUriPath;
+                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                    subscriber.onCompleted();
+                                } else {
+                                    String errorString = "The config specified a store that should exist on the " +
+                                            "filesystem but it could not be located.";
+                                    Log.w(LOG_TAG, errorString);
+                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+                                    subscriber.onError(new Throwable(errorString));
+                                }
+                            } catch (Exception e) {
+                                Log.w(LOG_TAG, "Couldn't connect to geojson store.", e);
+                                parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_STOPPED);
+                                e.printStackTrace();
+                                subscriber.onError(e);
+                            } finally {
+                                if (is != null) {
+                                    try {
+                                        is.close();
+                                    } catch (IOException e) {
+                                        Log.e(LOG_TAG, "Couldn't close the stream.", e);
+                                    }
+                                }
+                            }
+                        } else {
+                            Log.d(LOG_TAG, "File already exists so set the status to connected.");
+                            geojsonFilePath = localUriPath;
+                            GeoJsonStore parentStore =
+                                    (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
+                            parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                            //adapterInstance.connected();
+                            subscriber.onCompleted();
+                        }
+                    }
+
+                } else {
+                    GeoJsonStore parentStore =
+                            (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
+                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                    geojsonFilePath = filePath;
+                    subscriber.onCompleted();
+                }
+            }
+        });
+
     }
 
     public void stop() {
@@ -142,5 +298,33 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
 
     public void resume() {
         this.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+    }
+
+    private String getResourceAsString() {
+        InputStream is = null;
+        StringBuilder stringBuilder = null;
+        try {
+            final File geoJsonFile = new File(context.getFilesDir(), geojsonFilePath);
+            is = FileUtils.openInputStream(geoJsonFile);
+
+            BufferedReader bufferedreader = new BufferedReader(new InputStreamReader(is));
+            String line;
+            stringBuilder = new StringBuilder();
+
+            while ((line = bufferedreader.readLine()) != null) {
+                stringBuilder.append(line);
+            }
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "Couldn't read the stream.", e);
+        } finally {
+            try {
+                if (is != null) {
+                    is.close();
+                }
+            } catch (IOException e) {
+                Log.e(LOG_TAG, "Couldn't close the stream.", e);
+            }
+        }
+        return stringBuilder.toString();
     }
 }
