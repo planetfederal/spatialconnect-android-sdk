@@ -16,8 +16,6 @@ package com.boundlessgeo.spatialconnect.test;
 
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.dataAdapter.GeoJsonAdapter;
-import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
@@ -30,7 +28,6 @@ import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -67,11 +64,8 @@ public class GeoJsonTest extends BaseTestCase {
                     store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)
             );
             if (store.getType().equals("geojson")) {
-                containsGeoJsonStore = true;
                 if (store.getStoreId().equals(BARS_GEO_JSON_ID)) {
-                    assertTrue("The store's adapter should be connected",
-                            store.getAdapter().getStatus().equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED)
-                    );
+                    containsGeoJsonStore = true;
                 }
             }
         }
@@ -98,10 +92,6 @@ public class GeoJsonTest extends BaseTestCase {
         assertEquals("The store id should be for the test geojson store.",
                 BARS_GEO_JSON_ID,
                 feature.getKey().getStoreId()
-        );
-        assertEquals("The layer should be " + GeoJsonAdapter.DEFAULTLAYER,
-                GeoJsonAdapter.DEFAULTLAYER,
-                feature.getKey().getLayerId()
         );
         assertEquals("The id should match the featureId from the key tuple.",
                 feature.getId(),
