@@ -20,14 +20,20 @@ import android.content.Context;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
-import com.boundlessgeo.spatialconnect.scutilities.Triplet;
+import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import rx.Observable;
+import rx.Subscriber;
+import rx.functions.Action1;
 
 /**
  * Subclasses of SCDataStore provide read/write access to a single data store using an {@link SCDataAdapter}.  Instances
@@ -154,7 +160,37 @@ public abstract class SCDataStore {
         READ, READ_WRITE
     }
 
-    public Observable<Triplet<Float, byte[], Integer>> downloadWithProgress(String url) {
-        return HttpHandler.getInstance().getWithProgress2(url);
+    public Observable<Float> download(final String url, final File file) {
+
+        return Observable.create(new Observable.OnSubscribe<Float>() {
+            @Override
+            public void call(final Subscriber subscriber) {
+                try {
+                    final OutputStream output = new FileOutputStream(file, true);
+                    HttpHandler.getInstance().getWithProgress2(url)
+                            .subscribe(new Action1<SCTuple<Float, byte[], Integer>>() {
+                                @Override
+                                public void call(SCTuple<Float, byte[], Integer> downloadTuple) {
+                                    try {
+                                        if (downloadTuple.first() < 1) {
+                                            output.write(downloadTuple.second(), 0, downloadTuple.third());
+                                            subscriber.onNext(downloadTuple.first());
+                                        } else {
+                                            output.write(downloadTuple.second(), 0, downloadTuple.third());
+                                            subscriber.onNext(1f);
+                                            subscriber.onCompleted();
+                                            output.flush();
+                                            output.close();
+                                        }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            });
+                } catch (Exception e) {
+                    subscriber.onError(e);
+                }
+            }
+        });
     }
 }

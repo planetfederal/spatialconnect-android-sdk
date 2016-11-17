@@ -22,8 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
 import java.net.URL;
 
 import okhttp3.Interceptor;
@@ -132,10 +130,10 @@ public class HttpHandler {
         .subscribeOn(Schedulers.io());
     }
 
-    public Observable<Triplet<Float, byte[], Integer>> getWithProgress2(final String url) {
-        return Observable.create(new Observable.OnSubscribe<Triplet<Float, byte[], Integer>>() {
+    public Observable<SCTuple<Float, byte[], Integer>> getWithProgress2(final String url) {
+        return Observable.create(new Observable.OnSubscribe<SCTuple<Float, byte[], Integer>>() {
             @Override
-            public void call(Subscriber<? super Triplet<Float, byte[], Integer>> subscriber) {
+            public void call(Subscriber<? super SCTuple<Float, byte[], Integer>> subscriber) {
                 try {
                     final URL downloadFileUrl = new URL(url);
                     final HttpURLConnection connection = (HttpURLConnection) downloadFileUrl.openConnection();
@@ -156,21 +154,16 @@ public class HttpHandler {
                     while ((count = inputStream.read(buffer)) != -1) {
                         total += count;
                         progress = (total / (float)contentLength);
-                        subscriber.onNext((Triplet<Float, byte[], Integer>)new Triplet(progress, buffer, count));
+                        subscriber.onNext((SCTuple<Float, byte[], Integer>)new SCTuple(progress, buffer, count));
                     }
 
-                    subscriber.onNext((Triplet<Float, byte[], Integer>)new Triplet(1f, buffer, count));
+                    subscriber.onNext((SCTuple<Float, byte[], Integer>)new SCTuple(1f, buffer, count));
                     subscriber.onCompleted();
 
-                } catch (MalformedURLException mue) {
-                    mue.printStackTrace();
-                } catch (ProtocolException pe) {
-                    pe.printStackTrace();
-                } catch (IOException ioe) {
-                    ioe.printStackTrace();
+                } catch (Exception e) {
+                    subscriber.onError(e);
                 }
             }
-
         });
     }
 

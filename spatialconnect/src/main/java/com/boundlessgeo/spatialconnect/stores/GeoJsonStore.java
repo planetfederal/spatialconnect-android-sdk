@@ -25,17 +25,14 @@ import com.boundlessgeo.spatialconnect.geometries.SCGeometryCollection;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.scutilities.Triplet;
 
 import org.apache.commons.io.FileUtils;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
@@ -171,14 +168,12 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
     }
 
     public Observable<SCStoreStatusEvent> start() {
-        final String storeId = this.getStoreId();
         final GeoJsonStore storeInstance = this;
         storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_STARTED);
 
         return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
             @Override
             public void call(final Subscriber subscriber) {
-                //adapterInstance.connect();
                 final String filePath = scStoreConfig.getUniqueID() + EXT;
                 final File geoJsonFile = new File(context.getFilesDir(), filePath); //new File(filePath);
 
@@ -186,34 +181,30 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
                     if (scStoreConfig.getUri().startsWith("http")) {
                         //download from web
                         try {
-                            final OutputStream output = new FileOutputStream(geoJsonFile, true);
                             URL theUrl = new URL(scStoreConfig.getUri());
-                            downloadWithProgress(theUrl.toString())
-                                    .subscribe(new Action1<Triplet<Float, byte[], Integer>>() {
-                                        @Override
-                                        public void call(Triplet<Float, byte[], Integer> downloadTuple) {
-                                            try {
-                                                GeoJsonStore parentStore =
-                                                        (GeoJsonStore) SpatialConnect.getInstance().getDataService().getStoreById(scStoreConfig.getUniqueID());
-                                                parentStore.setDownloadProgress(downloadTuple.first());
-                                                if (downloadTuple.first() < 1) {
-                                                    output.write(downloadTuple.second(), 0, downloadTuple.third());
-                                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING_DATA);
+                            download(theUrl.toString(), geoJsonFile)
+                                    .subscribe(
+                                        new Action1<Float>() {
+                                            @Override
+                                            public void call(Float progress) {
+                                               setDownloadProgress(progress);
+                                                if (progress < 1) {
+                                                    setStatus(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING_DATA);
                                                     subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_DOWNLOADING_DATA));
                                                 } else {
-                                                    output.write(downloadTuple.second(), 0, downloadTuple.third());
-                                                    parentStore.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                                    setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
                                                     geojsonFilePath = filePath;
-
                                                     subscriber.onCompleted();
-                                                    output.flush();
-                                                    output.close();
                                                 }
-                                            } catch (IOException e) {
-                                                e.printStackTrace();
+                                            }
+                                        },
+                                        new Action1<Throwable>() {
+                                            @Override
+                                            public void call(Throwable t) {
+                                                subscriber.onNext(new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_START_FAILED));
                                             }
                                         }
-                                    });
+                                    );
                         } catch (IOException e) {
                             Log.w(LOG_TAG, "Couldn't download geojson store.", e);
                             GeoJsonStore parentStore =
