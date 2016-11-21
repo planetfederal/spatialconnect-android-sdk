@@ -2,8 +2,6 @@ package com.boundlessgeo.spatialconnect.test;
 
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
-import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
@@ -52,16 +50,12 @@ public class FormStoreTest extends BaseTestCase {
     @Test
     public void testFormStoreIsInitialized() {
         FormStore formStore =  sc.getDataService().getFormStore();
-        assertEquals("The default store should have the adapter connected if it initialized properly.",
-                formStore.getAdapter().getStatus(),
-                SCDataAdapterStatus.DATA_ADAPTER_CONNECTED
-        );
 
         assertEquals("The form store should have 1 form tables.",
-                1, ((GeoPackageAdapter)formStore.getAdapter()).getGeoPackageContents().size());
+                1, formStore.getGeoPackageContents().size());
 
         assertEquals("The from store table should be baseball_team.",
-                "baseball_team", ((GeoPackageAdapter)formStore.getAdapter()).getGeoPackageContents().iterator().next().getTableName());
+                "baseball_team", formStore.getGeoPackageContents().iterator().next().getTableName());
     }
 
     @Test
@@ -112,7 +106,7 @@ public class FormStoreTest extends BaseTestCase {
         FormStore formStore =  sc.getDataService().getFormStore();
         formStore.deleteFormLayer(TEST_LAYER_NAME);
         assertTrue("The Form store should have 0 form tables.",
-                0 == ((GeoPackageAdapter) formStore.getAdapter()).getGeoPackageContents().size());
+                0 == formStore.getGeoPackageContents().size());
     }
 
     private static void waitForStoreToStart(final String storeId) {

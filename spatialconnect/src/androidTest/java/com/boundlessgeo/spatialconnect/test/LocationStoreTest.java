@@ -1,8 +1,6 @@
 package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
-import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.geometries.SCPoint;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
@@ -14,7 +12,6 @@ import com.vividsolutions.jts.geom.PrecisionModel;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Map;
@@ -46,13 +43,9 @@ public class LocationStoreTest extends BaseTestCase {
     @Test
     public void testLocationStoreIsInitialized() {
         LocationStore locationStore =  sc.getDataService().getLocationStore();
-        assertEquals("The location store should have the adapter connected if it initialized properly.",
-                locationStore.getAdapter().getStatus(),
-                SCDataAdapterStatus.DATA_ADAPTER_CONNECTED
-        );
 
         assertEquals("The location store should have 1  table.",
-                1, ((GeoPackageAdapter)locationStore.getAdapter()).getGeoPackageContents().size());
+                1, locationStore.getGeoPackageContents().size());
     }
 
     @Test

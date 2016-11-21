@@ -22,7 +22,6 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
-import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
@@ -77,7 +76,7 @@ public class FormStore extends GeoPackageStore implements  SCSpatialStore, SCDat
 
     public void deleteFormLayer(String layerName) {
         storeForms.remove(layerName);
-        ((GeoPackageAdapter) getAdapter()).deleteLayer(layerName);
+        deleteLayer(layerName);
     }
 
     public List<SCFormConfig> getFormConfigs() {
@@ -92,7 +91,7 @@ public class FormStore extends GeoPackageStore implements  SCSpatialStore, SCDat
     @Override
     public Observable<SCSpatialFeature> create(final SCSpatialFeature scSpatialFeature) {
 
-        Observable<SCSpatialFeature> spatialFeature = ((GeoPackageAdapter) getAdapter()).create(scSpatialFeature);
+        Observable<SCSpatialFeature> spatialFeature = super.create(scSpatialFeature);
 
         return spatialFeature.doOnCompleted(new Action0() {
             @Override

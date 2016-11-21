@@ -144,6 +144,7 @@ public class HttpHandler {
                     connection.connect();
 
                     int contentLength = connection.getContentLength();
+                    //Log.e(LOG_TAG, "contentLength: " + contentLength);
                     final byte buffer[] = new byte[2048];
                     final InputStream inputStream = connection.getInputStream();
 
@@ -153,18 +154,23 @@ public class HttpHandler {
 
                     while ((count = inputStream.read(buffer)) != -1) {
                         total += count;
+                        //Log.e(LOG_TAG, "count: " + count);
+                        //Log.e(LOG_TAG, "total: " + total);
                         progress = (total / (float)contentLength);
                         subscriber.onNext((SCTuple<Float, byte[], Integer>)new SCTuple(progress, buffer, count));
                     }
-
+                    //Log.e(LOG_TAG, "should be sending 1: ");
                     subscriber.onNext((SCTuple<Float, byte[], Integer>)new SCTuple(1f, buffer, count));
                     subscriber.onCompleted();
 
                 } catch (Exception e) {
+                    Log.e(LOG_TAG, "Exception: " + e.toString());
+                    Log.e(LOG_TAG, "Exception: " + e.getMessage());
+                    e.printStackTrace();
                     subscriber.onError(e);
                 }
             }
-        });
+        }).subscribeOn(Schedulers.io());
     }
 
     public InputStream getResponseAsInputStream(String url) throws IOException {

@@ -16,6 +16,7 @@ package com.boundlessgeo.spatialconnect.stores;
 
 
 import android.content.Context;
+import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapter;
@@ -35,6 +36,8 @@ import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Action1;
 
+import static com.boundlessgeo.spatialconnect.db.SCKVPStore.LOG_TAG;
+
 /**
  * Subclasses of SCDataStore provide read/write access to a single data store using an {@link SCDataAdapter}.  Instances
  * of SCDataStore are initialized with an {@link SCStoreConfig} which provides the information needed to connect to the
@@ -45,7 +48,7 @@ import rx.functions.Action1;
  */
 public abstract class SCDataStore {
 
-    private SCDataAdapter adapter;
+//    private SCDataAdapter adapter;
     private String storeId;
     private String name;
     private String version;
@@ -69,13 +72,13 @@ public abstract class SCDataStore {
         return DataStorePermissionEnum.READ;
     }
 
-    public SCDataAdapter getAdapter() {
-        return this.adapter;
-    }
-
-    public void setAdapter(SCDataAdapter adapter) {
-        this.adapter = adapter;
-    }
+//    public SCDataAdapter getAdapter() {
+//        return this.adapter;
+//    }
+//
+//    public void setAdapter(SCDataAdapter adapter) {
+//        this.adapter = adapter;
+//    }
 
     public String getStoreId() {
         return this.storeId;
@@ -172,22 +175,31 @@ public abstract class SCDataStore {
                                 @Override
                                 public void call(SCTuple<Float, byte[], Integer> downloadTuple) {
                                     try {
-                                        if (downloadTuple.first() < 1) {
+                                        //Log.e("SCDataStore","progress: " + downloadTuple.first());
+                                        if (downloadTuple.first() < 1f) {
+                                            //Log.e("SCDataStore","less than 1 write: count: " + downloadTuple.third() );
                                             output.write(downloadTuple.second(), 0, downloadTuple.third());
                                             subscriber.onNext(downloadTuple.first());
                                         } else {
-                                            output.write(downloadTuple.second(), 0, downloadTuple.third());
+                                            //Log.e("SCDataStore","final write: count: " + downloadTuple.third() );
+                                            if (downloadTuple.third() > 0){
+                                                output.write(downloadTuple.second(), 0, downloadTuple.third());
+                                            }
                                             subscriber.onNext(1f);
                                             subscriber.onCompleted();
                                             output.flush();
                                             output.close();
                                         }
                                     } catch (IOException e) {
+                                        Log.e(LOG_TAG, "Exception11: " + e.toString());
+                                        Log.e(LOG_TAG, "Exception11: " + e.getMessage());
                                         e.printStackTrace();
                                     }
                                 }
                             });
                 } catch (Exception e) {
+                    Log.e(LOG_TAG, "Exception22: " + e.toString());
+                    Log.e(LOG_TAG, "Exception22: " + e.getMessage());
                     subscriber.onError(e);
                 }
             }
