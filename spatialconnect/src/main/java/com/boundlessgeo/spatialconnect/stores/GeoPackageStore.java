@@ -51,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
 import rx.Subscriber;
@@ -394,6 +395,7 @@ public class GeoPackageStore extends SCDataStore implements SCSpatialStore, SCDa
                     try {
                         theUrl = new URL(scStoreConfig.getUri());
                         download(theUrl.toString(), getContext().getDatabasePath(scStoreConfig.getUniqueID()))
+                                .sample(2, TimeUnit.SECONDS)
                                 .subscribe(
                                         new Action1<Float>() {
                                             @Override

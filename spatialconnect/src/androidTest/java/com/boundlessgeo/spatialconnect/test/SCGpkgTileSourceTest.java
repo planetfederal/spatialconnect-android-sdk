@@ -29,7 +29,6 @@ public class SCGpkgTileSourceTest extends BaseTestCase {
 
     @BeforeClass
     public static void setUp() throws Exception {
-//        deleteDatabases();
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
         sc.addConfig(localConfigFile);
