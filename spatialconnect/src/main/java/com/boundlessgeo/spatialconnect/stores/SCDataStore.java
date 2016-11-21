@@ -45,7 +45,6 @@ import rx.functions.Action1;
  */
 public abstract class SCDataStore {
 
-//    private SCDataAdapter adapter;
     private String storeId;
     private String name;
     private String version;
@@ -68,14 +67,6 @@ public abstract class SCDataStore {
     public DataStorePermissionEnum getAuthorization() {
         return DataStorePermissionEnum.READ;
     }
-
-//    public SCDataAdapter getAdapter() {
-//        return this.adapter;
-//    }
-//
-//    public void setAdapter(SCDataAdapter adapter) {
-//        this.adapter = adapter;
-//    }
 
     public String getStoreId() {
         return this.storeId;
