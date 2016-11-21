@@ -17,8 +17,6 @@ package com.boundlessgeo.spatialconnect.test;
 import android.database.Cursor;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
-import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapterStatus;
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
@@ -55,7 +53,6 @@ import rx.functions.Action1;
 import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertTrue;
 
 public class GeoPackageTest extends BaseTestCase {
@@ -79,17 +76,6 @@ public class GeoPackageTest extends BaseTestCase {
     public static void tearDown() throws Exception {
         HttpHandler.getInstance().cancelAllRequests();
         testContext.deleteDatabase(HAITI_GPKG_ID);
-    }
-
-    @Test
-    public void testThatDataServiceStartedGeoPackageStore() {
-        SCDataStore gpkgStore = sc.getDataService().getStoreById(HAITI_GPKG_ID);
-
-        assertTrue("The store's adapter should be connected.",
-                gpkgStore.getAdapter().getStatus()
-                        .equals(SCDataAdapterStatus.DATA_ADAPTER_CONNECTED));
-        assertNotNull("The store should downloaded locally", gpkgStore);
-        assertEquals("The store should be running", SCDataStoreStatus.SC_DATA_STORE_RUNNING, gpkgStore.getStatus());
     }
 
     @Test
@@ -340,15 +326,15 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGetGeoPackageContents() {
-        SCDataStore whitehorse = sc.getDataService().getStoreById(HAITI_GPKG_ID);
-        int contentsSize = ((GeoPackageAdapter) whitehorse.getAdapter()).getGeoPackageContents().size();
+        GeoPackageStore whitehorse = (GeoPackageStore)sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        int contentsSize =  whitehorse.getGeoPackageContents().size();
         assertEquals("The Haiti gpkg should only have 3 row in the gpkg_contents table.", 3, contentsSize);
     }
 
     @Test
     public void testGetFeatureSources() {
-        SCDataStore store = sc.getDataService().getStoreById(HAITI_GPKG_ID);
-        int featureSourcesSize = ((GeoPackageAdapter) store.getAdapter()).getFeatureSources().size();
+        GeoPackageStore store = (GeoPackageStore)sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        int featureSourcesSize = store.getFeatureSources().size();
         assertEquals("The Haiti gpkg should have 3 feature tables.", 3, featureSourcesSize);
     }
 

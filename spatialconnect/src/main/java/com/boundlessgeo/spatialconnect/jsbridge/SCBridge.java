@@ -21,7 +21,6 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
-import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
@@ -107,7 +106,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
                     public void onMapReady(GoogleMap googleMap) {
                         List<SCDataStore> stores = sc.getDataService().getActiveStores();
                         for (SCDataStore store : stores) {
-                            if(store instanceof GeoPackageStore && ((GeoPackageAdapter)store.getAdapter()).getTileSources().size() > 0) {
+                            if(store instanceof GeoPackageStore && ((GeoPackageStore)store).getTileSources().size() > 0) {
                                 SCRasterStore rs = new GpkgRasterSource((GeoPackageStore)store);
                                 for (String tableName : rs.rasterLayers()) {
                                     rs.overlayFromLayer(tableName, googleMap);

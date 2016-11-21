@@ -1,19 +1,24 @@
 package com.boundlessgeo.spatialconnect.test;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.dataAdapter.GeoPackageAdapter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
+import com.boundlessgeo.spatialconnect.services.SCDataService;
+import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
+import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import rx.Observable;
+import rx.Subscriber;
+import rx.functions.Action1;
 import rx.observers.TestSubscriber;
 
 import static junit.framework.Assert.assertEquals;
@@ -24,7 +29,6 @@ public class SCGpkgTileSourceTest extends BaseTestCase {
 
     @BeforeClass
     public static void setUp() throws Exception {
-        deleteDatabases();
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
         sc.addConfig(localConfigFile);
@@ -40,8 +44,8 @@ public class SCGpkgTileSourceTest extends BaseTestCase {
 
     @Test
     public void testTileSourcesAreCreatedCorrectly() {
-        SCDataStore store = sc.getDataService().getStoreById(WHITEHORSE_GPKG_ID);
-        Map<String, SCGpkgTileSource> tileSources = ((GeoPackageAdapter) store.getAdapter()).getTileSources();
+        GeoPackageStore store = (GeoPackageStore)sc.getDataService().getStoreById(WHITEHORSE_GPKG_ID);
+        Map<String, SCGpkgTileSource> tileSources = store.getTileSources();
         assertEquals("The Whitehorse gpkg should have 1 tile source.", 1, tileSources.size());
         SCGpkgTileSource whiteHorseTileSource = tileSources.get("WhiteHorse");
         assertEquals("The Whitehorse gpkg should have 1 tile source named WhiteHorse.",
@@ -67,11 +71,36 @@ public class SCGpkgTileSourceTest extends BaseTestCase {
     }
 
     private static void waitForStoreToStart(final String storeId) {
+        System.out.println("Waiting for store " + storeId + " to start");
         TestSubscriber testSubscriber = new TestSubscriber();
-        sc.getDataService().storeStarted(storeId).timeout(3, TimeUnit.MINUTES).subscribe(testSubscriber);
+        Observable.create(new Observable.OnSubscribe<Void>() {
+            @Override
+            public void call(final Subscriber<? super Void> subscriber) {
+                SCDataService dataService = sc.getDataService();
+                SCDataStore store = dataService.getStoreById(storeId);
+                if (store != null) {
+                    if (dataService.getStoreById(storeId).getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+                        subscriber.onCompleted();
+                    } else {
+                        dataService.storeEvents.autoConnect()
+                                .timeout(2, TimeUnit.MINUTES)
+                                .subscribe(new Action1<SCStoreStatusEvent>() {
+                                    @Override
+                                    public void call(SCStoreStatusEvent event) {
+                                        if (event.getStoreId().equals(storeId) &&
+                                                event.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+                                            subscriber.onCompleted();
+                                        }
+                                    }
+                                });
+                    }
+                }
+            }
+        }).subscribe(testSubscriber);
+
         testSubscriber.awaitTerminalEvent();
-        testSubscriber.assertNoErrors();
         testSubscriber.assertCompleted();
+        testSubscriber.assertNoErrors();
     }
 
 }

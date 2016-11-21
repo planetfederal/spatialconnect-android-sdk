@@ -45,7 +45,6 @@ import rx.functions.Action1;
  */
 public abstract class SCDataStore {
 
-    private SCDataAdapter adapter;
     private String storeId;
     private String name;
     private String version;
@@ -67,14 +66,6 @@ public abstract class SCDataStore {
 
     public DataStorePermissionEnum getAuthorization() {
         return DataStorePermissionEnum.READ;
-    }
-
-    public SCDataAdapter getAdapter() {
-        return this.adapter;
-    }
-
-    public void setAdapter(SCDataAdapter adapter) {
-        this.adapter = adapter;
     }
 
     public String getStoreId() {
@@ -167,23 +158,25 @@ public abstract class SCDataStore {
             public void call(final Subscriber subscriber) {
                 try {
                     final OutputStream output = new FileOutputStream(file, true);
-                    HttpHandler.getInstance().getWithProgress2(url)
+                    HttpHandler.getInstance().getWithProgress(url)
                             .subscribe(new Action1<SCTuple<Float, byte[], Integer>>() {
                                 @Override
                                 public void call(SCTuple<Float, byte[], Integer> downloadTuple) {
                                     try {
-                                        if (downloadTuple.first() < 1) {
+                                        if (downloadTuple.first() < 1f) {
                                             output.write(downloadTuple.second(), 0, downloadTuple.third());
                                             subscriber.onNext(downloadTuple.first());
                                         } else {
-                                            output.write(downloadTuple.second(), 0, downloadTuple.third());
+                                            if (downloadTuple.third() > 0){
+                                                output.write(downloadTuple.second(), 0, downloadTuple.third());
+                                            }
                                             subscriber.onNext(1f);
                                             subscriber.onCompleted();
                                             output.flush();
                                             output.close();
                                         }
                                     } catch (IOException e) {
-                                        e.printStackTrace();
+                                        subscriber.onError(e);
                                     }
                                 }
                             });
