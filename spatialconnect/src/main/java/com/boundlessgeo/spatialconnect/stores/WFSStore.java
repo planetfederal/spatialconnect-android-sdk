@@ -19,13 +19,14 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.util.Xml;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryCollection;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
+import com.boundlessgeo.spatialconnect.services.SCSensorService;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -47,7 +48,7 @@ import rx.functions.Action1;
  * <p></p>
  * Note that all features will be queried and created in a workspace named <i>spatialconnect</i>.
  */
-public class WFSStore extends SCDataStore implements  SCSpatialStore, SCDataStoreLifeCycle {
+public class WFSStore extends SCRemoteDataStore implements  SCSpatialStore {
 
     private static final String LOG_TAG = WFSStore.class.getSimpleName();
     private String baseUrl;
@@ -170,8 +171,10 @@ public class WFSStore extends SCDataStore implements  SCSpatialStore, SCDataStor
         return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
             @Override
             public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
+                SCSensorService ss = SpatialConnect.getInstance().getSensorService();
+
                 // try to connect to WFS store to get the layers from the capabilities documents
-                SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
+                ss.isConnected.subscribe(new Action1<Boolean>() {
                     @Override
                     public void call(Boolean connected) {
                         if (connected) {
@@ -315,17 +318,8 @@ public class WFSStore extends SCDataStore implements  SCSpatialStore, SCDataStor
 
     @Override
     public void stop() {
+        super.stop();
         this.layerNames.clear();
-    }
-
-    @Override
-    public void resume() {
-
-    }
-
-    @Override
-    public void pause() {
-
     }
 
     public String getGetCapabilitiesUrl() {

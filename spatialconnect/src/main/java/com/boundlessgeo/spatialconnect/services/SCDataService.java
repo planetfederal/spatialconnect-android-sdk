@@ -17,6 +17,7 @@ package com.boundlessgeo.spatialconnect.services;
 import android.content.Context;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -29,6 +30,7 @@ import com.boundlessgeo.spatialconnect.stores.LocationStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreLifeCycle;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
+import com.boundlessgeo.spatialconnect.stores.SCRemoteDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 import com.boundlessgeo.spatialconnect.stores.WFSStore;
@@ -179,6 +181,40 @@ public class SCDataService extends SCService {
         });
     }
 
+    private void pauseRemoteStores() {
+        for (SCDataStore store : stores.values()) {
+            if (store instanceof SCRemoteDataStore && store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+                ((SCRemoteDataStore) store).pause();
+                storeEventSubject.onNext(
+                        new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_PAUSED, store.getStoreId()));
+            }
+        }
+    }
+
+    private void resumeRemoteStores() {
+        for (SCDataStore store : stores.values()) {
+            if (store instanceof SCRemoteDataStore && store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_PAUSED)) {
+                ((SCRemoteDataStore) store).resume();
+                storeEventSubject.onNext(
+                        new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_RESUMED, store.getStoreId()));
+            }
+        }
+    }
+
+    private void setupSubscriptions() {
+        SCSensorService ss = SpatialConnect.getInstance().getSensorService();
+        ss.isConnected.subscribe(new Action1<Boolean>() {
+            @Override
+            public void call(Boolean connected) {
+                if (connected) {
+                    resumeRemoteStores();
+                } else {
+                    pauseRemoteStores();
+                }
+            }
+        });
+    }
+
     public void addDefaultStoreImpls() {
         this.supportedStores.add(GeoJsonStore.TYPE + "." + "1");
         this.supportedStores.add(GeoJsonStore.TYPE + "." + "1.0");
@@ -285,6 +321,7 @@ public class SCDataService extends SCService {
         for (SCDataStore store : getAllStores()) {
             startStore(store);
         }
+        setupSubscriptions();
         this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
     }
 
