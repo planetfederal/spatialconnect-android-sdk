@@ -10,7 +10,6 @@ import org.json.JSONObject;
 public class SCNotification {
 
     private String to;
-    private String icon;
     private String title;
     private String body;
     private JSONObject payload;
@@ -19,11 +18,9 @@ public class SCNotification {
     public SCNotification(SCMessageOuterClass.SCMessage message) {
         try {
             JSONObject payload = new JSONObject(message.getPayload());
-            JSONObject notificationBody = payload.getJSONObject("notification");
             this.to = payload.getString("to");
-            this.icon = notificationBody.getString("icon");
-            this.title = notificationBody.getString("title");
-            this.body = notificationBody.getString("body");
+            this.title = payload.getString("title");
+            this.body = payload.getString("body");
             this.payload = payload.getJSONObject("payload");
             this.priority = payload.getString("priority");
         }
@@ -36,7 +33,6 @@ public class SCNotification {
         JSONObject obj = new JSONObject();
         try {
             obj.put("to" , to);
-            obj.put("icon", icon);
             obj.put("title", title);
             obj.put("body", body);
             obj.put("payload", payload);
