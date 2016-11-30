@@ -19,12 +19,14 @@ package com.boundlessgeo.spatialconnect.stores;
 import android.content.Context;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
+import com.boundlessgeo.spatialconnect.services.SCSensorService;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -102,7 +104,8 @@ public class FormStore extends GeoPackageStore implements  SCSpatialStore, SCDat
                 if (formId != null) {
                     final String theUrl = SCBackendService.backendUri + "/api/forms/" + formId + "/submit";
                     if (SCBackendService.backendUri != null) {
-                        SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
+                        SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
+                        sensorService.isConnected.subscribe(new Action1<Boolean>() {
                             @Override
                             public void call(Boolean connected) {
                                 if (connected) {

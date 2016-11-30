@@ -17,11 +17,15 @@ package com.boundlessgeo.spatialconnect.services;
 
 import android.content.Context;
 import android.location.Location;
+import android.net.NetworkInfo;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.scutilities.LocationHelper;
+import com.github.pwittchen.reactivenetwork.library.Connectivity;
+import com.github.pwittchen.reactivenetwork.library.ReactiveNetwork;
 
 import rx.Observable;
+import rx.functions.Action1;
 import rx.subjects.BehaviorSubject;
 
 /**
@@ -35,6 +39,7 @@ public class SCSensorService extends SCService {
     private boolean gpsListenerStarted;
     private final String LOG_TAG = SCSensorService.class.getSimpleName();
     public static BehaviorSubject<Integer> running = BehaviorSubject.create(0);
+    public BehaviorSubject<Boolean> isConnected = BehaviorSubject.create(false);
 
 
     public SCSensorService(Context context) {
@@ -48,6 +53,14 @@ public class SCSensorService extends SCService {
     public void start() {
         super.start();
         running.onNext(1);
+        ReactiveNetwork.observeNetworkConnectivity(context)
+                .subscribe(new Action1<Connectivity>() {
+                    @Override
+                    public void call(Connectivity connectivity) {
+                        Log.d(LOG_TAG, "Connectivity is " + connectivity.getState().name());
+                        isConnected.onNext(connectivity.getState().equals(NetworkInfo.State.CONNECTED));
+                    }
+                });
     }
 
     /**
