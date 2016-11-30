@@ -49,7 +49,6 @@ public class SCBackendService extends SCService {
     private static MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
     public static BehaviorSubject<Boolean> configReceived = BehaviorSubject.create(false);
-//    public static BehaviorSubject<Boolean> networkConnected = BehaviorSubject.create(false);
     public static String backendUri = null;
 
     public SCBackendService(final Context context) {
