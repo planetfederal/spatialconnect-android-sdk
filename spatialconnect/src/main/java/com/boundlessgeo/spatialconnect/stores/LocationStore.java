@@ -29,7 +29,6 @@ import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
@@ -124,7 +123,8 @@ public class LocationStore extends GeoPackageStore implements  SCSpatialStore, S
     }
 
     private void publishLocation(final SCPoint point) {
-        SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
+        SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
+        sensorService.isConnected.subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {

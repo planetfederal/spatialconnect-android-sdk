@@ -17,6 +17,7 @@ package com.boundlessgeo.spatialconnect.services;
 import android.content.Context;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.github.rtoshiro.secure.SecureSharedPreferences;
 
@@ -116,7 +117,8 @@ public class SCAuthService extends SCService {
      */
     private static void refreshToken() throws IOException {
         Log.d(LOG_TAG, "Refreshing auth token when network is available.");
-        SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
+        SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
+        sensorService.isConnected.subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {

@@ -31,7 +31,6 @@ import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
@@ -310,7 +309,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
     private void handleNotificationSubscribe(final ReadableMap message) {
         Log.d(LOG_TAG, "Subscribing to notifications");
-        SCBackendService.networkConnected.subscribe(new Action1<Boolean>() {
+        SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
+        sensorService.isConnected.subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {

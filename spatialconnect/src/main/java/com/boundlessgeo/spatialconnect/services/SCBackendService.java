@@ -16,7 +16,6 @@ package com.boundlessgeo.spatialconnect.services;
 
 
 import android.content.Context;
-import android.net.NetworkInfo;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
@@ -31,8 +30,6 @@ import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
-import com.github.pwittchen.reactivenetwork.library.Connectivity;
-import com.github.pwittchen.reactivenetwork.library.ReactiveNetwork;
 
 import java.io.IOException;
 import java.util.Map;
@@ -52,7 +49,7 @@ public class SCBackendService extends SCService {
     private static MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
     public static BehaviorSubject<Boolean> configReceived = BehaviorSubject.create(false);
-    public static BehaviorSubject<Boolean> networkConnected = BehaviorSubject.create(false);
+//    public static BehaviorSubject<Boolean> networkConnected = BehaviorSubject.create(false);
     public static String backendUri = null;
 
     public SCBackendService(final Context context) {
@@ -83,16 +80,8 @@ public class SCBackendService extends SCService {
     public void start() {
         mqttHandler.connect();
         Log.d(LOG_TAG, "Subscribing to network connectivity updates.");
-        ReactiveNetwork.observeNetworkConnectivity(context)
-                .subscribe(new Action1<Connectivity>() {
-                    @Override
-                    public void call(Connectivity connectivity) {
-                        Log.d(LOG_TAG, "Connectivity is " + connectivity.getState().name());
-                        networkConnected.onNext(connectivity.getState().equals(NetworkInfo.State.CONNECTED));
-                    }
-                });
-
-        networkConnected.subscribe(new Action1<Boolean>() {
+        SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
+        sensorService.isConnected.subscribe(new Action1<Boolean>() {
                 @Override
                 public void call(Boolean connected) {
                     if (connected) {
