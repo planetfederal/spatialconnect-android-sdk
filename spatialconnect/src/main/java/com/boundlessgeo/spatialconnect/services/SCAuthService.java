@@ -41,7 +41,6 @@ public class SCAuthService extends SCService {
     public static BehaviorSubject<Boolean> loginStatus = BehaviorSubject.create(false);
     public static final String AUTH_HEADER_NAME = "x-access-token";
     private static String accessToken;
-    private static String email;
     private static String password;
     private static SecureSharedPreferences settings;
     private static String username;
@@ -49,7 +48,7 @@ public class SCAuthService extends SCService {
     public SCAuthService(Context context) {
         this.context = context;
         this.settings = new SecureSharedPreferences(context);
-        this.email = getEmail();
+        this.username = getUsername();
         this.password = getPassword();
         this.accessToken = getAccessToken();
         if (this.accessToken != null) {
@@ -57,8 +56,8 @@ public class SCAuthService extends SCService {
         }
     }
 
-    public void authenticate(String email, String password, String username) {
-        saveCredentials(email, password, username);
+    public void authenticate(String username, String password) {
+        saveCredentials(username, password);
         try {
             refreshToken();
         }
@@ -124,9 +123,9 @@ public class SCAuthService extends SCService {
             public void call(Boolean connected) {
                 if (connected) {
                     final String theUrl = SCBackendService.backendUri + "/api/authenticate";
-                    if (getEmail() != null && getPassword() != null) {
+                    if (getUsername() != null && getPassword() != null) {
                         HttpHandler.getInstance()
-                            .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", getEmail(), getPassword()))
+                            .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", getUsername(), getPassword()))
                                 .subscribe(
                                     new Action1<Response>() {
                                         @Override
@@ -172,17 +171,11 @@ public class SCAuthService extends SCService {
         editor.commit();
     }
 
-    public void saveCredentials(String email, String password, String username) {
+    public void saveCredentials(String password, String username) {
         SecureSharedPreferences.Editor editor = settings.edit();
-        editor.putString("email", email);
-        editor.putString("password", password);
         editor.putString("username", username);
+        editor.putString("password", password);
         editor.commit();
-    }
-
-    public static String getEmail() {
-        SecureSharedPreferences settings = new SecureSharedPreferences(context);
-        return settings.getString("email", null);
     }
 
     public static String getPassword() {
