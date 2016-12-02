@@ -44,6 +44,7 @@ public class SCAuthService extends SCService {
     private static String email;
     private static String password;
     private static SecureSharedPreferences settings;
+    private static String username;
 
     public SCAuthService(Context context) {
         this.context = context;
@@ -56,8 +57,8 @@ public class SCAuthService extends SCService {
         }
     }
 
-    public void authenticate(String email, String password) {
-        saveCredentials(email, password);
+    public void authenticate(String email, String password, String username) {
+        saveCredentials(email, password, username);
         try {
             refreshToken();
         }
@@ -171,10 +172,11 @@ public class SCAuthService extends SCService {
         editor.commit();
     }
 
-    public void saveCredentials(String email, String password) {
+    public void saveCredentials(String email, String password, String username) {
         SecureSharedPreferences.Editor editor = settings.edit();
         editor.putString("email", email);
         editor.putString("password", password);
+        editor.putString("username", username);
         editor.commit();
     }
 
@@ -186,5 +188,10 @@ public class SCAuthService extends SCService {
     public static String getPassword() {
         SecureSharedPreferences settings = new SecureSharedPreferences(context);
         return settings.getString("password", null);
+    }
+
+    public static String getUsername() {
+        SecureSharedPreferences settings = new SecureSharedPreferences(context);
+        return settings.getString("username", null);
     }
 }

@@ -78,7 +78,7 @@ public class IntegratedTests {
             sc.initialize(activity);
             sc.addConfig(remoteConfigFile);
             sc.startAllServices();
-            sc.getAuthService().authenticate("admin@something.com", "admin");
+            sc.getAuthService().authenticate("admin@something.com", "admin", "admin@something.com");
 
         } catch (IOException ex) {
             System.exit(0);

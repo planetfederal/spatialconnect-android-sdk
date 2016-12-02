@@ -368,7 +368,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
         String email = message.getMap("payload").getString("email");
         String password = message.getMap("payload").getString("password");
         SCAuthService authService = SpatialConnect.getInstance().getAuthService();
-        authService.authenticate(email, password);
+        authService.authenticate(email, password, email);
     }
 
 
