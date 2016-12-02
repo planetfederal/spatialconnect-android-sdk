@@ -36,6 +36,12 @@ public class SCFormConfig {
     @JsonProperty("fields")
     private List<SCFormField> fields;
 
+    /**
+     * Unique id of the team to which this form belongs.
+     */
+    @JsonProperty("team_id")
+    private String teamId;
+
     public String getId() {
         return id;
     }
@@ -74,6 +80,14 @@ public class SCFormConfig {
 
     public void setFormLabel(String formLabel) {
         this.formLabel = formLabel;
+    }
+
+    public String getTeamId() {
+        return teamId;
+    }
+
+    public void setTeamId(String teamId) {
+        this.teamId = teamId;
     }
 
     @Override
