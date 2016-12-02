@@ -59,6 +59,12 @@ public class SCStoreConfig
     @JsonProperty("default_layers")
     private List<String> defaultLayers;
 
+    /**
+     * Unique id of the team to which this store belongs.
+     */
+    @JsonProperty("team_id")
+    private String teamId;
+
     public SCStoreConfig() {}
 
     public String getType()
@@ -118,5 +124,13 @@ public class SCStoreConfig
 
     public void setDefaultLayers(List<String> defaultLayers) {
         this.defaultLayers = defaultLayers;
+    }
+
+    public String getTeamId() {
+        return teamId;
+    }
+
+    public void setTeamId(String teamId) {
+        this.teamId = teamId;
     }
 }
