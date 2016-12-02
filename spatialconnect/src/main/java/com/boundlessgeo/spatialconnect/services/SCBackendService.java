@@ -30,6 +30,7 @@ import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.google.protobuf.Timestamp;
 
 import java.io.IOException;
 import java.util.Map;
@@ -261,6 +262,10 @@ public class SCBackendService extends SCService {
     public Observable<SCMessageOuterClass.SCMessage> publishReplyTo(
             String topic,
             final SCMessageOuterClass.SCMessage message) {
+
+        long millis = System.currentTimeMillis();
+        Timestamp timestamp = Timestamp.newBuilder().setSeconds(millis / 1000).build();
+
         // set the correlation id and replyTo topic
         int correlationId = (int) (System.currentTimeMillis() / 1000L);
         final SCMessageOuterClass.SCMessage newMessage = SCMessageOuterClass.SCMessage.newBuilder()
@@ -268,6 +273,8 @@ public class SCBackendService extends SCService {
                 .setPayload(message.getPayload())
                 .setReplyTo(MqttHandler.REPLY_TO_TOPIC)
                 .setCorrelationId(correlationId)
+                .setJwt(getJwt())
+                .setTime(timestamp)
                 .build();
         mqttHandler.publish(topic, newMessage, QoS.EXACTLY_ONCE.value());
         // filter message from reply to topic on the correlation id
@@ -288,11 +295,15 @@ public class SCBackendService extends SCService {
 
     public void publish(String topic, SCMessageOuterClass.SCMessage message, QoS qos) {
 
+        long millis = System.currentTimeMillis();
+        Timestamp timestamp = Timestamp.newBuilder().setSeconds(millis / 1000).build();
+
         SCMessageOuterClass.SCMessage.Builder jwtMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
         jwtMessagebuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
                 .setReplyTo(message.getReplyTo())
-                .setJwt(getJwt()); //adding jwt
+                .setJwt(getJwt())
+                .setTime(timestamp);
 
         mqttHandler.publish(topic, jwtMessagebuilder.build(), qos.value());
     }
