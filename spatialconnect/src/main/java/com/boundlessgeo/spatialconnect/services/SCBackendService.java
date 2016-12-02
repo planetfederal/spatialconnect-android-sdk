@@ -30,6 +30,7 @@ import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.google.protobuf.Timestamp;
 
 import java.io.IOException;
 import java.util.Map;
@@ -148,9 +149,10 @@ public class SCBackendService extends SCService {
         SCMessageOuterClass.SCMessage registerConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
                 .setAction(SCCommand.CONFIG_REGISTER_DEVICE.value())
                 .setPayload(
-                        String.format("{\"identifier\": \"%s\", \"device_info\": \"%s\"}",
+                        String.format("{\"identifier\": \"%s\", \"device_info\": \"%s\", \"mobile\": \"%s\"}",
                                 SCConfigService.getClientId(),
-                                SCConfigService.getAndroidVersion())
+                                SCConfigService.getAndroidVersion(),
+                                SCAuthService.getUsername())
                 )
                 .build();
         publish("/config/register", registerConfigMsg, QoS.EXACTLY_ONCE);
@@ -260,6 +262,10 @@ public class SCBackendService extends SCService {
     public Observable<SCMessageOuterClass.SCMessage> publishReplyTo(
             String topic,
             final SCMessageOuterClass.SCMessage message) {
+
+        long millis = System.currentTimeMillis();
+        Timestamp timestamp = Timestamp.newBuilder().setSeconds(millis / 1000).build();
+
         // set the correlation id and replyTo topic
         int correlationId = (int) (System.currentTimeMillis() / 1000L);
         final SCMessageOuterClass.SCMessage newMessage = SCMessageOuterClass.SCMessage.newBuilder()
@@ -267,6 +273,8 @@ public class SCBackendService extends SCService {
                 .setPayload(message.getPayload())
                 .setReplyTo(MqttHandler.REPLY_TO_TOPIC)
                 .setCorrelationId(correlationId)
+                .setJwt(getJwt())
+                .setTime(timestamp)
                 .build();
         mqttHandler.publish(topic, newMessage, QoS.EXACTLY_ONCE.value());
         // filter message from reply to topic on the correlation id
@@ -286,7 +294,18 @@ public class SCBackendService extends SCService {
     }
 
     public void publish(String topic, SCMessageOuterClass.SCMessage message, QoS qos) {
-        mqttHandler.publish(topic, message, qos.value());
+
+        long millis = System.currentTimeMillis();
+        Timestamp timestamp = Timestamp.newBuilder().setSeconds(millis / 1000).build();
+
+        SCMessageOuterClass.SCMessage.Builder jwtMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
+        jwtMessagebuilder.setAction(message.getAction())
+                .setPayload(message.getPayload())
+                .setReplyTo(message.getReplyTo())
+                .setJwt(getJwt())
+                .setTime(timestamp);
+
+        mqttHandler.publish(topic, jwtMessagebuilder.build(), qos.value());
     }
 
     private void loadConfig(SCMessageOuterClass.SCMessage message) {
@@ -305,5 +324,9 @@ public class SCBackendService extends SCService {
         catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public String getJwt() {
+        return SCAuthService.getAccessToken();
     }
 }

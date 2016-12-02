@@ -1,8 +1,12 @@
 syntax = "proto3";
 
+import "google/protobuf/timestamp.proto";
+
 message SCMessage {
   int32 correlationId = 1;
   string replyTo = 2;
   int32 action = 3;
   string payload = 4;
+  string jwt = 5;
+  google.protobuf.Timestamp time = 6;
 };
