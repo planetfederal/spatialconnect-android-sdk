@@ -42,6 +42,12 @@ public class SCFormConfig {
     @JsonProperty("team_id")
     private String teamId;
 
+    /**
+     * Metadata about this form config.
+     */
+    @JsonProperty("metadata")
+    private FormMetadata metadata;
+
     public String getId() {
         return id;
     }
@@ -90,6 +96,14 @@ public class SCFormConfig {
         this.teamId = teamId;
     }
 
+    public FormMetadata getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(FormMetadata metadata) {
+        this.metadata = metadata;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -106,6 +120,29 @@ public class SCFormConfig {
         return id != null ? id.hashCode() : 0;
     }
 
+    public class FormMetadata {
+
+        private Integer count;
+
+        @JsonProperty("last_activity")
+        private String lastActivity;
+
+        public Integer getCount() {
+            return count;
+        }
+
+        public void setCount(Integer count) {
+            this.count = count;
+        }
+
+        public String getLastActivity() {
+            return lastActivity;
+        }
+
+        public void setLastActivity(String lastActivity) {
+            this.lastActivity = lastActivity;
+        }
+    }
 }
 
 
