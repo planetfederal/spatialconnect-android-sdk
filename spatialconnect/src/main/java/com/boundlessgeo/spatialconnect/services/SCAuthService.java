@@ -171,7 +171,7 @@ public class SCAuthService extends SCService {
         editor.commit();
     }
 
-    public void saveCredentials(String password, String username) {
+    public void saveCredentials(String username, String password) {
         SecureSharedPreferences.Editor editor = settings.edit();
         editor.putString("username", username);
         editor.putString("password", password);
