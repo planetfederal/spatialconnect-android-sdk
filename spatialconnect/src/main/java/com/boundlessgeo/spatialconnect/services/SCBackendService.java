@@ -327,6 +327,7 @@ public class SCBackendService extends SCService {
     }
 
     public String getJwt() {
-        return SCAuthService.getAccessToken();
+        String jwt = SCAuthService.getAccessToken();
+        return (jwt != null) ? SCAuthService.getAccessToken() : "";
     }
 }
