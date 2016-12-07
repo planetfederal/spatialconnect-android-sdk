@@ -15,7 +15,6 @@
 package com.boundlessgeo.spatialconnect.test;
 
 import android.database.Cursor;
-import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
@@ -259,7 +258,6 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageUpdateFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
-        Log.e("GpkgTest","testGeoPackageUpdateFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist");
         SCSpatialStore gpkgStore = ((SCSpatialStore) sc.getDataService().getStoreById(HAITI_GPKG_ID));
         TestSubscriber testSubscriber = new TestSubscriber();
         SCSpatialFeature feature = getTestHaitiPoint();

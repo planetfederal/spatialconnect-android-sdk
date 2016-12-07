@@ -171,6 +171,7 @@ public class GeoPackageStore extends SCDataStore implements SCSpatialStore, SCDa
     public String getFilePath() {
         return getContext().getDatabasePath(scStoreConfig.getUniqueID()).getPath();
     }
+
     @Override
     public DataStorePermissionEnum getAuthorization() {
         return DataStorePermissionEnum.READ_WRITE;
