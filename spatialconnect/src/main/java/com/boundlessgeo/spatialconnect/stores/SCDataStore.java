@@ -151,7 +151,7 @@ public abstract class SCDataStore {
         READ, READ_WRITE
     }
 
-    public Observable<Float> download(final String url, final File file) {
+    protected Observable<Float> download(final String url, final File file) {
 
         return Observable.create(new Observable.OnSubscribe<Float>() {
             @Override
@@ -185,5 +185,10 @@ public abstract class SCDataStore {
                 }
             }
         });
+    }
+
+    protected void deleteFile(final String path) {
+        final File file = new File(path);
+        file.delete();
     }
 }

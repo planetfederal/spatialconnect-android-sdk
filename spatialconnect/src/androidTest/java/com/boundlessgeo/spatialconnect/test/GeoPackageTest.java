@@ -15,6 +15,7 @@
 package com.boundlessgeo.spatialconnect.test;
 
 import android.database.Cursor;
+import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
@@ -40,9 +41,12 @@ import com.vividsolutions.jts.io.WKTReader;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +59,7 @@ import rx.observers.TestSubscriber;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class GeoPackageTest extends BaseTestCase {
 
     private static SpatialConnect sc;
@@ -254,6 +259,7 @@ public class GeoPackageTest extends BaseTestCase {
 
     @Test
     public void testGeoPackageUpdateFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist() {
+        Log.e("GpkgTest","testGeoPackageUpdateFeatureThrowsDataStoreExceptionWhenNoFeatureTablesExist");
         SCSpatialStore gpkgStore = ((SCSpatialStore) sc.getDataService().getStoreById(HAITI_GPKG_ID));
         TestSubscriber testSubscriber = new TestSubscriber();
         SCSpatialFeature feature = getTestHaitiPoint();
@@ -379,6 +385,9 @@ public class GeoPackageTest extends BaseTestCase {
         cursor.moveToFirst();
         assertTrue("ST_WKTToSQL should return a blob if it loaded correctly.", cursor.getColumnCount() == 1);
         assertTrue("ST_WKTToSQL should return a blob if it loaded correctly.", cursor.getBlob(0).length > 0);
+
+        //must test destory on last method
+        testDestroy();
     }
 
 
@@ -446,7 +455,14 @@ public class GeoPackageTest extends BaseTestCase {
         assertEquals("The geometry type should be Point.", "Point", cursor.getString(0));
     }
 
+    private void testDestroy() {
+        GeoPackageStore store = (GeoPackageStore) sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        final File geoPackageFile = testContext.getDatabasePath(store.getStoreId());
+        assertTrue("GeoPackage file should exist", geoPackageFile.exists());
 
+        store.destroy();
+        assertEquals(geoPackageFile.exists(), false);
+    }
     private static void waitForStoreToStart(final String storeId) {
         System.out.println("Waiting for store " + storeId + " to start");
         TestSubscriber testSubscriber = new TestSubscriber();

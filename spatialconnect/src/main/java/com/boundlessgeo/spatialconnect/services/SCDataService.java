@@ -272,6 +272,15 @@ public class SCDataService extends SCService {
         }
     }
 
+    public void destroyStore(final SCDataStore store) {
+        if (store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+            ((SCDataStoreLifeCycle) store).destroy();
+            hasStores.onNext(stores.size() > 0);
+            storeEventSubject.onNext(
+                    new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_REMOVED, store.getStoreId()));
+        }
+    }
+
     /**
      * Closes the stream by calling the subscriber's onComplete() when the specified store has started.
      *
@@ -432,10 +441,10 @@ public class SCDataService extends SCService {
 
     public void unregisterStore(SCDataStore store) {
         this.stores.remove(store.getStoreId());
-        // if data service is started, and a store is unregister, then we want to stop the store
         if (getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING)) {
             Log.d(LOG_TAG, "Stopping store " + store.getName());
             stopStore(store);
+            destroyStore(store);
         }
     }
 

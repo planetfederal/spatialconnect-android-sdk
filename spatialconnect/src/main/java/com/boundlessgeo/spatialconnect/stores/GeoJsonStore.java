@@ -175,7 +175,7 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
             @Override
             public void call(final Subscriber subscriber) {
                 final String filePath = scStoreConfig.getUniqueID() + EXT;
-                final File geoJsonFile = new File(context.getFilesDir(), filePath); //new File(filePath);
+                final File geoJsonFile = new File(getPath()); //new File(filePath);
 
                 if (!geoJsonFile.exists()) {
                     if (scStoreConfig.getUri().startsWith("http")) {
@@ -289,6 +289,19 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
 
     public void resume() {
         this.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+    }
+
+    public void destroy() {
+        deleteFile(getPath());
+    }
+
+    public String getPath() {
+        StringBuilder filePath = new StringBuilder();
+        filePath.append(context.getFilesDir());
+        filePath.append(File.separator);
+        filePath.append(scStoreConfig.getUniqueID());
+        filePath.append(EXT);
+        return filePath.toString();
     }
 
     private String getResourceAsString() {

@@ -22,14 +22,18 @@ import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
+import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
+import java.io.File;
 import java.util.concurrent.TimeUnit;
 
 import rx.observers.TestSubscriber;
@@ -37,6 +41,7 @@ import rx.observers.TestSubscriber;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class GeoJsonTest extends BaseTestCase {
 
     private static SpatialConnect sc;
@@ -100,6 +105,17 @@ public class GeoJsonTest extends BaseTestCase {
         assertTrue("The feature should have properties.",
                 feature.getProperties().size() > 0
         );
+    }
+
+    @Test
+    public void testStoreDestroy() {
+        GeoJsonStore store = (GeoJsonStore) sc.getDataService().getStoreById(BARS_GEO_JSON_ID);
+        final File geoJsonFile = new File(store.getPath());
+        assertTrue("GeoJson file should exist", geoJsonFile.exists());
+
+        store.destroy();
+        assertEquals(geoJsonFile.exists(), false);
+
     }
 
     private static void waitForStoreToStart(final String storeId) {

@@ -168,6 +168,9 @@ public class GeoPackageStore extends SCDataStore implements SCSpatialStore, SCDa
         gpkg.refreshFeatureSources();
     }
 
+    public String getFilePath() {
+        return getContext().getDatabasePath(scStoreConfig.getUniqueID()).getPath();
+    }
     @Override
     public DataStorePermissionEnum getAuthorization() {
         return DataStorePermissionEnum.READ_WRITE;
@@ -463,6 +466,11 @@ public class GeoPackageStore extends SCDataStore implements SCSpatialStore, SCDa
     @Override
     public void pause() {
 
+    }
+
+    @Override
+    public void destroy() {
+        deleteFile(getFilePath());
     }
 
     @Override

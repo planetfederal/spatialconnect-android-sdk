@@ -91,6 +91,11 @@ public class FormStore extends GeoPackageStore implements  SCSpatialStore, SCDat
     }
 
     @Override
+    public void destroy() {
+        super.destroy();
+    }
+
+    @Override
     public Observable<SCSpatialFeature> create(final SCSpatialFeature scSpatialFeature) {
 
         Observable<SCSpatialFeature> spatialFeature = super.create(scSpatialFeature);
