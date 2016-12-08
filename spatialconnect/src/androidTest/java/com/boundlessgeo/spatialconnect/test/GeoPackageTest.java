@@ -40,9 +40,12 @@ import com.vividsolutions.jts.io.WKTReader;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +58,7 @@ import rx.observers.TestSubscriber;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class GeoPackageTest extends BaseTestCase {
 
     private static SpatialConnect sc;
@@ -446,6 +450,15 @@ public class GeoPackageTest extends BaseTestCase {
         assertEquals("The geometry type should be Point.", "Point", cursor.getString(0));
     }
 
+    @Test
+    public void zTestDestroy() { //must be last test to run
+        GeoPackageStore store = (GeoPackageStore) sc.getDataService().getStoreById(HAITI_GPKG_ID);
+        final File geoPackageFile = testContext.getDatabasePath(store.getStoreId());
+        assertTrue("GeoPackage file should exist", geoPackageFile.exists());
+
+        store.destroy();
+        assertEquals(geoPackageFile.exists(), false);
+    }
 
     private static void waitForStoreToStart(final String storeId) {
         System.out.println("Waiting for store " + storeId + " to start");

@@ -19,8 +19,9 @@ import rx.Observable;
 
 public interface SCDataStoreLifeCycle
 {
-    public Observable<SCStoreStatusEvent> start();
-    public void stop();
-    public void resume();
-    public void pause();
+    Observable<SCStoreStatusEvent> start();
+    void stop();
+    void resume();
+    void pause();
+    void destroy();
 }

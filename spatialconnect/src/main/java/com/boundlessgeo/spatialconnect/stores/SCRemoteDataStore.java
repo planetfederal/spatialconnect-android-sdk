@@ -37,6 +37,9 @@ public class SCRemoteDataStore extends SCDataStore implements SCDataStoreLifeCyc
         setStatus(SCDataStoreStatus.SC_DATA_STORE_PAUSED);
     }
 
+    @Override
+    public void destroy() {}
+
     private void listenForConnection() {
         SCSensorService ss = SpatialConnect.getInstance().getSensorService();
         ss.isConnected.subscribe(new Action1<Boolean>() {

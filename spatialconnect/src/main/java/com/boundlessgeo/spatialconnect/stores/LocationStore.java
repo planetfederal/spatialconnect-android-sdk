@@ -72,6 +72,10 @@ public class LocationStore extends GeoPackageStore implements  SCSpatialStore, S
         });
     }
 
+    public void destroy() {
+        super.destroy();
+    }
+
     private void listenForLocationUpdate() {
         SCSensorService.running.subscribe(new Action1<Integer>() {
             @Override
