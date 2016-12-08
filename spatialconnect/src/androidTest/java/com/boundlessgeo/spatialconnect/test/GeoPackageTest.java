@@ -383,9 +383,6 @@ public class GeoPackageTest extends BaseTestCase {
         cursor.moveToFirst();
         assertTrue("ST_WKTToSQL should return a blob if it loaded correctly.", cursor.getColumnCount() == 1);
         assertTrue("ST_WKTToSQL should return a blob if it loaded correctly.", cursor.getBlob(0).length > 0);
-
-        //must test destory on last method
-        testDestroy();
     }
 
 
@@ -453,7 +450,8 @@ public class GeoPackageTest extends BaseTestCase {
         assertEquals("The geometry type should be Point.", "Point", cursor.getString(0));
     }
 
-    private void testDestroy() {
+    @Test
+    public void zTestDestroy() { //must be last test to run
         GeoPackageStore store = (GeoPackageStore) sc.getDataService().getStoreById(HAITI_GPKG_ID);
         final File geoPackageFile = testContext.getDatabasePath(store.getStoreId());
         assertTrue("GeoPackage file should exist", geoPackageFile.exists());
@@ -461,6 +459,7 @@ public class GeoPackageTest extends BaseTestCase {
         store.destroy();
         assertEquals(geoPackageFile.exists(), false);
     }
+
     private static void waitForStoreToStart(final String storeId) {
         System.out.println("Waiting for store " + storeId + " to start");
         TestSubscriber testSubscriber = new TestSubscriber();
