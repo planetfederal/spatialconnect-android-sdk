@@ -18,30 +18,22 @@ package com.boundlessgeo.spatialconnect.stores;
 
 import android.content.Context;
 import android.util.Log;
-
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
-import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
-import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
-import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
-import com.boundlessgeo.spatialconnect.services.SCSensorService;
-
+import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import rx.Observable;
 import rx.functions.Action0;
-import rx.functions.Action1;
 import rx.subjects.BehaviorSubject;
 
 public class FormStore extends GeoPackageStore implements  SCSpatialStore, SCDataStoreLifeCycle {
@@ -115,7 +107,7 @@ public class FormStore extends GeoPackageStore implements  SCSpatialStore, SCDat
                     formSubmissionPayload.put("form_id", formId);
                     formSubmissionPayload.put("feature", scSpatialFeature.toJson());
                     try {
-                        String payload = ObjectMappers.getGenericMapper().writeValueAsString(formSubmissionPayload);
+                        String payload = SCObjectMapper.getMapper().writeValueAsString(formSubmissionPayload);
                         SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
                             .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
                             .setPayload(payload)

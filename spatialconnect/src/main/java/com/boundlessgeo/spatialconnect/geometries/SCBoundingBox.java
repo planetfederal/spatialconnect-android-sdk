@@ -16,7 +16,7 @@ package com.boundlessgeo.spatialconnect.geometries;
 
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
+import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.vividsolutions.jts.geom.Envelope;
 
@@ -67,7 +67,7 @@ public class SCBoundingBox
         String geoJson = "";
         try
         {
-            geoJson = ObjectMappers.getMapper().writeValueAsString(this);
+            geoJson = SCObjectMapper.getMapper().writeValueAsString(this);
         }
         catch (Exception ex)
         {
@@ -80,7 +80,7 @@ public class SCBoundingBox
     {
         try
         {
-            ObjectMappers.getMapper().writeValue(file, this);
+            SCObjectMapper.getMapper().writeValue(file, this);
         }
         catch (Exception ex)
         {
