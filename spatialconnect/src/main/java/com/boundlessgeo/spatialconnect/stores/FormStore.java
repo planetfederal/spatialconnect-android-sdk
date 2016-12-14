@@ -99,13 +99,13 @@ public class FormStore extends GeoPackageStore implements  SCSpatialStore, SCDat
         return super.create(scSpatialFeature).doOnCompleted(new Action0() {
             @Override
             public void call() {
-                String formId;
+                Integer formId;
                 SCFormConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
-                formId = c.getId();
+                formId = Integer.parseInt(c.getId());
                 if (formId != null) {
-                    HashMap<String, String> formSubmissionPayload = new HashMap<>();
+                    HashMap<String, Object> formSubmissionPayload = new HashMap<>();
                     formSubmissionPayload.put("form_id", formId);
-                    formSubmissionPayload.put("feature", scSpatialFeature.toJson());
+                    formSubmissionPayload.put("feature", scSpatialFeature);
                     try {
                         String payload = SCObjectMapper.getMapper().writeValueAsString(formSubmissionPayload);
                         SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
