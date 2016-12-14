@@ -3,7 +3,7 @@ package com.boundlessgeo.spatialconnect.test;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
-import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
+import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
 
 import org.junit.AfterClass;
@@ -82,7 +82,7 @@ public class SCCacheTest extends BaseTestCase {
     public void testCrud() {
         try {
             SCConfigService cs = sc.getConfigService();
-            SCConfig c = ObjectMappers.getMapper().readValue(jsonConfig, SCConfig.class);
+            SCConfig c = SCObjectMapper.getMapper().readValue(jsonConfig, SCConfig.class);
             cs.setCachedConfig(c);
             SCConfig config2 = cs.getCachedConfig();
 

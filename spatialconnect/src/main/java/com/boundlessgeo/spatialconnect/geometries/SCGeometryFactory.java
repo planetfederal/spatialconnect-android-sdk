@@ -16,7 +16,7 @@ package com.boundlessgeo.spatialconnect.geometries;
 
 import android.util.Log;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
-import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
+import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -913,7 +913,7 @@ public class SCGeometryFactory
         SCGeometryCollection scGeometryCollection = null;
         try
         {
-            JsonNode node = ObjectMappers.getMapper().readTree(json);
+            JsonNode node = SCObjectMapper.getMapper().readTree(json);
             Iterator<JsonNode> it = node.get("geometries").iterator();
             List<SCSpatialFeature> features = new ArrayList<>();
             while (it.hasNext())
@@ -942,7 +942,7 @@ public class SCGeometryFactory
 
         try
         {
-            ObjectMapper mapper = ObjectMappers.getMapper();
+            ObjectMapper mapper = SCObjectMapper.getMapper();
             JsonNode node = mapper.readTree(json);
             JsonNode idNode = node.get("id");
             if(idNode != null)
@@ -1016,7 +1016,7 @@ public class SCGeometryFactory
         Geometry geometry = null;
         try
         {
-            geometry = ObjectMappers.getMapper().readValue(json, Geometry.class);
+            geometry = SCObjectMapper.getMapper().readValue(json, Geometry.class);
         }
         catch (Exception ex)
         {

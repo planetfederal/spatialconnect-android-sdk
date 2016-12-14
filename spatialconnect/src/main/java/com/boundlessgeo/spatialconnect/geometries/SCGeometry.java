@@ -17,7 +17,7 @@ package com.boundlessgeo.spatialconnect.geometries;
 
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
+import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -138,7 +138,7 @@ import java.io.File;
         String json = "";
         try
         {
-            json = ObjectMappers.getMapper().writeValueAsString(this);
+            json = SCObjectMapper.getMapper().writeValueAsString(this);
         }
         catch (Exception ex)
         {
@@ -153,7 +153,7 @@ import java.io.File;
         String geoJson = "";
         try
         {
-            geoJson = ObjectMappers.getMapper().writeValueAsString(geometry);
+            geoJson = SCObjectMapper.getMapper().writeValueAsString(geometry);
         }
         catch (Exception ex)
         {
@@ -166,7 +166,7 @@ import java.io.File;
     {
         try
         {
-            ObjectMappers.getMapper().writeValue(file, this);
+            SCObjectMapper.getMapper().writeValue(file, this);
         }
         catch (Exception ex)
         {

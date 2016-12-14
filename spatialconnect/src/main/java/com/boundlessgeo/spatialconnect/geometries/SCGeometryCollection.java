@@ -15,12 +15,10 @@
 package com.boundlessgeo.spatialconnect.geometries;
 
 import android.util.Log;
-import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
+import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryCollection;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -122,7 +120,7 @@ public class SCGeometryCollection extends SCSpatialFeature
         String geoJson = "";
         try
         {
-            geoJson = ObjectMappers.getMapper().writeValueAsString(this);
+            geoJson = SCObjectMapper.getMapper().writeValueAsString(this);
         }
         catch (Exception ex)
         {
@@ -135,7 +133,7 @@ public class SCGeometryCollection extends SCSpatialFeature
     {
         try
         {
-            ObjectMappers.getMapper().writeValue(file, this);
+            SCObjectMapper.getMapper().writeValue(file, this);
         }
         catch (Exception ex)
         {

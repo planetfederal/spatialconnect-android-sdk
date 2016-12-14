@@ -24,7 +24,7 @@ import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
-import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
+import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -120,7 +120,7 @@ public class SCConfigService extends SCService {
             for (File file : configFiles) {
                 final SCConfig scConfig;
                 try {
-                    scConfig = ObjectMappers.getMapper().readValue(file, SCConfig.class);
+                    scConfig = SCObjectMapper.getMapper().readValue(file, SCConfig.class);
                     loadConfig(scConfig);
                 }
                 catch (IOException e) {
@@ -238,7 +238,7 @@ public class SCConfigService extends SCService {
 
         try {
             SpatialConnect sc = SpatialConnect.getInstance();
-            String configJson = ObjectMappers.getMapper().writeValueAsString(config);
+            String configJson = SCObjectMapper.getMapper().writeValueAsString(config);
             sc.getCache().setValue(configJson, "spatialconnect.config.remote.cached");
         } catch (JsonProcessingException e) {
             e.printStackTrace();
@@ -252,7 +252,7 @@ public class SCConfigService extends SCService {
             SpatialConnect sc = SpatialConnect.getInstance();
             String configJson = sc.getCache().getStringValue("spatialconnect.config.remote.cached");
             if (configJson != null) {
-                returnConfig = ObjectMappers.getMapper().readValue(
+                returnConfig = SCObjectMapper.getMapper().readValue(
                         configJson,
                         SCConfig.class);
             }
