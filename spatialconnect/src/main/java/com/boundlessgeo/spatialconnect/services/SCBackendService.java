@@ -43,9 +43,10 @@ import rx.subjects.BehaviorSubject;
 /**
  * SCBackendService handles any communication with backend SpatialConnect services.
  */
-public class SCBackendService extends SCService {
+public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private static final String LOG_TAG = SCBackendService.class.getSimpleName();
+    private static final String SERVICE_NAME = "SC_BACKEND_SERVICE";
     private static Context context;
     private static MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
@@ -77,7 +78,7 @@ public class SCBackendService extends SCService {
     }
 
     @Override
-    public void start() {
+    public Observable<Void> start() {
         mqttHandler.connect();
         Log.d(LOG_TAG, "Subscribing to network connectivity updates.");
         SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
@@ -108,6 +109,7 @@ public class SCBackendService extends SCService {
 
                 }
             });
+        return Observable.empty();
     }
 
     private void setupSubscriptions() {
@@ -150,7 +152,7 @@ public class SCBackendService extends SCService {
                 .setAction(SCCommand.CONFIG_REGISTER_DEVICE.value())
                 .setPayload(
                         String.format("{\"identifier\": \"%s\", \"device_info\": \"%s\", \"mobile\": \"%s\"}",
-                                SCConfigService.getClientId(),
+                                SpatialConnect.getInstance().getDeviceIdentifier(),
                                 SCConfigService.getAndroidVersion(),
                                 SCAuthService.getUsername())
                 )
@@ -329,5 +331,30 @@ public class SCBackendService extends SCService {
     public String getJwt() {
         String jwt = SCAuthService.getAccessToken();
         return (jwt != null) ? SCAuthService.getAccessToken() : "";
+    }
+
+
+    @Override
+    public void stop() {
+        super.stop();
+    }
+
+    @Override
+    public void resume() {
+        super.resume();
+    }
+
+    @Override
+    public void pause() {
+        super.pause();
+    }
+
+    @Override
+    public void startError() {
+        super.startError();
+    }
+
+    public static String serviceId() {
+        return SERVICE_NAME;
     }
 }

@@ -32,8 +32,9 @@ import rx.subjects.BehaviorSubject;
  * The SCSensorService provides access to various sensors inputs that can be captured by the mobile device.  This
  * includes the GPS, the camera, the microphone, and various Bluetooth connections.
  */
-public class SCSensorService extends SCService {
+public class SCSensorService extends SCService implements SCServiceLifecycle{
 
+    private static final String SERVICE_NAME = "SC_SENSOR_SERVICE";
     private Context context;
     private LocationHelper locationHelper;
     private boolean gpsListenerStarted;
@@ -50,7 +51,8 @@ public class SCSensorService extends SCService {
     /**
      * Calls the SCService#start() method to set the status to SC_SERVICE_RUNNING
      */
-    public void start() {
+    @Override
+    public Observable<Void> start() {
         super.start();
         running.onNext(1);
         ReactiveNetwork.observeNetworkConnectivity(context)
@@ -61,6 +63,28 @@ public class SCSensorService extends SCService {
                         isConnected.onNext(connectivity.getState().equals(NetworkInfo.State.CONNECTED));
                     }
                 });
+
+        return Observable.empty();
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+    }
+
+    @Override
+    public void resume() {
+        super.resume();
+    }
+
+    @Override
+    public void pause() {
+        super.pause();
+    }
+
+    @Override
+    public void startError() {
+        super.startError();
     }
 
     /**
@@ -105,5 +129,9 @@ public class SCSensorService extends SCService {
      */
     public boolean gpsListenerStarted() {
         return this.gpsListenerStarted;
+    }
+
+    public static String serviceId() {
+        return SERVICE_NAME;
     }
 }

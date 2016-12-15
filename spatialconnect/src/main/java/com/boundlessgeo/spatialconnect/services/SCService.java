@@ -14,20 +14,18 @@
  */
 package com.boundlessgeo.spatialconnect.services;
 
-import java.util.UUID;
+import rx.Observable;
 
-public class SCService {
-    private String id;
+public class SCService implements SCServiceLifecycle{
     private SCServiceStatus status;
 
     public SCService() {
-        this.id = UUID.randomUUID().toString();
         this.status = SCServiceStatus.SC_SERVICE_STOPPED;
     }
 
-    // TODO: should this return an observable?
-    public void start() {
+    public Observable<Void> start() {
         this.status = SCServiceStatus.SC_SERVICE_STARTING;
+        return Observable.empty();
     }
 
     public void stop() {
@@ -42,8 +40,9 @@ public class SCService {
         this.status = SCServiceStatus.SC_SERVICE_PAUSED;
     }
 
-    public String getId() {
-        return id;
+    @Override
+    public void startError() {
+        this.status = SCServiceStatus.SC_SERVICE_ERROR;
     }
 
     public SCServiceStatus getStatus() {

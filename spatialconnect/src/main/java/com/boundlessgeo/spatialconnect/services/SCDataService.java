@@ -56,9 +56,10 @@ import rx.subjects.BehaviorSubject;
  * The SCDataService is responsible for starting, stopping, and managing access to {@link SCDataStore} instances.  This
  * includes exposing methods to query across multiple SCDataStore instances.
  */
-public class SCDataService extends SCService {
+public class SCDataService extends SCService implements SCServiceLifecycle {
 
     private static final String LOG_TAG = SCDataService.class.getSimpleName();
+    private static final String SERVICE_NAME = "SC_DATA_SERVICE";
     private Set<String> supportedStores; // the strings are store keys: type.version
     private Map<String, SCDataStore> stores;
     public BehaviorSubject<Boolean> hasStores = BehaviorSubject.create(false);
@@ -324,7 +325,7 @@ public class SCDataService extends SCService {
     /**
      * Calling start on the {@link SCDataService} will start all registered {@link SCDataStore}s.
      */
-    public void start() {
+    public Observable<Void> start() {
         Log.d(LOG_TAG, "Starting SCDataService. Starting all registered data stores.");
         super.start();
         for (SCDataStore store : getAllStores()) {
@@ -332,6 +333,27 @@ public class SCDataService extends SCService {
         }
         setupSubscriptions();
         this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
+        return Observable.empty();
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+    }
+
+    @Override
+    public void resume() {
+        super.resume();
+    }
+
+    @Override
+    public void pause() {
+        super.pause();
+    }
+
+    @Override
+    public void startError() {
+        super.startError();
     }
 
     public void registerAndStartStoreByConfig(SCStoreConfig config) {
@@ -448,11 +470,13 @@ public class SCDataService extends SCService {
         }
     }
 
+    //TODO: remove  add getSupportedStoreByKey
     public List<String> getSupportedStoreKeys() {
         return new ArrayList<>(supportedStores);
     }
 
     public boolean isStoreSupported(String key) {
+        //call getSupportedStoreByKey
         return supportedStores.contains(key);
     }
 
@@ -560,6 +584,10 @@ public class SCDataService extends SCService {
 
     public void setContext(Context context) {
         this.context = context;
+    }
+
+    public static String serviceId() {
+        return SERVICE_NAME;
     }
 }
 

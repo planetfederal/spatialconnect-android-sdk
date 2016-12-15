@@ -10,6 +10,7 @@ import java.util.Map;
  *  Provides an interface used to read/write to/from the SCKVPStore.
  *  TODO: react to config changes and update kvp rows accordingly
  */
+//TODO:remove
 public class SCKVPStoreService extends SCService {
 
     private SCKVPStore store;

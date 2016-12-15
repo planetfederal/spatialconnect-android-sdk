@@ -53,7 +53,6 @@ public class HttpHandler {
         this.client = new OkHttpClient.Builder()
                 .addNetworkInterceptor(new LoggingInterceptor())
                 .addNetworkInterceptor(new SCAuthService.AuthHeaderInterceptor())
-                .authenticator(new SCAuthService.SCAuthenticator())
                 .build();
     }
 
