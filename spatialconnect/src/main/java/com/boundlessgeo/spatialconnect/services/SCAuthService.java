@@ -57,13 +57,7 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
     }
 
     public void authenticate(String username, String password) {
-        saveCredentials(username, password);
-        try {
-            refreshToken();
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
+        auth(username, password);
     }
 
     public static void logout() {
@@ -98,59 +92,41 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
         }
     }
 
-    /**
-     * Method that refreshes the auth token.
-     *
-     * @return
-     */
-    private static void refreshToken() throws IOException {
-        Log.d(LOG_TAG, "Refreshing auth token when network is available.");
-        SpatialConnect sc = SpatialConnect.getInstance();
-        SCBackendService bs = sc.getBackendService();
-        if (bs.backendUri != null) {
-            SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
-            sensorService.isConnected.subscribe(new Action1<Boolean>() {
-                @Override
-                public void call(Boolean connected) {
-                    if (connected) {
-                        final String theUrl = SCBackendService.backendUri + "/api/authenticate";
-                        if (getUsername() != null && getPassword() != null) {
-                            HttpHandler.getInstance()
-                                    .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", getUsername(), getPassword()))
-                                    .subscribe(
-                                            new Action1<Response>() {
-                                                @Override
-                                                public void call(Response response) {
-                                                    if (response.isSuccessful()) {
-                                                        try {
-                                                            accessToken = new JSONObject(response.body().string())
-                                                                    .getJSONObject("result").getString("token");
-                                                            if (accessToken != null) {
-                                                                saveAccessToken(accessToken);
-                                                                loginStatus.onNext(true);
-                                                            }
-                                                        } catch (JSONException e) {
-                                                            e.printStackTrace();
-                                                        } catch (IOException e) {
-                                                            e.printStackTrace();
-                                                        }
-                                                    } else {
-                                                        loginStatus.onNext(false);
-                                                    }
-                                                }
-                                            },
-                                            new Action1<Throwable>() {
-                                                @Override
-                                                public void call(Throwable throwable) {
-                                                    loginStatus.onNext(false);
-                                                    Log.e(LOG_TAG, "something went wrong refreshing token: " + throwable.getMessage());
-                                                }
-                                            });
-                        }
-                    }
-                }
-            });
-        }
+    private  void auth(final String username, final String pwd) {
+        final String theUrl = SCBackendService.backendUri + "/api/authenticate";
+        HttpHandler.getInstance()
+                .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", username, pwd))
+                .subscribe(
+                        new Action1<Response>() {
+                            @Override
+                            public void call(Response response) {
+                                if (response.isSuccessful()) {
+                                    try {
+                                        accessToken = new JSONObject(response.body().string())
+                                                .getJSONObject("result").getString("token");
+                                        if (accessToken != null) {
+                                            Log.e(LOG_TAG, "Authenticated....");
+                                            saveAccessToken(accessToken);
+                                            saveCredentials(username, pwd);
+                                            loginStatus.onNext(true);
+                                        }
+                                    } catch (JSONException e) {
+                                        e.printStackTrace();
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                } else {
+                                    loginStatus.onNext(false);
+                                }
+                            }
+                        },
+                        new Action1<Throwable>() {
+                            @Override
+                            public void call(Throwable throwable) {
+                                loginStatus.onNext(false);
+                                Log.e(LOG_TAG, "something went wrong refreshing token: " + throwable.getMessage());
+                            }
+                        });
     }
 
     public static String getAccessToken() {
@@ -183,6 +159,19 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
     public Observable<Void> start() {
         super.start();
         SpatialConnect sc = SpatialConnect.getInstance();
+        sc.serviceStarted(SCBackendService.serviceId()).subscribe(new Action1<SCServiceStatusEvent>() {
+            @Override
+            public void call(SCServiceStatusEvent scServiceStatusEvent) {
+                String username = getUsername();
+                String pwd = getPassword();
+                if (username != null && pwd != null) {
+                    auth(username, pwd);
+                } else {
+                    loginStatus.onNext(false);
+                }
+
+            }
+        });
         return Observable.empty();
     }
 

@@ -178,8 +178,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
         localConfigFiles.add(configFile);
     }
 
-    //TODO remove
-    public ArrayList<File> getLocalConfigFiles() {
+    private ArrayList<File> getLocalConfigFiles() {
         return localConfigFiles;
     }
 

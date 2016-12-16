@@ -146,7 +146,10 @@ public class SpatialConnect {
 
     public void startAllServices() {
         Log.d(LOG_TAG, "Starting all services.");
-        for (String key : this.services.keySet()) {
+
+        HashMap<String, SCService> ss  = new HashMap<>(services);
+        for (String key : ss.keySet()) {
+            Log.e(LOG_TAG, "starting: " + key);
             this.services.get(key).start();
         }
     }
@@ -167,13 +170,23 @@ public class SpatialConnect {
     public Observable<SCServiceStatusEvent> serviceStarted(final String serviceId) {
         return Observable.create(new Observable.OnSubscribe<SCServiceStatusEvent>() {
             @Override
-            public void call(Subscriber<? super SCServiceStatusEvent> subscriber) {
+            public void call(final Subscriber<? super SCServiceStatusEvent> subscriber) {
                 SCService service = getServiceById(serviceId);
-                if (service.getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
-                    subscriber.onNext(new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_RUNNING));
+                if (service != null && service.getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
+                    subscriber.onNext(new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_STARTED));
                     subscriber.onCompleted();
                 } else {
-
+                    serviceEvents.autoConnect()
+                            .subscribe(new Action1<SCServiceStatusEvent>() {
+                                @Override
+                                public void call(SCServiceStatusEvent event) {
+                                    Log.e(LOG_TAG,"got serivceEent for " + event.getServiceId());
+                                    if (event.getServiceId().equals(serviceId) &&
+                                            event.getStatus().equals(SCServiceStatus.SC_SERVICE_STARTED)) {
+                                        subscriber.onNext(event);
+                                    }
+                                }
+                            });
                 }
             }
         });
@@ -184,7 +197,8 @@ public class SpatialConnect {
             Log.d(LOG_TAG, "connecting backend");
             backendService = new SCBackendService(context);
             backendService.initialize(remoteConfig);
-            backendService.start();
+            addService(SCBackendService.serviceId(), backendService);
+            startService(SCBackendService.serviceId());
         }
     }
 
