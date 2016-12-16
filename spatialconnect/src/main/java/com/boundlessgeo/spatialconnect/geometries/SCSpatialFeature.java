@@ -16,7 +16,7 @@ package com.boundlessgeo.spatialconnect.geometries;
 
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
+import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -118,7 +118,7 @@ public class SCSpatialFeature
 
     public String toJson() {
         try {
-            return ObjectMappers.getMapper().writeValueAsString(this);
+            return SCObjectMapper.getMapper().writeValueAsString(this);
         }
         catch (JsonProcessingException e) {
             e.printStackTrace();

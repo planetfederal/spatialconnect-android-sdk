@@ -18,24 +18,22 @@ package com.boundlessgeo.spatialconnect.stores;
 
 import android.content.Context;
 import android.util.Log;
-
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
-import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
-import com.boundlessgeo.spatialconnect.services.SCSensorService;
-
+import com.boundlessgeo.spatialconnect.mqtt.QoS;
+import com.boundlessgeo.spatialconnect.schema.SCCommand;
+import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
+import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import rx.Observable;
 import rx.functions.Action0;
-import rx.functions.Action1;
 import rx.subjects.BehaviorSubject;
 
 public class FormStore extends GeoPackageStore implements  SCSpatialStore, SCDataStoreLifeCycle {
@@ -98,31 +96,30 @@ public class FormStore extends GeoPackageStore implements  SCSpatialStore, SCDat
     @Override
     public Observable<SCSpatialFeature> create(final SCSpatialFeature scSpatialFeature) {
 
-        Observable<SCSpatialFeature> spatialFeature = super.create(scSpatialFeature);
-
-        return spatialFeature.doOnCompleted(new Action0() {
+        return super.create(scSpatialFeature).doOnCompleted(new Action0() {
             @Override
             public void call() {
-                String formId;
+                Integer formId;
                 SCFormConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
-                formId = c.getId();
+                formId = Integer.parseInt(c.getId());
                 if (formId != null) {
-                    final String theUrl = SCBackendService.backendUri + "/api/forms/" + formId + "/submit";
-                    if (SCBackendService.backendUri != null) {
-                        SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
-                        sensorService.isConnected.subscribe(new Action1<Boolean>() {
-                            @Override
-                            public void call(Boolean connected) {
-                                if (connected) {
-                                    Log.d(LOG_TAG, "Posting created feature to " + theUrl);
-                                    HttpHandler.getInstance().post(theUrl, scSpatialFeature.toJson()).subscribe();
-                                }
-                            }
-                        });
+                    HashMap<String, Object> formSubmissionPayload = new HashMap<>();
+                    formSubmissionPayload.put("form_id", formId);
+                    formSubmissionPayload.put("feature", scSpatialFeature);
+                    try {
+                        String payload = SCObjectMapper.getMapper().writeValueAsString(formSubmissionPayload);
+                        SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
+                            .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
+                            .setPayload(payload)
+                            .build();
+                        SpatialConnect.getInstance().getBackendService()
+                            .publish("/store/form", message, QoS.EXACTLY_ONCE);
+                    } catch (JsonProcessingException e) {
+                        Log.e(LOG_TAG, "Could not parse form submission payload");
                     }
                 }
                 else {
-                    Log.w(LOG_TAG, "Could not post feature b/c form id was null");
+                    Log.w(LOG_TAG, "Did not send feature b/c form id was null");
                 }
             }
         });

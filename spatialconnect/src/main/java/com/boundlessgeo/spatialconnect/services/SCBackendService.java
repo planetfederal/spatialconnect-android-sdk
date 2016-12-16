@@ -28,7 +28,7 @@ import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
-import com.boundlessgeo.spatialconnect.scutilities.Json.ObjectMappers;
+import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.google.protobuf.Timestamp;
 
@@ -172,7 +172,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 switch (SCCommand.fromActionNumber(scMessage.getAction())) {
                     case CONFIG_ADD_STORE:
                         try {
-                            SCStoreConfig config = ObjectMappers.getMapper()
+                            SCStoreConfig config = SCObjectMapper.getMapper()
                                     .readValue(scMessage.getPayload(), SCStoreConfig.class);
                             cachedConfig.addStore(config);
                             sc.getDataService().registerAndStartStoreByConfig(config);
@@ -183,7 +183,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         break;
                     case CONFIG_UPDATE_STORE:
                         try {
-                            SCStoreConfig config = ObjectMappers.getMapper()
+                            SCStoreConfig config = SCObjectMapper.getMapper()
                                     .readValue(scMessage.getPayload(), SCStoreConfig.class);
                             cachedConfig.updateStore(config);
                             sc.getDataService().updateStoresByConfig(config);
@@ -198,7 +198,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         break;
                     case CONFIG_ADD_FORM:
                         try {
-                            SCFormConfig config = ObjectMappers.getMapper()
+                            SCFormConfig config = SCObjectMapper.getMapper()
                                     .readValue(scMessage.getPayload(), SCFormConfig.class);
                             cachedConfig.addForm(config);
                             sc.getDataService().getFormStore().registerFormByConfig(config);
@@ -208,7 +208,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         break;
                     case CONFIG_UPDATE_FORM:
                         try {
-                            SCFormConfig config = ObjectMappers.getMapper()
+                            SCFormConfig config = SCObjectMapper.getMapper()
                                     .readValue(scMessage.getPayload(), SCFormConfig.class);
                             cachedConfig.updateForm(config);
                             sc.getDataService().getFormStore().updateFormByConfig(config);
@@ -313,7 +313,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private void loadConfig(SCMessageOuterClass.SCMessage message) {
         Log.d(LOG_TAG, "mqtt message received on thread " + Thread.currentThread().getName());
         try {
-            SCConfig config = ObjectMappers.getMapper().readValue(
+            SCConfig config = SCObjectMapper.getMapper().readValue(
                     message.getPayload(),
                     SCConfig.class
             );

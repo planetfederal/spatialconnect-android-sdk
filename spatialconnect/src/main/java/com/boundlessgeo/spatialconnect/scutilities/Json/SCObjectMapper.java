@@ -14,48 +14,34 @@
  */
 package com.boundlessgeo.spatialconnect.scutilities.Json;
 
-
 import com.bedatadriven.jackson.datatype.jts.JtsModule;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
-public class ObjectMappers
-{
+/**
+ * SCObjectMapper holds the single instance of Jackson's {@link com.fasterxml.jackson.databind.ObjectMapper} used by
+ * this library.  It is configured once during the static initialization and is safe for use by multiple threads.
+ */
+public class SCObjectMapper {
 
-    private static ObjectMapper jtsMapper;
-    private static ObjectMapper outputMapper;
-    private static ObjectMapper genericMapper;
-    private static ObjectMapper mapper;
+    private ObjectMapper mapper;
 
-    static
-    {
+    private SCObjectMapper() {
         mapper = new ObjectMapper();
         mapper.registerModule(new JtsModule());
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
-
-
-        jtsMapper = new ObjectMapper();
-        jtsMapper.registerModule(new JtsModule());
-
-        outputMapper = new ObjectMapper();
-        outputMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        outputMapper.enable(SerializationFeature.INDENT_OUTPUT);
-
-        genericMapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, false);
+        mapper.registerModule(new JtsModule());
     }
 
-
-    public static ObjectMapper getJTSMapper()
-    {
-        return jtsMapper;
+    private static class SingletonHelper {
+        private static final SCObjectMapper INSTANCE = new SCObjectMapper();
     }
 
-    public static ObjectMapper getGenericMapper()
-    {
-        return genericMapper;
+    public static ObjectMapper getMapper() {
+        return SCObjectMapper.SingletonHelper.INSTANCE.mapper;
     }
-
-    public static ObjectMapper getMapper() {return mapper;}
 }

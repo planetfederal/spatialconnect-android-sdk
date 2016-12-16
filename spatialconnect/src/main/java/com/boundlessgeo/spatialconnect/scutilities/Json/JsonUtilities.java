@@ -43,10 +43,7 @@ public class JsonUtilities
         Map<String, Object> map = new HashMap<>();
         try
         {
-            map = ObjectMappers.getMapper().readValue(json,
-                                                      new TypeReference<HashMap<String, Object>>()
-                                                      {
-                                                      });
+            map = SCObjectMapper.getMapper().readValue(json, new TypeReference<HashMap<String, Object>>() {});
         }
         catch (Exception ex)
         {
@@ -104,7 +101,7 @@ public class JsonUtilities
 
         try
         {
-            ObjectMapper mapper = ObjectMappers.getMapper();
+            ObjectMapper mapper = SCObjectMapper.getMapper();
             JsonNode node = mapper.readTree(json);
 
             JsonNode idNode = node.get("id");
