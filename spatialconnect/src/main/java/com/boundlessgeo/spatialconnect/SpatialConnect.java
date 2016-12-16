@@ -121,7 +121,7 @@ public class SpatialConnect {
                 @Override
                 public void call(Throwable t) {
                     Log.d(LOG_TAG, t.getLocalizedMessage());
-                    // onError can happen if we cannot start the store b/c of some error or runtime exception
+                    // onError can happen if we cannot start the service b/c of some error or runtime exception
                     serviceEventSubject.onNext(
                             new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_ERROR, id)
                     );
@@ -180,7 +180,6 @@ public class SpatialConnect {
                             .subscribe(new Action1<SCServiceStatusEvent>() {
                                 @Override
                                 public void call(SCServiceStatusEvent event) {
-                                    Log.e(LOG_TAG,"got serivceEent for " + event.getServiceId());
                                     if (event.getServiceId().equals(serviceId) &&
                                             event.getStatus().equals(SCServiceStatus.SC_SERVICE_STARTED)) {
                                         subscriber.onNext(event);
