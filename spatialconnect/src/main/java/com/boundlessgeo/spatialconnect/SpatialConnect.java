@@ -146,10 +146,8 @@ public class SpatialConnect {
 
     public void startAllServices() {
         Log.d(LOG_TAG, "Starting all services.");
-
         HashMap<String, SCService> ss  = new HashMap<>(services);
         for (String key : ss.keySet()) {
-            Log.e(LOG_TAG, "starting: " + key);
             this.services.get(key).start();
         }
     }
