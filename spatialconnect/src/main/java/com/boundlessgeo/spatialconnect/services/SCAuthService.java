@@ -105,7 +105,6 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
                                         accessToken = new JSONObject(response.body().string())
                                                 .getJSONObject("result").getString("token");
                                         if (accessToken != null) {
-                                            Log.e(LOG_TAG, "Authenticated....");
                                             saveAccessToken(accessToken);
                                             saveCredentials(username, pwd);
                                             loginStatus.onNext(true);
