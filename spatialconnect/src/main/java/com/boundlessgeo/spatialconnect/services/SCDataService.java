@@ -30,6 +30,7 @@ import com.boundlessgeo.spatialconnect.stores.LocationStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreLifeCycle;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
+import com.boundlessgeo.spatialconnect.stores.SCRasterStore;
 import com.boundlessgeo.spatialconnect.stores.SCRemoteDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
@@ -60,8 +61,12 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
 
     private static final String LOG_TAG = SCDataService.class.getSimpleName();
     private static final String SERVICE_NAME = "SC_DATA_SERVICE";
+    private static final String DEFAULT_STORE = "DEFAULT_STORE";
+    private static final String FORM_STORE = "FORM_STORE";
+    private static final String LOCATION_STORE = "LOCATION_STORE";
     private Set<String> supportedStores; // the strings are store keys: type.version
     private Map<String, SCDataStore> stores;
+    private Map<String, Class> supportedStoreImpls;
     public BehaviorSubject<Boolean> hasStores = BehaviorSubject.create(false);
     private Context context;
 
@@ -83,6 +88,8 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         super();
         this.supportedStores = new HashSet<>();
         this.stores = new HashMap<>();
+        this.supportedStoreImpls = new HashMap<>();
+
         // "cold" observable used to emit SCStoreStatusEvents
         this.storeEventSubject = BehaviorSubject.create();
         // turns the "cold" storeEventSubject observable into a "hot" ConnectableObservable
@@ -216,12 +223,15 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         });
     }
 
-    public void addDefaultStoreImpls() {
-        this.supportedStores.add(GeoJsonStore.TYPE + "." + "1");
-        this.supportedStores.add(GeoJsonStore.TYPE + "." + "1.0");
-        this.supportedStores.add(GeoPackageStore.TYPE + "." + "1");
-        this.supportedStores.add(GeoPackageStore.TYPE + "." + "1.0");
-        this.supportedStores.add(WFSStore.TYPE + "." + "1.1.0");
+    private void addDefaultStoreImpls() {
+//        this.supportedStores.add(GeoJsonStore.TYPE + "." + "1");
+//        this.supportedStores.add(GeoJsonStore.TYPE + "." + "1.0");
+//        this.supportedStores.add(GeoPackageStore.TYPE + "." + "1");
+//        this.supportedStores.add(GeoPackageStore.TYPE + "." + "1.0");
+//        this.supportedStores.add(WFSStore.TYPE + "." + "1.1.0");
+        supportedStoreImpls.put(GeoJsonStore.getVersionKey() ,GeoJsonStore.class);
+        supportedStoreImpls.put(GeoPackageStore.getVersionKey() ,GeoPackageStore.class);
+        supportedStoreImpls.put(WFSStore.getVersionKey() ,WFSStore.class);
     }
 
     public void startStore(final SCDataStore store) {
@@ -367,7 +377,8 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
 
     public boolean registerStoreByConfig(SCStoreConfig scStoreConfig) {
         String key = scStoreConfig.getType() + "." + scStoreConfig.getVersion();
-        if (isStoreSupported(key)) {
+        Class store = getSupportedStoreByKey(key);
+        if (store != null) {
             if (key.startsWith(GeoJsonStore.TYPE)) {
                 Log.d(LOG_TAG, "Registering geojson store " + scStoreConfig.getName() + " with SCDataService.");
                 registerStore(new GeoJsonStore(context, scStoreConfig));
@@ -475,6 +486,10 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         return new ArrayList<>(supportedStores);
     }
 
+    public Class getSupportedStoreByKey(String key) {
+        return supportedStoreImpls.get(key);
+    }
+
     public boolean isStoreSupported(String key) {
         //call getSupportedStoreByKey
         return supportedStores.contains(key);
@@ -502,7 +517,19 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
             SCDataStore scDataStore = stores.get(key);
             activeStores.add(scDataStore);
         }
-        return activeStores;
+        return activeStores;    
+    }
+
+    public List<SCDataStore> getStoresRaster() {
+        List<SCDataStore> rasterStores = new ArrayList<>();
+        for (String key : stores.keySet()) {
+            SCDataStore scDataStore = stores.get(key);
+            if (scDataStore.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING) &&
+                    scDataStore instanceof SCRasterStore) {
+                rasterStores.add(scDataStore);
+            }
+        }
+        return rasterStores;
     }
 
     /**
@@ -520,7 +547,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         return null;
     }
 
-    public Observable<SCSpatialFeature> queryStores(final List<String> storeIds, final SCQueryFilter filter) {
+    public Observable<SCSpatialFeature> queryStoresByIds(final List<String> storeIds, final SCQueryFilter filter) {
         return Observable.from(getActiveStores())
                 .filter(new Func1<SCDataStore, Boolean>() {
                     @Override
@@ -546,6 +573,12 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
                         return ((SCSpatialStore) scDataStore).query(filter);
                     }
                 });
+    }
+
+    public Observable<SCSpatialFeature> queryStoreById(String storeId, final SCQueryFilter filter) {
+        SCDataStore store = getStoreById(storeId);
+        Log.d(LOG_TAG, "Querying store by Id with Filter:  " + store.getName());
+        return ((SCSpatialStore) store).query(filter);
     }
 
     public DefaultStore getDefaultStore() {

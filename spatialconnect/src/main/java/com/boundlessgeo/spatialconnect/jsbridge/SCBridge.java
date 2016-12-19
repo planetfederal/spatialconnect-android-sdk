@@ -518,7 +518,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
             storeIds.add(readableArray.getString(index));
         }
         if (filter != null) {
-            sc.getDataService().queryStores(storeIds, filter)
+            sc.getDataService().queryStoresByIds(storeIds, filter)
                     .subscribeOn(Schedulers.io())
 //                    .onBackpressureBuffer(filter.getLimit())
                     .subscribe(

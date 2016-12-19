@@ -304,6 +304,9 @@ public class GeoJsonStore extends SCDataStore implements SCSpatialStore, SCDataS
         return filePath.toString();
     }
 
+    public static String getVersionKey() {
+        return String.format("%s.%s",TYPE, VERSION);
+    }
     private String getResourceAsString() {
         InputStream is = null;
         StringBuilder stringBuilder = null;

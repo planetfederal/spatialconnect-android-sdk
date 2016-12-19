@@ -46,7 +46,6 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -88,7 +87,7 @@ public class GeoPackageTest extends BaseTestCase {
                 new SCPredicate(HAITI_BOUNDING_BOX, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
         );
         TestSubscriber testSubscriber = new TestSubscriber();
-        sc.getDataService().queryStores(Arrays.asList(HAITI_GPKG_ID), filter)
+        sc.getDataService().queryStoreById(HAITI_GPKG_ID, filter)
                 .timeout(TIMEOUT, TimeUnit.SECONDS)
                 .subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
