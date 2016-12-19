@@ -4,6 +4,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCPolygon;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCRasterStore;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.model.TileOverlayOptions;
 
 import java.util.List;
@@ -18,17 +19,16 @@ public class GpkgRasterSource implements SCRasterStore {
     }
 
     @Override
-    public void overlayFromLayer(String layerName, GoogleMap map) {
+    public TileOverlay overlayFromLayer(String layer, GoogleMap map) {
         Map<String, SCGpkgTileSource> tileSources = gpkgStore.getTileSources();
-        if (tileSources.size() > 0) {
-            if (tileSources.keySet().contains(layerName)) {
-                 map.addTileOverlay(
-                         new TileOverlayOptions().tileProvider(
-                                 new GpkgTileProvider(tileSources.get(layerName))
-                         )
-                 );
-            }
+        if (tileSources.size() > 0 && tileSources.keySet().contains(layer)) {
+            return map.addTileOverlay(
+                    new TileOverlayOptions().tileProvider(
+                            new GpkgTileProvider(tileSources.get(layer))
+                    )
+            );
         }
+        return null;
     }
 
     @Override

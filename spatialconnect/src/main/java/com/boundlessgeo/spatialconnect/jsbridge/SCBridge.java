@@ -57,6 +57,7 @@ import com.facebook.react.uimanager.UIBlock;
 import com.facebook.react.uimanager.UIManagerModule;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
+import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.OnMapReadyCallback;
 
 import org.json.JSONArray;
@@ -67,6 +68,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.HashMap;
 
 import rx.Subscriber;
 import rx.functions.Action1;
@@ -80,18 +82,24 @@ public class SCBridge extends ReactContextBaseJavaModule {
     private static final String LOG_TAG = SCBridge.class.getSimpleName();
     private final SpatialConnect sc;
     private final ReactContext reactContext;
+    private GoogleMap mapView;
+    private HashMap<String, List<TileOverlay>> tileoverlays = new HashMap();
 
     public SCBridge(ReactApplicationContext reactContext) {
         super(reactContext);
         this.sc = SpatialConnect.getInstance();
         this.sc.initialize(reactContext.getApplicationContext());
         this.reactContext = reactContext;
-        // todo: get GoogleMap instance from react native 
+        // todo: get GoogleMap instance from react native
     }
 
     @Override
     public String getName() {
         return "SCBridge";
+    }
+
+    public void setMapView(GoogleMap map) {
+        mapView = map;
     }
 
     @ReactMethod
@@ -100,20 +108,50 @@ public class SCBridge extends ReactContextBaseJavaModule {
         uiManager.addUIBlock(new UIBlock() {
             public void execute (NativeViewHierarchyManager nvhm) {
                 MapView mapView = (MapView)nvhm.resolveView(tag);
+                //mapView.getMapAsync(this);
                 mapView.getMapAsync(new OnMapReadyCallback() {
                     @Override
-                    public void onMapReady(GoogleMap googleMap) {
-                        List<SCDataStore> stores = sc.getDataService().getActiveStores();
-                        for (SCDataStore store : stores) {
-                            if(store instanceof GeoPackageStore && ((GeoPackageStore)store).getTileSources().size() > 0) {
-                                SCRasterStore rs = new GpkgRasterSource((GeoPackageStore)store);
-                                for (String tableName : rs.rasterLayers()) {
-                                    rs.overlayFromLayer(tableName, googleMap);
-                                }
-                            }
-                        }
+                    public void onMapReady(final GoogleMap googleMap) {
+                      setMapView(googleMap);
                     }
                 });
+            }
+        });
+    }
+
+    @ReactMethod
+    public void addRasterLayers(final ReadableArray storeIdArray) {
+        UIManagerModule uiManager = this.reactContext.getNativeModule(UIManagerModule.class);
+        uiManager.addUIBlock(new UIBlock() {
+            public void execute (NativeViewHierarchyManager nvhm) {
+                List<String> storeIds = new ArrayList<>(storeIdArray.size());
+                for (int index = 0; index < storeIdArray.size(); index++) {
+                    storeIds.add(storeIdArray.getString(index));
+                }
+                List<SCDataStore> stores = sc.getDataService().getActiveStores();
+                for (SCDataStore store : stores) {
+                    List<TileOverlay> tiles = tileoverlays.get(store.getStoreId());
+                    if(storeIds.contains(store.getStoreId())) {
+                        if (tiles == null) {
+                            if(store instanceof GeoPackageStore && ((GeoPackageStore)store).getTileSources().size() > 0) {
+                                SCRasterStore rs = new GpkgRasterSource((GeoPackageStore)store);
+                                List<TileOverlay> newTiles = new ArrayList<TileOverlay>();
+                                for (String tableName : rs.rasterLayers()) {
+                                    TileOverlay t = rs.overlayFromLayer(tableName, mapView);
+                                    newTiles.add(t);
+                                }
+                                tileoverlays.put(store.getStoreId(), newTiles);
+                            }
+                        }
+                    } else {
+                        if (tiles != null) {
+                            for (TileOverlay tile : tiles) {
+                                tile.remove();
+                            }
+                            tileoverlays.remove(store.getStoreId());
+                        }
+                    }
+                }
             }
         });
     }

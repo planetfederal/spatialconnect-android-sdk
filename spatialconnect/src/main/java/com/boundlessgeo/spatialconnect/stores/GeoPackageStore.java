@@ -31,6 +31,7 @@ import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.tiles.GpkgTileProvider;
 import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.model.TileOverlayOptions;
 import com.squareup.sqlbrite.BriteDatabase;
 import com.squareup.sqlbrite.SqlBrite;
@@ -475,17 +476,16 @@ public class GeoPackageStore extends SCDataStore implements SCSpatialStore, SCDa
     }
 
     @Override
-    public void overlayFromLayer(String layer, GoogleMap map) {
+    public TileOverlay overlayFromLayer(String layer, GoogleMap map) {
         Map<String, SCGpkgTileSource> tileSources = getTileSources();
-        if (tileSources.size() > 0) {
-            if (tileSources.keySet().contains(layer)) {
-                map.addTileOverlay(
-                        new TileOverlayOptions().tileProvider(
-                                new GpkgTileProvider(tileSources.get(layer))
-                        )
-                );
-            }
+        if (tileSources.size() > 0 && tileSources.keySet().contains(layer)) {
+            return map.addTileOverlay(
+                    new TileOverlayOptions().tileProvider(
+                            new GpkgTileProvider(tileSources.get(layer))
+                    )
+            );
         }
+        return null;
     }
 
     @Override
