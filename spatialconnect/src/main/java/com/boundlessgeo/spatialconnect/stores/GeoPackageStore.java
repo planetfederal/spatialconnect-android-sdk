@@ -65,7 +65,7 @@ public class GeoPackageStore extends SCDataStore implements SCSpatialStore, SCDa
 
     private static final String LOG_TAG = GeoPackageStore.class.getSimpleName();
     public static final String TYPE = "gpkg";
-    private static final String VERSION = "1.0";
+    private static final String VERSION = "1";
     protected GeoPackage gpkg;
     protected SCStoreConfig scStoreConfig;
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();

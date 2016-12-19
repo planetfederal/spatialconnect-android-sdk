@@ -42,6 +42,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
@@ -61,9 +62,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
 
     private static final String LOG_TAG = SCDataService.class.getSimpleName();
     private static final String SERVICE_NAME = "SC_DATA_SERVICE";
-    private static final String DEFAULT_STORE = "DEFAULT_STORE";
-    private static final String FORM_STORE = "FORM_STORE";
-    private static final String LOCATION_STORE = "LOCATION_STORE";
     private Set<String> supportedStores; // the strings are store keys: type.version
     private Map<String, SCDataStore> stores;
     private Map<String, Class> supportedStoreImpls;
@@ -105,7 +103,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         Log.d(LOG_TAG, "Creating default store");
         SCStoreConfig defaultStoreConfig = new SCStoreConfig();
         defaultStoreConfig.setName(DefaultStore.NAME);
-        defaultStoreConfig.setUniqueID(DefaultStore.NAME);
+        defaultStoreConfig.setUniqueID(UUID.randomUUID().toString());
         defaultStoreConfig.setUri("file://" + DefaultStore.NAME);
         defaultStoreConfig.setType("gpkg");
         defaultStoreConfig.setVersion("1");
@@ -134,7 +132,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     private void initializeFormStore() {
         SCStoreConfig formStoreConfig = new SCStoreConfig();
         formStoreConfig.setName(FormStore.NAME);
-        formStoreConfig.setUniqueID(FormStore.NAME);
+        formStoreConfig.setUniqueID(UUID.randomUUID().toString());
         formStoreConfig.setUri("file://" + FormStore.NAME);
         formStoreConfig.setType("gpkg");
         formStoreConfig.setVersion("1");
@@ -163,7 +161,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     private void initializeLocationStore() {
         SCStoreConfig locationStoreConfig = new SCStoreConfig();
         locationStoreConfig.setName(LocationStore.NAME);
-        locationStoreConfig.setUniqueID(LocationStore.NAME);
+        locationStoreConfig.setUniqueID(UUID.randomUUID().toString());
         locationStoreConfig.setUri("file://" + LocationStore.NAME);
         locationStoreConfig.setType("gpkg");
         locationStoreConfig.setVersion("1");
@@ -224,11 +222,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     }
 
     private void addDefaultStoreImpls() {
-//        this.supportedStores.add(GeoJsonStore.TYPE + "." + "1");
-//        this.supportedStores.add(GeoJsonStore.TYPE + "." + "1.0");
-//        this.supportedStores.add(GeoPackageStore.TYPE + "." + "1");
-//        this.supportedStores.add(GeoPackageStore.TYPE + "." + "1.0");
-//        this.supportedStores.add(WFSStore.TYPE + "." + "1.1.0");
         supportedStoreImpls.put(GeoJsonStore.getVersionKey() ,GeoJsonStore.class);
         supportedStoreImpls.put(GeoPackageStore.getVersionKey() ,GeoPackageStore.class);
         supportedStoreImpls.put(WFSStore.getVersionKey() ,WFSStore.class);
@@ -236,7 +229,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
 
     public void startStore(final SCDataStore store) {
         if (!store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
-
             ((SCDataStoreLifeCycle) store).start()
                     .observeOn(AndroidSchedulers.mainThread())
                     .sample(2, TimeUnit.SECONDS)
@@ -413,7 +405,8 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
 
     public boolean updateStoresByConfig(SCStoreConfig scStoreConfig) {
         String key  = String.format("%s.%s", scStoreConfig.getType(), scStoreConfig.getVersion());
-        if (isStoreSupported(key)) {
+        Class store = getSupportedStoreByKey(key);
+        if (store != null) {
 
             SCDataStore currentStore = stores.get(scStoreConfig.getUniqueID());
             SCDataStore updatedStore = null;
@@ -454,16 +447,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         }
     }
 
-
-    public void addSupportedStoreKey(String key) {
-        this.supportedStores.add(key);
-    }
-
-    public void removeSupportedStoreKey(String key) {
-        this.supportedStores.remove(key);
-    }
-
-
     public void registerStore(SCDataStore store) {
         this.stores.put(store.getStoreId(), store);
         // if data service is started/running when a new store is added, then we want to start the store
@@ -481,18 +464,8 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         }
     }
 
-    //TODO: remove  add getSupportedStoreByKey
-    public List<String> getSupportedStoreKeys() {
-        return new ArrayList<>(supportedStores);
-    }
-
     public Class getSupportedStoreByKey(String key) {
         return supportedStoreImpls.get(key);
-    }
-
-    public boolean isStoreSupported(String key) {
-        //call getSupportedStoreByKey
-        return supportedStores.contains(key);
     }
 
     /**
@@ -517,7 +490,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
             SCDataStore scDataStore = stores.get(key);
             activeStores.add(scDataStore);
         }
-        return activeStores;    
+        return activeStores;
     }
 
     public List<SCDataStore> getStoresRaster() {
