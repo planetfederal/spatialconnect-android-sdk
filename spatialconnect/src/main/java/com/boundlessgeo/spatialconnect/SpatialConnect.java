@@ -35,9 +35,9 @@ import java.util.Map;
 import java.util.UUID;
 
 import rx.Observable;
-import rx.Subscriber;
 import rx.functions.Action0;
 import rx.functions.Action1;
+import rx.functions.Func1;
 import rx.observables.ConnectableObservable;
 import rx.subjects.BehaviorSubject;
 
@@ -166,27 +166,21 @@ public class SpatialConnect {
     }
 
     public Observable<SCServiceStatusEvent> serviceStarted(final String serviceId) {
-        return Observable.create(new Observable.OnSubscribe<SCServiceStatusEvent>() {
-            @Override
-            public void call(final Subscriber<? super SCServiceStatusEvent> subscriber) {
-                SCService service = getServiceById(serviceId);
-                if (service != null && service.getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
-                    subscriber.onNext(new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_STARTED));
-                    subscriber.onCompleted();
-                } else {
-                    serviceEvents.autoConnect()
-                            .subscribe(new Action1<SCServiceStatusEvent>() {
-                                @Override
-                                public void call(SCServiceStatusEvent event) {
-                                    if (event.getServiceId().equals(serviceId) &&
-                                            event.getStatus().equals(SCServiceStatus.SC_SERVICE_STARTED)) {
-                                        subscriber.onNext(event);
-                                    }
-                                }
-                            });
-                }
-            }
-        });
+
+        SCService service = getServiceById(serviceId);
+        if (service != null && service.getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
+            return Observable.just(new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_STARTED));
+        } else {
+            return serviceEvents.autoConnect()
+                    .filter(new Func1<SCServiceStatusEvent, Boolean>() {
+                        @Override
+                        public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
+                            return scServiceStatusEvent.getServiceId().equals(serviceId) &&
+                                    scServiceStatusEvent.getStatus().equals(SCServiceStatus.SC_SERVICE_STARTED);
+                        }
+                    })
+                    .take(1);
+        }
     }
 
     public void connectBackend(final SCRemoteConfig remoteConfig) {
