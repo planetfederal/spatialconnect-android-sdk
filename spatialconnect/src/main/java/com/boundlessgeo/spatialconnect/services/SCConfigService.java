@@ -34,8 +34,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+
+import rx.Observable;
 
 /**
  * The SCConfigService is responsible for managing the configuration for SpatialConnect.  This includes downloading
@@ -43,9 +43,10 @@ import java.util.UUID;
  * also responsible for parsing the relevant parts of the config and invoking functions on other services using parts
  * of the {@link SCConfig}.
  */
-public class SCConfigService extends SCService {
+public class SCConfigService extends SCService implements SCServiceLifecycle {
 
     private static final String LOG_TAG = SCConfigService.class.getSimpleName();
+    private static final String SERVICE_NAME = "SC_CONFIG_SERVICE";
     private Context context;
     private static final String CONFIGS_DIR = "configs";
     private ArrayList<File> localConfigFiles = new ArrayList<>();
@@ -139,6 +140,7 @@ public class SCConfigService extends SCService {
     }
 
     /* Registers all the forms specified in each config file */
+    //TODO: renmae to ADD
     private void registerForms(List<SCFormConfig> formConfigs) {
         if (formConfigs != null) {
             Log.d(LOG_TAG, "Loading "+ formConfigs.size() +" form configs");
@@ -176,17 +178,18 @@ public class SCConfigService extends SCService {
         localConfigFiles.add(configFile);
     }
 
-    public ArrayList<File> getLocalConfigFiles() {
+    private ArrayList<File> getLocalConfigFiles() {
         return localConfigFiles;
     }
 
     @Override
-    public void start() {
+    public Observable<Void> start() {
         Log.d(LOG_TAG, "Starting SCConfig Service.  Loading all configs");
         if (getStatus() != SCServiceStatus.SC_SERVICE_RUNNING) {
             loadConfigs();
             this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
         }
+        return Observable.empty();
     }
 
     /* Checks if external storage is available for read and write */
@@ -196,29 +199,6 @@ public class SCConfigService extends SCService {
             return true;
         }
         return false;
-    }
-
-    /**
-     * Gets the unique identifier that identifies this installation of the application.
-     *
-     * @return The UUID string that identifies this application
-     * @see <a href="https://developer.android.com/training/articles/user-data-ids.html">
-     * https://developer.android.com/training/articles/user-data-ids.html</a>
-     */
-    public static String getClientId() {
-        if (CLIENT_ID != null) {
-            return CLIENT_ID;
-        }
-        SCKVPStoreService kvpStoreService = SpatialConnect.getInstance().getSCKVPStoreService();
-        Map<String, Object> resp = kvpStoreService.getValueForKey("clientId");
-        if (resp.get("clientId") != null) {
-            CLIENT_ID = (String) resp.get("clientId");
-        }
-        else {
-            CLIENT_ID = UUID.randomUUID().toString();
-            kvpStoreService.put("clientId", CLIENT_ID);
-        }
-        return CLIENT_ID;
     }
 
     public static String getAndroidVersion() {
@@ -262,5 +242,29 @@ public class SCConfigService extends SCService {
         }
 
         return returnConfig;
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+    }
+
+    @Override
+    public void resume() {
+        super.resume();
+    }
+
+    @Override
+    public void pause() {
+        super.pause();
+    }
+
+    @Override
+    public void startError() {
+        super.startError();
+    }
+
+    public static String serviceId() {
+        return SERVICE_NAME;
     }
 }

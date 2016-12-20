@@ -18,26 +18,11 @@ import android.content.Context;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.R;
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
-import com.boundlessgeo.spatialconnect.services.SCConfigService;
 
-import java.io.IOException;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.SecureRandom;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import javax.net.SocketFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509TrustManager;
 import org.eclipse.paho.android.service.MqttAndroidClient;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
@@ -47,6 +32,11 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
+import java.io.IOException;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -69,7 +59,7 @@ public class MqttHandler implements MqttCallback {
     private MqttAndroidClient client;
     private Context context;
     public PublishSubject<Map<String, SCMessageOuterClass.SCMessage>> scMessageSubject = PublishSubject.create();
-    public final static String REPLY_TO_TOPIC = String.format("/device/%s-replyTo", SCConfigService.getClientId());
+    public final static String REPLY_TO_TOPIC = String.format("/device/%s-replyTo", SpatialConnect.getInstance().getDeviceIdentifier());
     public static BehaviorSubject<Integer> clientConnected = BehaviorSubject.create(0);
     private boolean isSecure;
 
@@ -96,7 +86,7 @@ public class MqttHandler implements MqttCallback {
             isSecure = false;
         }
         String brokerUri = getMqttBrokerUri(config);
-        client = new MqttAndroidClient(context, brokerUri, SCConfigService.getClientId());
+        client = new MqttAndroidClient(context, brokerUri, SpatialConnect.getInstance().getDeviceIdentifier());
         client.setCallback(this);
     }
 

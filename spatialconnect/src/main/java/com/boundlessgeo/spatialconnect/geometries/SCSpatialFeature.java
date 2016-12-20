@@ -15,8 +15,8 @@
 package com.boundlessgeo.spatialconnect.geometries;
 
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
-import com.boundlessgeo.spatialconnect.services.SCConfigService;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -112,7 +112,7 @@ public class SCSpatialFeature
         Map map = new HashMap<>(3);
         map.put("storeId", storeId);
         map.put("layerId", layerId);
-        map.put("client", SCConfigService.getClientId());
+        map.put("client", SpatialConnect.getInstance().getDeviceIdentifier());
         return map;
     }
 

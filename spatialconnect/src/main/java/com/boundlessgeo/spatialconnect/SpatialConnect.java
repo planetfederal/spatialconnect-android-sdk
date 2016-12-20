@@ -23,13 +23,23 @@ import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
-import com.boundlessgeo.spatialconnect.services.SCKVPStoreService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.services.SCService;
+import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
+import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
+import com.github.rtoshiro.secure.SecureSharedPreferences;
 
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
+
+import rx.Observable;
+import rx.functions.Action0;
+import rx.functions.Action1;
+import rx.functions.Func1;
+import rx.observables.ConnectableObservable;
+import rx.subjects.BehaviorSubject;
 
 /**
  * When instantiated, SpatialConnect adds the default services and registers all stores
@@ -41,7 +51,6 @@ public class SpatialConnect {
     private final String LOG_TAG = SpatialConnect.class.getSimpleName();
     private HashMap<String, SCService> services;
     private SCDataService dataService;
-    private SCKVPStoreService kvpStoreService;
     private SCSensorService sensorService;
     private SCConfigService configService;
     private SCBackendService backendService;
@@ -49,6 +58,8 @@ public class SpatialConnect {
     private SCCache cache;
 
     private Context context;
+    public BehaviorSubject<SCServiceStatusEvent> serviceEventSubject;
+    public ConnectableObservable<SCServiceStatusEvent> serviceEvents;
 
     private SpatialConnect() {}
 
@@ -69,10 +80,13 @@ public class SpatialConnect {
      */
     public void initialize(Context context) {
         Log.d(LOG_TAG, "Initializing SpatialConnect");
+
+        this.serviceEventSubject = BehaviorSubject.create();
+        this.serviceEvents = serviceEventSubject.publish();
+
         this.services = new HashMap<>();
         this.sensorService = new SCSensorService(context);
         this.dataService = new SCDataService(context);
-        this.kvpStoreService = new SCKVPStoreService(context);
         this.configService = new SCConfigService(context);
         this.authService = new SCAuthService(context);
         this.cache = new SCCache(context);
@@ -84,23 +98,41 @@ public class SpatialConnect {
      * Adds all the default services to the services hash map maintained by the SpatialConnect.
      */
     private void addDefaultServices() {
-        addService(this.dataService);
-        addService(this.sensorService);
-        addService(this.configService);
-        addService(this.kvpStoreService);
-        addService(this.authService);
+        addService(SCDataService.serviceId(), this.dataService);
+        addService(SCSensorService.serviceId(), this.sensorService);
+        addService(SCConfigService.serviceId(), this.configService);
+        addService(SCAuthService.serviceId(), this.authService);
     }
 
-    public void addService(SCService service) {
-        this.services.put(service.getId(), service);
+    public void addService(String serviceKey, SCService service) {
+        this.services.put(serviceKey, service);
     }
 
-    public void removeService(SCService service) {
-        this.services.remove(service.getId());
+    public void removeService(String id) {
+        this.services.remove(id);
     }
 
-    public void startService(String id) {
-        this.services.get(id).start();
+    public void startService(final String id) {
+        this.services.get(id).start().subscribe(new Action1<Void>() {
+            @Override
+            public void call(Void aVoid) {}
+            },
+                new Action1<Throwable>() {
+                @Override
+                public void call(Throwable t) {
+                    Log.d(LOG_TAG, t.getLocalizedMessage());
+                    // onError can happen if we cannot start the service b/c of some error or runtime exception
+                    serviceEventSubject.onNext(
+                            new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_ERROR, id)
+                    );
+                }
+            }, new Action0() {
+                @Override
+                public void call() {
+                    serviceEventSubject.onNext(
+                            new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_STARTED, id));
+                }
+        });
     }
 
     public void stopService(String id) {
@@ -114,7 +146,8 @@ public class SpatialConnect {
 
     public void startAllServices() {
         Log.d(LOG_TAG, "Starting all services.");
-        for (String key : this.services.keySet()) {
+        HashMap<String, SCService> ss  = new HashMap<>(services);
+        for (String key : ss.keySet()) {
             this.services.get(key).start();
         }
     }
@@ -132,12 +165,31 @@ public class SpatialConnect {
         }
     }
 
+    public Observable<SCServiceStatusEvent> serviceStarted(final String serviceId) {
+
+        SCService service = getServiceById(serviceId);
+        if (service != null && service.getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
+            return Observable.just(new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_STARTED));
+        } else {
+            return serviceEvents.autoConnect()
+                    .filter(new Func1<SCServiceStatusEvent, Boolean>() {
+                        @Override
+                        public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
+                            return scServiceStatusEvent.getServiceId().equals(serviceId) &&
+                                    scServiceStatusEvent.getStatus().equals(SCServiceStatus.SC_SERVICE_STARTED);
+                        }
+                    })
+                    .take(1);
+        }
+    }
+
     public void connectBackend(final SCRemoteConfig remoteConfig) {
         if (remoteConfig != null && backendService == null) {
             Log.d(LOG_TAG, "connecting backend");
             backendService = new SCBackendService(context);
             backendService.initialize(remoteConfig);
-            backendService.start();
+            addService(SCBackendService.serviceId(), backendService);
+            startService(SCBackendService.serviceId());
         }
     }
 
@@ -165,10 +217,6 @@ public class SpatialConnect {
         return sensorService;
     }
 
-    public SCKVPStoreService getSCKVPStoreService() {
-        return kvpStoreService;
-    }
-
     public SCConfigService getConfigService() {
         return configService;
     }
@@ -183,6 +231,19 @@ public class SpatialConnect {
 
     public SCCache getCache() {
         return cache;
+    }
+
+    public String getDeviceIdentifier() {
+        String deviceId;
+        SecureSharedPreferences ssp = new SecureSharedPreferences(context);
+        deviceId = ssp.getString("deviceId", null);
+        if (deviceId == null) {
+            deviceId = UUID.randomUUID().toString();
+            SecureSharedPreferences.Editor editor = ssp.edit();
+            editor.putString("deviceId", deviceId);
+            editor.apply();
+        }
+        return deviceId;
     }
 }
 
