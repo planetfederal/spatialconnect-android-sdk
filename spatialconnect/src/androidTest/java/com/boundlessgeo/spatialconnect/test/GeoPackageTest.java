@@ -46,7 +46,7 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import java.io.File;
-import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -88,7 +88,7 @@ public class GeoPackageTest extends BaseTestCase {
                 new SCPredicate(HAITI_BOUNDING_BOX, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
         );
         TestSubscriber testSubscriber = new TestSubscriber();
-        sc.getDataService().queryStores(Arrays.asList(HAITI_GPKG_ID), filter)
+        sc.getDataService().queryStoreById(HAITI_GPKG_ID, filter)
                 .timeout(TIMEOUT, TimeUnit.SECONDS)
                 .subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
@@ -448,6 +448,13 @@ public class GeoPackageTest extends BaseTestCase {
         Cursor cursor = haiti.query("SELECT ST_GeometryType(the_geom) FROM point_features LIMIT 1;");
         cursor.moveToFirst();
         assertEquals("The geometry type should be Point.", "Point", cursor.getString(0));
+    }
+
+    @Test
+    public void test_sc_rasterStores() {
+        List<SCDataStore> rasterStores = sc.getDataService().getStoresRaster();
+        //should have 3 default geo package stores plus haiti and whitehorse in the test local config
+        assertEquals("Should have 5 stores that use the SCRasterStore interface", 5, rasterStores.size());
     }
 
     @Test

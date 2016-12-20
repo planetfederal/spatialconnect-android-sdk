@@ -14,17 +14,15 @@
  */
 package com.boundlessgeo.spatialconnect.test;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 
 import org.junit.AfterClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
 
 public class ServicesTest extends BaseTestCase {
 
@@ -32,14 +30,6 @@ public class ServicesTest extends BaseTestCase {
     public static void tearDown() throws Exception {
         HttpHandler.getInstance().cancelAllRequests();
         deleteDatabases();
-    }
-
-    @Test
-    public void testDataServiceInitialization() {
-        SpatialConnect.getInstance().initialize(testContext);
-        SCDataService dataService = SpatialConnect.getInstance().getDataService();
-        assertEquals("The data service should have 5 supported stores.",
-                5, dataService.getSupportedStoreKeys().size());
     }
 
     @Test
@@ -51,22 +41,8 @@ public class ServicesTest extends BaseTestCase {
         }
         SpatialConnect sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        assertEquals("5 default services should have been initialized (data, kvp, sensor, config, and auth)",
-                5, sc.getServices().size()
-        );
-        assertEquals("There should be only 5 supported data stores: geojson.1, gpkg.1 and geojson.1.0, gpkg.1.0, " +
-                        "wfs.1.1.0",
-                5,
-                sc.getDataService().getSupportedStoreKeys().size()
-        );
-        assertTrue("The geojson.1 store should be in the list of supported stores.",
-                sc.getDataService().getSupportedStoreKeys().contains("geojson.1")
-        );
-        assertTrue("The gpkg.1 store should be in the list of supported stores.",
-                sc.getDataService().getSupportedStoreKeys().contains("gpkg.1")
-        );
-        assertTrue("The wfs.1.1.0 store should be in the list of supported stores.",
-                sc.getDataService().getSupportedStoreKeys().contains("wfs.1.1.0")
+        assertEquals("4 default services should have been initialized (data, sensor, config, and auth) no backend svc for unit test",
+                4, sc.getServices().size()
         );
     }
 }

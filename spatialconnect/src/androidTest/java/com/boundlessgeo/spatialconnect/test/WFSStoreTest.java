@@ -22,6 +22,7 @@ import rx.observers.TestSubscriber;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
+@Ignore //need to move to integration tests
 public class WFSStoreTest extends BaseTestCase {
 
     private static SpatialConnect sc;

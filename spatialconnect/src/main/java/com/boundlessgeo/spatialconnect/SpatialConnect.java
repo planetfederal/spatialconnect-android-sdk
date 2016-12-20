@@ -38,6 +38,7 @@ import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
+
 import rx.observables.ConnectableObservable;
 import rx.subjects.BehaviorSubject;
 
@@ -166,7 +167,6 @@ public class SpatialConnect {
     }
 
     public Observable<SCServiceStatusEvent> serviceStarted(final String serviceId) {
-
         SCService service = getServiceById(serviceId);
         if (service != null && service.getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
             return Observable.just(new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_STARTED));

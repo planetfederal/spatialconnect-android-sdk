@@ -55,6 +55,7 @@ public class WFSStore extends SCRemoteDataStore implements  SCSpatialStore {
     private List<String> layerNames = new ArrayList<>();
     private List<String> defaultLayers;
     public static final String TYPE = "wfs";
+    private static final String VERSION = "1.1.0";
 
     public WFSStore(Context context, SCStoreConfig scStoreConfig) {
         super(context, scStoreConfig);
@@ -342,6 +343,10 @@ public class WFSStore extends SCRemoteDataStore implements  SCSpatialStore {
                 baseUrl,
                 this.getVersion()
         );
+    }
+
+    public static String getVersionKey() {
+        return String.format("%s.%s",TYPE, VERSION);
     }
 
 }
