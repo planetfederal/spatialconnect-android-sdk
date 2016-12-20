@@ -42,7 +42,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
@@ -103,7 +102,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         Log.d(LOG_TAG, "Creating default store");
         SCStoreConfig defaultStoreConfig = new SCStoreConfig();
         defaultStoreConfig.setName(DefaultStore.NAME);
-        defaultStoreConfig.setUniqueID(UUID.randomUUID().toString());
+        defaultStoreConfig.setUniqueID(DefaultStore.NAME);
         defaultStoreConfig.setUri("file://" + DefaultStore.NAME);
         defaultStoreConfig.setType("gpkg");
         defaultStoreConfig.setVersion("1");
@@ -132,7 +131,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     private void initializeFormStore() {
         SCStoreConfig formStoreConfig = new SCStoreConfig();
         formStoreConfig.setName(FormStore.NAME);
-        formStoreConfig.setUniqueID(UUID.randomUUID().toString());
+        formStoreConfig.setUniqueID(FormStore.NAME);
         formStoreConfig.setUri("file://" + FormStore.NAME);
         formStoreConfig.setType("gpkg");
         formStoreConfig.setVersion("1");
@@ -161,7 +160,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     private void initializeLocationStore() {
         SCStoreConfig locationStoreConfig = new SCStoreConfig();
         locationStoreConfig.setName(LocationStore.NAME);
-        locationStoreConfig.setUniqueID(UUID.randomUUID().toString());
+        locationStoreConfig.setUniqueID(LocationStore.NAME);
         locationStoreConfig.setUri("file://" + LocationStore.NAME);
         locationStoreConfig.setType("gpkg");
         locationStoreConfig.setVersion("1");
