@@ -196,6 +196,20 @@ public class WFSStore extends SCRemoteDataStore implements  SCSpatialStore {
                                                     subscriber.onCompleted();
                                                 }
                                             }
+                                        },
+                                        new Action1<Throwable>() {
+                                            @Override
+                                            public void call(Throwable t) {
+                                                Log.d(LOG_TAG, t.getLocalizedMessage());
+                                                storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_START_FAILED);
+                                                subscriber.onNext(
+                                                        new SCStoreStatusEvent(
+                                                                SCDataStoreStatus.SC_DATA_STORE_START_FAILED,
+                                                                storeInstance.getStoreId()
+                                                        )
+                                                );
+                                                subscriber.onCompleted();
+                                            }
                                         });
                             } catch (IOException e) {
                                 e.printStackTrace();
