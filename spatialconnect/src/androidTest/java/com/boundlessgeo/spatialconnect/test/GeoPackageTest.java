@@ -454,7 +454,7 @@ public class GeoPackageTest extends BaseTestCase {
     public void test_sc_rasterStores() {
         List<SCDataStore> rasterStores = sc.getDataService().getStoresRaster();
         //should have 3 default geo package stores plus haiti and whitehorse in the test local config
-        assertEquals("Should have 2 stores that use the SCRasterStore interface", 5, rasterStores.size());
+        assertEquals("Should have 5 stores that use the SCRasterStore interface", 5, rasterStores.size());
     }
 
     @Test
