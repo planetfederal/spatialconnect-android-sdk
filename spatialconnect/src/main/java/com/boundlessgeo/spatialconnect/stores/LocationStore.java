@@ -91,7 +91,12 @@ public class LocationStore extends GeoPackageStore implements  SCSpatialStore, S
                                     public void call(Location location) {
                                         GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 0);
                                         Geometry point = geometryFactory.createPoint(
-                                                new Coordinate(location.getLongitude(), location.getLatitude()));
+                                                new Coordinate(
+                                                    location.getLongitude(),
+                                                    location.getLatitude(),
+                                                    location.getAltitude()
+                                                )
+                                        );
                                         SCGeometry scFeatureLocationUpdate = new SCGeometry(point);
                                         scFeatureLocationUpdate.setLayerId(LAST_KNOWN_TABLE);
                                         scFeatureLocationUpdate.getProperties().put(TIMESTAMP_COLUMN, System.currentTimeMillis());
