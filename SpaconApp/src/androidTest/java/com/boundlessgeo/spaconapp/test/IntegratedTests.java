@@ -95,7 +95,7 @@ public class IntegratedTests {
         SCBackendService networkService = sc.getBackendService();
         SCMessageOuterClass.SCMessage.Builder builder =  SCMessageOuterClass.SCMessage.newBuilder();
         builder.setAction(0)
-                .setPayload("testing")
+                .setPayload("{\"testing\": true}")
                 .setReplyTo(MqttHandler.REPLY_TO_TOPIC)
                 .build();
         SCMessageOuterClass.SCMessage message = builder.build();
@@ -108,8 +108,8 @@ public class IntegratedTests {
         testSubscriber.assertNoErrors();
         testSubscriber.assertValueCount(1);
         testSubscriber.assertCompleted();
-        assertEquals("The reply message payload should be 'pong'.",
-                "pong",
+        assertEquals("The reply message payload should be {\"result\":\"pong\"}",
+                "{\"result\":\"pong\"}",
                 testSubscriber.getOnNextEvents().get(0).getPayload());
     }
 
