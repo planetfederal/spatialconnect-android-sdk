@@ -51,7 +51,6 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     private static final String CONFIGS_DIR = "configs";
     private ArrayList<File> localConfigFiles = new ArrayList<>();
     private SCDataService dataService;
-    public static String CLIENT_ID = null;
 
     public SCConfigService(Context context) {
         this.context = context;
@@ -67,7 +66,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
      * configuration files from the SpatialConnect backend service defined in the {@code remote} attribute of a
      * config.  Then we load any configs that were added with {@link SCConfigService#addConfig(File)}.</p>
      */
-    public void loadConfigs() {
+    private void loadConfigs() {
         if (getDefaultConfig() != null) {
             loadConfigs(Arrays.asList(getDefaultConfig()));
         }
@@ -132,16 +131,15 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     }
 
     public void loadConfig(SCConfig config) {
-        registerForms(config.getForms());
-        registerDataStores(config.getStores());
+        loadForms(config.getForms());
+        loadDataStores(config.getStores());
         if (config.getRemote() != null) {
             SpatialConnect.getInstance().connectBackend(config.getRemote());
         }
     }
 
     /* Registers all the forms specified in each config file */
-    //TODO: renmae to ADD
-    private void registerForms(List<SCFormConfig> formConfigs) {
+    private void loadForms(List<SCFormConfig> formConfigs) {
         if (formConfigs != null) {
             Log.d(LOG_TAG, "Loading "+ formConfigs.size() +" form configs");
             for (SCFormConfig formConfig : formConfigs) {
@@ -155,13 +153,13 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     }
 
     /* Registers all the stores specified in each config file */
-    private void registerDataStores(List<SCStoreConfig> storeConfigs) {
+    private void loadDataStores(List<SCStoreConfig> storeConfigs) {
         if (storeConfigs != null) {
             Log.d(LOG_TAG, "Loading "+ storeConfigs.size() +" store configs");
             for (SCStoreConfig storeConfig : storeConfigs) {
                 Log.d(LOG_TAG, "Adding store " + storeConfig.getName() + " to data service.");
                 try {
-                    dataService.registerStoreByConfig(storeConfig);
+                    dataService.registerAndStartStoreByConfig(storeConfig);
                 } catch (Exception ex) {
                     Log.w(LOG_TAG, "Exception adding store to data service ", ex);
                 }
@@ -180,16 +178,6 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
 
     private ArrayList<File> getLocalConfigFiles() {
         return localConfigFiles;
-    }
-
-    @Override
-    public Observable<Void> start() {
-        Log.d(LOG_TAG, "Starting SCConfig Service.  Loading all configs");
-        if (getStatus() != SCServiceStatus.SC_SERVICE_RUNNING) {
-            loadConfigs();
-            this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
-        }
-        return Observable.empty();
     }
 
     /* Checks if external storage is available for read and write */
@@ -242,6 +230,37 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
         }
 
         return returnConfig;
+    }
+
+    public void addForm(SCFormConfig c) {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        sc.getDataService().getFormStore().registerFormByConfig(c);
+    }
+
+    public void removeForm(SCFormConfig c) {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        sc.getDataService().getFormStore().unregisterFormByConfig(c);
+    }
+
+    public void addStore(SCStoreConfig c) {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        sc.getDataService().registerAndStartStoreByConfig(c);
+    }
+
+    public void removeStore(SCStoreConfig c) {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        SCDataService dataService = sc.getDataService();
+        dataService.unregisterStore(dataService.getStoreById(c.getUniqueID()));
+    }
+
+    @Override
+    public Observable<Void> start() {
+        Log.d(LOG_TAG, "Starting SCConfig Service.  Loading all configs");
+        if (getStatus() != SCServiceStatus.SC_SERVICE_RUNNING) {
+            loadConfigs();
+            this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
+        }
+        return Observable.empty();
     }
 
     @Override
