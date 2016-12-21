@@ -200,7 +200,6 @@ public class WFSStore extends SCRemoteDataStore implements  SCSpatialStore {
                                         new Action1<Throwable>() {
                                             @Override
                                             public void call(Throwable t) {
-                                                Log.d(LOG_TAG, t.getLocalizedMessage());
                                                 storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_START_FAILED);
                                                 subscriber.onNext(
                                                         new SCStoreStatusEvent(
