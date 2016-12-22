@@ -265,18 +265,15 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
             String topic,
             final SCMessageOuterClass.SCMessage message) {
 
-        long millis = System.currentTimeMillis();
-        Timestamp timestamp = Timestamp.newBuilder().setSeconds(millis / 1000).build();
-
         // set the correlation id and replyTo topic
-        int correlationId = (int) (System.currentTimeMillis() / 1000L);
+        int correlationId = (int) System.currentTimeMillis();
         final SCMessageOuterClass.SCMessage newMessage = SCMessageOuterClass.SCMessage.newBuilder()
                 .setAction(message.getAction())
                 .setPayload(message.getPayload())
                 .setReplyTo(MqttHandler.REPLY_TO_TOPIC)
                 .setCorrelationId(correlationId)
                 .setJwt(getJwt())
-                .setTime(timestamp)
+                .setTime(getTimestamp())
                 .build();
         mqttHandler.publish(topic, newMessage, QoS.EXACTLY_ONCE.value());
         // filter message from reply to topic on the correlation id
@@ -297,15 +294,14 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     public void publish(String topic, SCMessageOuterClass.SCMessage message, QoS qos) {
 
-        long millis = System.currentTimeMillis();
-        Timestamp timestamp = Timestamp.newBuilder().setSeconds(millis / 1000).build();
+
 
         SCMessageOuterClass.SCMessage.Builder jwtMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
         jwtMessagebuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
                 .setReplyTo(message.getReplyTo())
                 .setJwt(getJwt())
-                .setTime(timestamp);
+                .setTime(getTimestamp());
 
         mqttHandler.publish(topic, jwtMessagebuilder.build(), qos.value());
     }
@@ -333,6 +329,13 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         return (jwt != null) ? SCAuthService.getAccessToken() : "";
     }
 
+    private Timestamp getTimestamp() {
+        long millis = System.currentTimeMillis();
+        return Timestamp.newBuilder()
+            .setSeconds(millis / 1000)
+            .setNanos((int) ((millis % 1000) * 1000000))
+            .build();
+    }
 
     @Override
     public void stop() {
