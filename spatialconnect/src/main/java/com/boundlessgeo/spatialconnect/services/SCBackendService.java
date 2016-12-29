@@ -28,6 +28,7 @@ import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
+import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.google.protobuf.Timestamp;
@@ -168,6 +169,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 SpatialConnect sc = SpatialConnect.getInstance();
                 SCConfigService cs = sc.getConfigService();
                 SCConfig cachedConfig = cs.getCachedConfig();
+                JsonUtilities utilities = new JsonUtilities();
 
                 switch (SCCommand.fromActionNumber(scMessage.getAction())) {
                     case CONFIG_ADD_STORE:
@@ -192,8 +194,10 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         }
                         break;
                     case CONFIG_REMOVE_STORE:
-                        SCDataStore store = sc.getDataService().getStoreById(scMessage.getPayload());
-                        cachedConfig.removeStore(scMessage.getPayload());
+                        String storeId = utilities.getMapFromJson(scMessage.getPayload())
+                            .get("id").toString();
+                        SCDataStore store = sc.getDataService().getStoreById(storeId);
+                        cachedConfig.removeStore(storeId);
                         sc.getDataService().unregisterStore(store);
                         break;
                     case CONFIG_ADD_FORM:
@@ -217,12 +221,11 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         }
                         break;
                     case CONFIG_REMOVE_FORM:
-                            cachedConfig.removeForm(scMessage.getPayload());
-                            sc.getDataService()
-                                    .getFormStore()
-                                    .unregisterFormByKey(scMessage.getPayload());
+                        String formKey = utilities.getMapFromJson(scMessage.getPayload())
+                            .get("form_key").toString();
+                        cachedConfig.removeForm(formKey);
+                        sc.getDataService().getFormStore().unregisterFormByKey(formKey);
                         break;
-
                 }
 
                 cs.setCachedConfig(cachedConfig);
