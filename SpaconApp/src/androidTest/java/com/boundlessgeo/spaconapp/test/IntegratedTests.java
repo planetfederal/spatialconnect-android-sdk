@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
+import android.util.Log;
 
 import com.boundlessgeo.spaconapp.MainActivity;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
@@ -24,10 +25,14 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import rx.Subscriber;
 import rx.functions.Action1;
 import rx.observers.TestSubscriber;
+import rx.schedulers.Schedulers;
 
+import static com.boundlessgeo.spatialconnect.db.SCKVPStore.LOG_TAG;
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
 
 
 @RunWith(AndroidJUnit4.class)
@@ -125,5 +130,30 @@ public class IntegratedTests {
                                 2, sc.getDataService().getAllStores().size());
                     }
         });
+    }
+
+    @Test
+    public void testMqttConnected() {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        sc.getBackendService()
+                .connectedToBroker
+                .subscribeOn(Schedulers.io())
+                .subscribe(new Subscriber<Boolean>() {
+                    @Override
+                    public void onCompleted() {
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        e.printStackTrace();
+                        Log.e(LOG_TAG, "onError()\n" + e.getLocalizedMessage());
+                    }
+
+                    @Override
+                    public void onNext(Boolean connected) {
+                        assertTrue("Mqtt should be connected",
+                                connected);
+                    }
+                });
     }
 }
