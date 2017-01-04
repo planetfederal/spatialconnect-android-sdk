@@ -60,7 +60,7 @@ public class MqttHandler implements MqttCallback {
     private Context context;
     public PublishSubject<Map<String, SCMessageOuterClass.SCMessage>> scMessageSubject = PublishSubject.create();
     public final static String REPLY_TO_TOPIC = String.format("/device/%s-replyTo", SpatialConnect.getInstance().getDeviceIdentifier());
-    public static BehaviorSubject<Integer> clientConnected = BehaviorSubject.create(0);
+    public static BehaviorSubject<Boolean> clientConnected = BehaviorSubject.create(false);
     private boolean isSecure;
 
     private MqttHandler(Context context) {
@@ -154,10 +154,10 @@ public class MqttHandler implements MqttCallback {
      * @param qos   quality of service (0, 1, 2)
      */
     public void subscribe(final String topic, final int qos) {
-        clientConnected.subscribe(new Action1<Integer>() {
+        clientConnected.subscribe(new Action1<Boolean>() {
             @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
+            public void call(Boolean connected) {
+                if (connected) {
                     try {
                         Log.d(LOG_TAG, "subscribing to topic " + topic + " with qos " + qos);
                         client.subscribe(topic, qos);
@@ -178,10 +178,10 @@ public class MqttHandler implements MqttCallback {
      * @param qos     quality of service (0, 1, 2)
      */
     public void publish(final String topic, final SCMessageOuterClass.SCMessage message, final int qos) {
-        clientConnected.subscribe(new Action1<Integer>() {
+        clientConnected.subscribe(new Action1<Boolean>() {
             @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
+            public void call(Boolean connected) {
+                if (connected) {
                     Log.d(LOG_TAG, "publishing to topic " + topic + " with qos " + qos);
                     // create a new MqttMessage from the message string
                     MqttMessage mqttMsg = new MqttMessage(message.toByteArray());
@@ -200,7 +200,7 @@ public class MqttHandler implements MqttCallback {
     @Override
     public void connectionLost(Throwable cause) {
         Log.d(LOG_TAG, "Lost connection to mqtt broker.", cause);
-        clientConnected.onNext(0);
+        clientConnected.onNext(false);
     }
 
     @Override
@@ -225,13 +225,14 @@ public class MqttHandler implements MqttCallback {
         @Override
         public void onSuccess(IMqttToken asyncActionToken) {
             Log.d(LOG_TAG, "Connection Success!");
-            clientConnected.onNext(1);
+            clientConnected.onNext(true);
             scMessageSubject.publish();
         }
 
         @Override
         public void onFailure(IMqttToken asyncActionToken, Throwable ex) {
             Log.d(LOG_TAG, "Connection Failure!", ex);
+            clientConnected.onNext(false);
         }
     }
 }

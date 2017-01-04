@@ -57,8 +57,8 @@ import com.facebook.react.uimanager.UIBlock;
 import com.facebook.react.uimanager.UIManagerModule;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
-import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.TileOverlay;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -66,9 +66,9 @@ import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.HashMap;
 
 import rx.Subscriber;
 import rx.functions.Action1;
@@ -341,6 +341,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
             }
             if (command.equals(SCCommand.BACKENDSERVICE_HTTP_URI)) {
                 handleBackendServiceHTTPUri(message);
+            }
+            if (command.equals(SCCommand.BACKENDSERVICE_MQTT_CONNECTED)) {
+                handleMqttConnectionStatus(message);
             }
         }
     }
@@ -735,6 +738,36 @@ public class SCBridge extends ReactContextBaseJavaModule {
         eventPayload.putString("backendUri", backendUri);
         sendEvent(message.getInt("type"), message.getString("responseId"), eventPayload);
 
+    }
+
+    /**
+     * Handles the {@link SCCommand#BACKENDSERVICE_MQTT_CONNECTED} command.
+     *
+     * @param message the message received from the Javascript
+     */
+    private void handleMqttConnectionStatus(final ReadableMap message) {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        sc.getBackendService()
+                .connectedToBroker
+                .subscribeOn(Schedulers.io())
+                .subscribe(new Subscriber<Boolean>() {
+                    @Override
+                    public void onCompleted() {
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        e.printStackTrace();
+                        Log.e(LOG_TAG, "onError()\n" + e.getLocalizedMessage());
+                    }
+
+                    @Override
+                    public void onNext(Boolean connected) {
+                        int mqttConnected = (connected) ? 1 : 0;
+                        sendEvent(message.getInt("type"), mqttConnected);
+
+                    }
+                });
     }
 
     /**
