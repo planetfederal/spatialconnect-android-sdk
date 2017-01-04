@@ -16,6 +16,7 @@ package com.boundlessgeo.spatialconnect.stores;
 
 
 import android.content.Context;
+import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapter;
@@ -45,6 +46,7 @@ import rx.functions.Action1;
  */
 public abstract class SCDataStore {
 
+    private static final String LOG_TAG = SCDataStore.class.getSimpleName();
     private String storeId;
     private String name;
     private String version;
@@ -159,27 +161,36 @@ public abstract class SCDataStore {
                 try {
                     final OutputStream output = new FileOutputStream(file, true);
                     HttpHandler.getInstance().getWithProgress(url)
-                            .subscribe(new Action1<SCTuple<Float, byte[], Integer>>() {
-                                @Override
-                                public void call(SCTuple<Float, byte[], Integer> downloadTuple) {
-                                    try {
-                                        if (downloadTuple.first() < 1f) {
-                                            output.write(downloadTuple.second(), 0, downloadTuple.third());
-                                            subscriber.onNext(downloadTuple.first());
-                                        } else {
-                                            if (downloadTuple.third() > 0){
+                            .subscribe(
+                                new Action1<SCTuple<Float, byte[], Integer>>() {
+                                    @Override
+                                    public void call(SCTuple<Float, byte[], Integer> downloadTuple) {
+                                        try {
+                                            if (downloadTuple.first() < 1f) {
                                                 output.write(downloadTuple.second(), 0, downloadTuple.third());
+                                                subscriber.onNext(downloadTuple.first());
+                                            } else {
+                                                if (downloadTuple.third() > 0){
+                                                    output.write(downloadTuple.second(), 0, downloadTuple.third());
+                                                }
+                                                subscriber.onNext(1f);
+                                                subscriber.onCompleted();
+                                                output.flush();
+                                                output.close();
                                             }
-                                            subscriber.onNext(1f);
-                                            subscriber.onCompleted();
-                                            output.flush();
-                                            output.close();
+                                        } catch (IOException e) {
+                                            subscriber.onError(e);
                                         }
-                                    } catch (IOException e) {
-                                        subscriber.onError(e);
+                                    }
+                                },
+                                new Action1<Throwable>() {
+                                    @Override
+                                    public void call(Throwable t) {
+                                        Log.e(LOG_TAG,"Unable to download from: " + url + " with error: " + t.getMessage());
+                                        subscriber.onError(t);
                                     }
                                 }
-                            });
+                            );
                 } catch (Exception e) {
                     subscriber.onError(e);
                 }
