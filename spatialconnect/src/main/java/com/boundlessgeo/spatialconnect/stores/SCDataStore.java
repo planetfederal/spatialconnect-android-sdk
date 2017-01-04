@@ -186,7 +186,8 @@ public abstract class SCDataStore {
                                 new Action1<Throwable>() {
                                     @Override
                                     public void call(Throwable t) {
-                                        Log.e(LOG_TAG,"Unable to download from: " + url + " with error: " + t.getMessage());
+                                        String errorMsg = (t != null) ? t.getMessage() : "no message available";
+                                        Log.e(LOG_TAG,"Unable to download from: " + url + " with error: " + errorMsg);
                                         subscriber.onError(t);
                                     }
                                 }
