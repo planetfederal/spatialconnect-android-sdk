@@ -78,8 +78,6 @@ import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
-import static com.boundlessgeo.spatialconnect.services.SCAuthService.loginStatus;
-
 /**
  * This module handles messages sent from Javascript.
  */
@@ -580,7 +578,6 @@ public class SCBridge extends ReactContextBaseJavaModule {
         if (filter != null) {
             sc.getDataService().queryStoresByIds(storeIds, filter)
                     .subscribeOn(Schedulers.io())
-//                    .onBackpressureBuffer(filter.getLimit())
                     .subscribe(
                             new Subscriber<SCSpatialFeature>() {
                                 @Override
@@ -596,7 +593,6 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
                                 @Override
                                 public void onNext(SCSpatialFeature feature) {
-//                                    Log.d(LOG_TAG, "query returned new feature " + feature.toJson());
                                     try {
                                         // base64 encode id and set it before sending across wire
                                         String encodedId = ((SCGeometry) feature).getKey().encodedCompositeKey();
@@ -766,7 +762,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
      */
     private void handleMqttConnectionStatus(final ReadableMap message) {
         SpatialConnect sc = SpatialConnect.getInstance();
-        sc.getBackendService()
+        SCBackendService backendService = sc.getBackendService();
+        if (backendService != null) {
+            backendService
                 .connectedToBroker
                 .subscribeOn(Schedulers.io())
                 .subscribe(new Subscriber<Boolean>() {
@@ -787,6 +785,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
                     }
                 });
+        } else {
+            sendEvent(message.getInt("type"), 0);
+        }
     }
 
     /**
