@@ -31,7 +31,10 @@ import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
+import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
+import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
+import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
@@ -57,8 +60,8 @@ import com.facebook.react.uimanager.UIBlock;
 import com.facebook.react.uimanager.UIManagerModule;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
-import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.TileOverlay;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -66,12 +69,13 @@ import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.HashMap;
 
 import rx.Subscriber;
 import rx.functions.Action1;
+import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 /**
@@ -261,7 +265,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
      * .html#sending-events-to-javascript"> https://facebook.github.io/react-native/docs/native-modules-android
      * .html#sending-events-to-javascript</a>
      */
-    public void sendEvent(Integer eventType, @Nullable Integer payloadInteger) {
+    public void sendEvent(Integer eventType, String responseId, @Nullable Integer payloadInteger) {
         Log.v(LOG_TAG, String.format("Sending {\"type\": %s, \"payload\": %d} to Javascript",
                         eventType.toString(),
                         payloadInteger)
@@ -271,9 +275,21 @@ public class SCBridge extends ReactContextBaseJavaModule {
         newAction.putInt("payload", payloadInteger);
         this.reactContext
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                .emit(eventType.toString(), newAction);
+                .emit(responseId, newAction);
     }
 
+    public void sendEvent(Integer eventType, @Nullable Integer payloadInteger) {
+        Log.v(LOG_TAG, String.format("Sending {\"type\": %s, \"payload\": %d} to Javascript",
+                eventType.toString(),
+                payloadInteger)
+        );
+        WritableMap newAction = Arguments.createMap();
+        newAction.putInt("type", eventType);
+        newAction.putInt("payload", payloadInteger);
+        this.reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(eventType.toString(), newAction);
+    }
 
     /**
      * Handles a message sent from Javascript.  Expects the message envelope to look like:
@@ -342,6 +358,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (command.equals(SCCommand.BACKENDSERVICE_HTTP_URI)) {
                 handleBackendServiceHTTPUri(message);
             }
+            if (command.equals(SCCommand.BACKENDSERVICE_MQTT_CONNECTED)) {
+                handleMqttConnectionStatus(message);
+            }
         }
     }
 
@@ -352,20 +371,33 @@ public class SCBridge extends ReactContextBaseJavaModule {
             @Override
             public void call(Boolean connected) {
                 if (connected) {
-                    SpatialConnect.getInstance()
-                            .getBackendService()
-                            .getNotifications()
-                            .subscribe(new Action1<SCNotification>() {
-                                @Override
-                                public void call(SCNotification scNotification) {
-                                    try {
-                                        sendEvent(message.getInt("type"), convertJsonToMap(scNotification.toJson()));
-                                    }
-                                    catch (JSONException e) {
-                                        Log.w(LOG_TAG, "Could not parse notification");
-                                    }
-                                }
-                            });
+                    final SpatialConnect sc = SpatialConnect.getInstance();
+                    sc.serviceStarted(SCBackendService.serviceId())
+                        .filter(new Func1<SCServiceStatusEvent, Boolean>() {
+                            @Override
+                            public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
+                                return scServiceStatusEvent.getStatus()
+                                        .equals(SCServiceStatus.SC_SERVICE_RUNNING);
+                            }
+                        })
+                        .subscribe(new Action1<SCServiceStatusEvent>() {
+                            @Override
+                            public void call(SCServiceStatusEvent scServiceStatusEvent) {
+                                sc.getBackendService()
+                                    .getNotifications()
+                                    .subscribe(new Action1<SCNotification>() {
+                                        @Override
+                                        public void call(SCNotification scNotification) {
+                                            try {
+                                                sendEvent(message.getInt("type"), convertJsonToMap(scNotification.toJson()));
+                                            }
+                                            catch (JSONException e) {
+                                                Log.w(LOG_TAG, "Could not parse notification");
+                                            }
+                                        }
+                                    });
+                            }
+                    });
                 }
             }
         });
@@ -558,7 +590,6 @@ public class SCBridge extends ReactContextBaseJavaModule {
         if (filter != null) {
             sc.getDataService().queryStoresByIds(storeIds, filter)
                     .subscribeOn(Schedulers.io())
-//                    .onBackpressureBuffer(filter.getLimit())
                     .subscribe(
                             new Subscriber<SCSpatialFeature>() {
                                 @Override
@@ -574,7 +605,6 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
                                 @Override
                                 public void onNext(SCSpatialFeature feature) {
-//                                    Log.d(LOG_TAG, "query returned new feature " + feature.toJson());
                                     try {
                                         // base64 encode id and set it before sending across wire
                                         String encodedId = ((SCGeometry) feature).getKey().encodedCompositeKey();
@@ -735,6 +765,41 @@ public class SCBridge extends ReactContextBaseJavaModule {
         eventPayload.putString("backendUri", backendUri);
         sendEvent(message.getInt("type"), message.getString("responseId"), eventPayload);
 
+    }
+
+    /**
+     * Handles the {@link SCCommand#BACKENDSERVICE_MQTT_CONNECTED} command.
+     *
+     * @param message the message received from the Javascript
+     */
+    private void handleMqttConnectionStatus(final ReadableMap message) {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        SCBackendService backendService = sc.getBackendService();
+        if (backendService != null) {
+            backendService
+                .connectedToBroker
+                .subscribeOn(Schedulers.io())
+                .subscribe(new Subscriber<Boolean>() {
+                    @Override
+                    public void onCompleted() {
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        e.printStackTrace();
+                        Log.e(LOG_TAG, "onError()\n" + e.getLocalizedMessage());
+                    }
+
+                    @Override
+                    public void onNext(Boolean connected) {
+                        int mqttConnected = (connected) ? 1 : 0;
+                        sendEvent(message.getInt("type"), message.getString("responseId"), mqttConnected);
+
+                    }
+                });
+        } else {
+            sendEvent(message.getInt("type"),message.getString("responseId"), 0);
+        }
     }
 
     /**

@@ -52,6 +52,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private static MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
     public static BehaviorSubject<Boolean> configReceived = BehaviorSubject.create(false);
+    public BehaviorSubject<Boolean> connectedToBroker = BehaviorSubject.create(false);
     public static String backendUri = null;
 
     public SCBackendService(final Context context) {
@@ -76,6 +77,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         }
         mqttHandler.initialize(config);
         setupSubscriptions();
+        setupMqttConnectionListener();
     }
 
     @Override
@@ -123,6 +125,15 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         return Observable.just(notification);
                     }
                 });
+    }
+
+    private void setupMqttConnectionListener() {
+        MqttHandler.clientConnected.subscribe(new Action1<Boolean>() {
+            @Override
+            public void call(Boolean clientConnected) {
+                connectedToBroker.onNext(clientConnected);
+            }
+        });
     }
 
     public Observable<SCNotification> getNotifications() {
@@ -330,6 +341,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     public String getJwt() {
         String jwt = SCAuthService.getAccessToken();
         return (jwt != null) ? SCAuthService.getAccessToken() : "";
+    }
+
+    public void reconnect() {
+        //re subscribe to mqtt topics
+        setupSubscriptions();
+        listenForUpdates();
     }
 
     private Timestamp getTimestamp() {

@@ -61,6 +61,9 @@ android {
 
 repositories {
     mavenCentral()
+    maven {
+        url "https://repo.eclipse.org/content/repositories/paho-releases/"
+    }
 }
 
 dependencies {
@@ -74,8 +77,8 @@ dependencies {
     compile 'com.squareup.okhttp3:okhttp:3.3.1'
     compile 'com.facebook.react:react-native:0.34.0'
     compile 'com.google.protobuf:protobuf-java:3.0.0'
-    compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.0.2'
-    compile ('org.eclipse.paho:org.eclipse.paho.android.service:1.0.2') {
+    compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.0'
+    compile ('org.eclipse.paho:org.eclipse.paho.android.service:1.1.0') {
         exclude module: 'support-v4'
     }
     compile 'com.github.rtoshiro.securesharedpreferences:securesharedpreferences:1.2.0'

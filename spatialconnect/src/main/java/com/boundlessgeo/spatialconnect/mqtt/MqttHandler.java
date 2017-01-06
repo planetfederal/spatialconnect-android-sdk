@@ -24,10 +24,11 @@ import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -51,7 +52,7 @@ import rx.subjects.PublishSubject;
  *
  * http://www.hivemq.com/blog/mqtt-client-library-enyclopedia-paho-android-service
  */
-public class MqttHandler implements MqttCallback {
+public class MqttHandler implements MqttCallbackExtended {
 
     private final static String LOG_TAG = MqttHandler.class.getSimpleName();
 
@@ -60,7 +61,7 @@ public class MqttHandler implements MqttCallback {
     private Context context;
     public PublishSubject<Map<String, SCMessageOuterClass.SCMessage>> scMessageSubject = PublishSubject.create();
     public final static String REPLY_TO_TOPIC = String.format("/device/%s-replyTo", SpatialConnect.getInstance().getDeviceIdentifier());
-    public static BehaviorSubject<Integer> clientConnected = BehaviorSubject.create(0);
+    public static BehaviorSubject<Boolean> clientConnected = BehaviorSubject.create(false);
     private boolean isSecure;
 
     private MqttHandler(Context context) {
@@ -119,7 +120,8 @@ public class MqttHandler implements MqttCallback {
                     try {
                         // set the clean session to remove any previous connection the broker may have for this client
                         MqttConnectOptions options = new MqttConnectOptions();
-                        options.setCleanSession(true);
+                        options.setCleanSession(false);
+                        options.setAutomaticReconnect(true);
                         options.setUserName(accessToken);
                         options.setPassword("anypass".toCharArray());
                         if (isSecure) {
@@ -127,7 +129,7 @@ public class MqttHandler implements MqttCallback {
                                     new SCSocketFactory(context.getResources().openRawResource(R.raw.ca))
                             );
                         }
-                        client.connect(options, context, new ConnectActionListener());
+                        client.connect(options, null, new ConnectActionListener());
                     }
                     catch (MqttException e) {
                         Log.e(LOG_TAG, "could not connect to mqtt broker.", e.getCause());
@@ -154,10 +156,10 @@ public class MqttHandler implements MqttCallback {
      * @param qos   quality of service (0, 1, 2)
      */
     public void subscribe(final String topic, final int qos) {
-        clientConnected.subscribe(new Action1<Integer>() {
+        clientConnected.subscribe(new Action1<Boolean>() {
             @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
+            public void call(Boolean connected) {
+                if (connected) {
                     try {
                         Log.d(LOG_TAG, "subscribing to topic " + topic + " with qos " + qos);
                         client.subscribe(topic, qos);
@@ -178,10 +180,10 @@ public class MqttHandler implements MqttCallback {
      * @param qos     quality of service (0, 1, 2)
      */
     public void publish(final String topic, final SCMessageOuterClass.SCMessage message, final int qos) {
-        clientConnected.subscribe(new Action1<Integer>() {
+        clientConnected.subscribe(new Action1<Boolean>() {
             @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
+            public void call(Boolean connected) {
+                if (connected) {
                     Log.d(LOG_TAG, "publishing to topic " + topic + " with qos " + qos);
                     // create a new MqttMessage from the message string
                     MqttMessage mqttMsg = new MqttMessage(message.toByteArray());
@@ -200,7 +202,7 @@ public class MqttHandler implements MqttCallback {
     @Override
     public void connectionLost(Throwable cause) {
         Log.d(LOG_TAG, "Lost connection to mqtt broker.", cause);
-        clientConnected.onNext(0);
+        clientConnected.onNext(false);
     }
 
     @Override
@@ -218,6 +220,15 @@ public class MqttHandler implements MqttCallback {
         // todo: update or remove the audit table rows when changes have been successfully delivered to backend
     }
 
+    @Override
+    public void connectComplete(boolean reconnect, String serverURI) {
+        if (reconnect) {
+            clientConnected.onNext(true);
+            //clean session, re-subscribe
+            SpatialConnect.getInstance().getBackendService().reconnect();
+        }
+    }
+
     /**
      * An implementation of an IMqttActionListener for connecting/authenticating to the broker.
      */
@@ -225,13 +236,20 @@ public class MqttHandler implements MqttCallback {
         @Override
         public void onSuccess(IMqttToken asyncActionToken) {
             Log.d(LOG_TAG, "Connection Success!");
-            clientConnected.onNext(1);
+            DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
+            disconnectedBufferOptions.setBufferEnabled(true);
+            disconnectedBufferOptions.setBufferSize(100);
+            disconnectedBufferOptions.setPersistBuffer(false);
+            disconnectedBufferOptions.setDeleteOldestMessages(true);
+            client.setBufferOpts(disconnectedBufferOptions);
+            clientConnected.onNext(true);
             scMessageSubject.publish();
         }
 
         @Override
         public void onFailure(IMqttToken asyncActionToken, Throwable ex) {
             Log.d(LOG_TAG, "Connection Failure!", ex);
+            clientConnected.onNext(false);
         }
     }
 }
