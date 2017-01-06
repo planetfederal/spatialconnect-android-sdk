@@ -240,7 +240,7 @@ public class MqttHandler implements MqttCallbackExtended {
             disconnectedBufferOptions.setBufferEnabled(true);
             disconnectedBufferOptions.setBufferSize(100);
             disconnectedBufferOptions.setPersistBuffer(false);
-            disconnectedBufferOptions.setDeleteOldestMessages(false);
+            disconnectedBufferOptions.setDeleteOldestMessages(true);
             client.setBufferOpts(disconnectedBufferOptions);
             clientConnected.onNext(true);
             scMessageSubject.publish();
