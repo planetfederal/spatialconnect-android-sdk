@@ -343,6 +343,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         return (jwt != null) ? SCAuthService.getAccessToken() : "";
     }
 
+    public void reconnect() {
+        //re subscribe to mqtt topics
+        setupSubscriptions();
+        listenForUpdates();
+    }
+
     private Timestamp getTimestamp() {
         long millis = System.currentTimeMillis();
         return Timestamp.newBuilder()

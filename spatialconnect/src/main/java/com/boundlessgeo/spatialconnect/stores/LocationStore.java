@@ -29,7 +29,10 @@ import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
+import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
+import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
+import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -41,6 +44,7 @@ import java.util.Map;
 import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Action1;
+import rx.functions.Func1;
 
 public class LocationStore extends GeoPackageStore implements  SCSpatialStore, SCDataStoreLifeCycle {
 
@@ -132,19 +136,34 @@ public class LocationStore extends GeoPackageStore implements  SCSpatialStore, S
     }
 
     private void publishLocation(final SCPoint point) {
-        SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
+        final SpatialConnect sc = SpatialConnect.getInstance();
+        SCSensorService sensorService = sc.getSensorService();
         sensorService.isConnected.subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {
-                    Log.d(LOG_TAG, "posting new location to tracking topic " + point.toJson());
-                    SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
-                            .setAction(SCCommand.NO_ACTION.value())
-                            .setPayload(point.toJson())
-                            .build();
-                    SpatialConnect.getInstance()
-                            .getBackendService()
-                            .publish("/store/tracking", message, QoS.AT_MOST_ONCE);
+                    //make sure backendService is running
+                    sc.serviceStarted(SCBackendService.serviceId())
+                            .filter(new Func1<SCServiceStatusEvent, Boolean>() {
+                                @Override
+                                public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
+                                    return scServiceStatusEvent.getStatus()
+                                            .equals(SCServiceStatus.SC_SERVICE_RUNNING);
+                                }
+                            })
+                            .subscribe(new Action1<SCServiceStatusEvent>() {
+                                @Override
+                                public void call(SCServiceStatusEvent scServiceStatusEvent) {
+                                    Log.d(LOG_TAG, "posting new location to tracking topic " + point.toJson());
+                                    SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
+                                            .setAction(SCCommand.NO_ACTION.value())
+                                            .setPayload(point.toJson())
+                                            .build();
+                                    SpatialConnect.getInstance()
+                                            .getBackendService()
+                                            .publish("/store/tracking", message, QoS.AT_MOST_ONCE);
+                                }
+                            });
                 }
             }
         });

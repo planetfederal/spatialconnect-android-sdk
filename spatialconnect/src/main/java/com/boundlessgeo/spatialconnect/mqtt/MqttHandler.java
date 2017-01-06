@@ -24,10 +24,11 @@ import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
 import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
-import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -51,7 +52,7 @@ import rx.subjects.PublishSubject;
  *
  * http://www.hivemq.com/blog/mqtt-client-library-enyclopedia-paho-android-service
  */
-public class MqttHandler implements MqttCallback {
+public class MqttHandler implements MqttCallbackExtended {
 
     private final static String LOG_TAG = MqttHandler.class.getSimpleName();
 
@@ -119,7 +120,8 @@ public class MqttHandler implements MqttCallback {
                     try {
                         // set the clean session to remove any previous connection the broker may have for this client
                         MqttConnectOptions options = new MqttConnectOptions();
-                        options.setCleanSession(true);
+                        options.setCleanSession(false);
+                        options.setAutomaticReconnect(true);
                         options.setUserName(accessToken);
                         options.setPassword("anypass".toCharArray());
                         if (isSecure) {
@@ -127,7 +129,7 @@ public class MqttHandler implements MqttCallback {
                                     new SCSocketFactory(context.getResources().openRawResource(R.raw.ca))
                             );
                         }
-                        client.connect(options, context, new ConnectActionListener());
+                        client.connect(options, null, new ConnectActionListener());
                     }
                     catch (MqttException e) {
                         Log.e(LOG_TAG, "could not connect to mqtt broker.", e.getCause());
@@ -218,6 +220,15 @@ public class MqttHandler implements MqttCallback {
         // todo: update or remove the audit table rows when changes have been successfully delivered to backend
     }
 
+    @Override
+    public void connectComplete(boolean reconnect, String serverURI) {
+        if (reconnect) {
+            clientConnected.onNext(true);
+            //clean session, re-subscribe
+            SpatialConnect.getInstance().getBackendService().reconnect();
+        }
+    }
+
     /**
      * An implementation of an IMqttActionListener for connecting/authenticating to the broker.
      */
@@ -225,6 +236,12 @@ public class MqttHandler implements MqttCallback {
         @Override
         public void onSuccess(IMqttToken asyncActionToken) {
             Log.d(LOG_TAG, "Connection Success!");
+            DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
+            disconnectedBufferOptions.setBufferEnabled(true);
+            disconnectedBufferOptions.setBufferSize(100);
+            disconnectedBufferOptions.setPersistBuffer(false);
+            disconnectedBufferOptions.setDeleteOldestMessages(false);
+            client.setBufferOpts(disconnectedBufferOptions);
             clientConnected.onNext(true);
             scMessageSubject.publish();
         }

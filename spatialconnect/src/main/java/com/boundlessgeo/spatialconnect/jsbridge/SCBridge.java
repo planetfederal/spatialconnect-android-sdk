@@ -265,7 +265,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
      * .html#sending-events-to-javascript"> https://facebook.github.io/react-native/docs/native-modules-android
      * .html#sending-events-to-javascript</a>
      */
-    public void sendEvent(Integer eventType, @Nullable Integer payloadInteger) {
+    public void sendEvent(Integer eventType, String responseId, @Nullable Integer payloadInteger) {
         Log.v(LOG_TAG, String.format("Sending {\"type\": %s, \"payload\": %d} to Javascript",
                         eventType.toString(),
                         payloadInteger)
@@ -275,9 +275,21 @@ public class SCBridge extends ReactContextBaseJavaModule {
         newAction.putInt("payload", payloadInteger);
         this.reactContext
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-                .emit(eventType.toString(), newAction);
+                .emit(responseId, newAction);
     }
 
+    public void sendEvent(Integer eventType, @Nullable Integer payloadInteger) {
+        Log.v(LOG_TAG, String.format("Sending {\"type\": %s, \"payload\": %d} to Javascript",
+                eventType.toString(),
+                payloadInteger)
+        );
+        WritableMap newAction = Arguments.createMap();
+        newAction.putInt("type", eventType);
+        newAction.putInt("payload", payloadInteger);
+        this.reactContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                .emit(eventType.toString(), newAction);
+    }
 
     /**
      * Handles a message sent from Javascript.  Expects the message envelope to look like:
@@ -781,12 +793,12 @@ public class SCBridge extends ReactContextBaseJavaModule {
                     @Override
                     public void onNext(Boolean connected) {
                         int mqttConnected = (connected) ? 1 : 0;
-                        sendEvent(message.getInt("type"), mqttConnected);
+                        sendEvent(message.getInt("type"), message.getString("responseId"), mqttConnected);
 
                     }
                 });
         } else {
-            sendEvent(message.getInt("type"), 0);
+            sendEvent(message.getInt("type"),message.getString("responseId"), 0);
         }
     }
 
