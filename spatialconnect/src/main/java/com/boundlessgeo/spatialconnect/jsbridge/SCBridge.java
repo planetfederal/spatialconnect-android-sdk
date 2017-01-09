@@ -792,13 +792,15 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
                     @Override
                     public void onNext(Boolean connected) {
-                        int mqttConnected = (connected) ? 1 : 0;
-                        sendEvent(message.getInt("type"), message.getString("responseId"), mqttConnected);
-
+                        WritableMap eventPayload = Arguments.createMap();
+                        eventPayload.putBoolean("connected", connected);
+                        sendEvent(message.getInt("type"), message.getString("responseId"), eventPayload);
                     }
                 });
         } else {
-            sendEvent(message.getInt("type"),message.getString("responseId"), 0);
+            WritableMap eventPayload = Arguments.createMap();
+            eventPayload.putBoolean("connected", false);
+            sendEvent(message.getInt("type"), message.getString("responseId"), eventPayload);
         }
     }
 
