@@ -68,8 +68,8 @@ repositories {
 
 dependencies {
     compile 'com.android.support:appcompat-v7:24.2.1'
-    compile 'com.google.android.gms:play-services-maps:9.6.1'
-    compile 'com.android.support:multidex:1.0.0'
+    compile 'com.google.android.gms:play-services-maps:10.0.1'
+    compile 'com.android.support:multidex:1.0.1'
     compile "com.bedatadriven:jackson-datatype-jts:2.2"
     compile 'io.reactivex:rxandroid:1.1.0'
     compile 'io.reactivex:rxjava:1.1.0'
@@ -88,10 +88,14 @@ dependencies {
         exclude group: 'io.jeo', module: 'proj4j'
     }
     compile 'com.auth0:java-jwt:2.2.1'
+    compile 'com.google.firebase:firebase-messaging:10.0.1'
 
     // testing dependencies
     androidTestCompile 'junit:junit:4.12'
     androidTestCompile 'com.android.support.test:runner:0.5'
     androidTestCompile 'com.android.support.test:rules:0.5'
 }
+
+// Add to the bottom of the file
+apply plugin: 'com.google.gms.google-services'
 
