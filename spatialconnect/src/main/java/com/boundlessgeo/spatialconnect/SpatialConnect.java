@@ -63,7 +63,6 @@ public class SpatialConnect {
     private SpatialConnect() {
         this.serviceEventSubject = PublishSubject.create();
         this.serviceEvents = serviceEventSubject.publish();
-
         this.services = new HashMap<>();
     }
 
@@ -147,7 +146,6 @@ public class SpatialConnect {
         Log.d(LOG_TAG, "Starting all services.");
         HashMap<String, SCService> ss  = new HashMap<>(services);
         for (String key : ss.keySet()) {
-//            this.services.get(key).start();//
             startService(key);
         }
     }
@@ -168,10 +166,8 @@ public class SpatialConnect {
     public Observable<SCServiceStatusEvent> serviceStarted(final String serviceId) {
         SCService service = getServiceById(serviceId);
         if (service != null && service.getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
-            Log.e(LOG_TAG,"service NOT null for " + serviceId);
             return Observable.just(new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_RUNNING));
         } else {
-            Log.e(LOG_TAG,"service null for " + serviceId);
             return serviceEvents.autoConnect()
                     .filter(new Func1<SCServiceStatusEvent, Boolean>() {
                         @Override

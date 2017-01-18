@@ -51,7 +51,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private static final String SERVICE_NAME = "SC_BACKEND_SERVICE";
     private static Context context;
     private static MqttHandler mqttHandler;
-//    private Observable<SCNotification> notifications;
     public static BehaviorSubject<Boolean> configReceived = BehaviorSubject.create(false);
     public BehaviorSubject<Boolean> connectedToBroker = BehaviorSubject.create(false);
     public BehaviorSubject<SCNotification> notifications = BehaviorSubject.create();
@@ -124,9 +123,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                  }
              }
          });
-
-
-//        return Observable.empty();
     }
 
     private void setupSubscriptions() {
