@@ -326,15 +326,28 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     /**
      * Calling start on the {@link SCDataService} will start all registered {@link SCDataStore}s.
      */
-    public Observable<Void> start() {
-        Log.d(LOG_TAG, "Starting SCDataService. Starting all registered data stores.");
+    public Observable<SCServiceStatus> start() {
         super.start();
-        for (SCDataStore store : getAllStores()) {
-            startStore(store);
-        }
-        setupSubscriptions();
-        this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
-        return Observable.empty();
+        return Observable.create(new Observable.OnSubscribe<SCServiceStatus>() {
+            @Override
+            public void call(final Subscriber<? super SCServiceStatus> subscriber) {
+
+                try {
+                    subscriber.onNext(getStatus());
+
+                    Log.d(LOG_TAG, "Starting SCDataService. Starting all registered data stores.");
+                    for (SCDataStore store : getAllStores()) {
+                        startStore(store);
+                    }
+                    setupSubscriptions();
+                    setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
+
+                    subscriber.onNext(getStatus());
+                } catch (Exception e) {
+                    subscriber.onError(e);
+                }
+            }
+        });
     }
 
     @Override

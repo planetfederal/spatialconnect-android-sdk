@@ -30,6 +30,7 @@ import okhttp3.Interceptor;
 import okhttp3.Request;
 import okhttp3.Response;
 import rx.Observable;
+import rx.Subscriber;
 import rx.functions.Action1;
 import rx.subjects.BehaviorSubject;
 
@@ -155,23 +156,34 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
         return settings.getString("username", null);
     }
 
-    public Observable<Void> start() {
+    public Observable<SCServiceStatus> start() {
         super.start();
-        SpatialConnect sc = SpatialConnect.getInstance();
-        sc.serviceStarted(SCBackendService.serviceId()).subscribe(new Action1<SCServiceStatusEvent>() {
-            @Override
-            public void call(SCServiceStatusEvent scServiceStatusEvent) {
-                String username = getUsername();
-                String pwd = getPassword();
-                if (username != null && pwd != null) {
-                    auth(username, pwd);
-                } else {
-                    loginStatus.onNext(false);
-                }
 
+        return Observable.create(new Observable.OnSubscribe<SCServiceStatus>() {
+            @Override
+            public void call(final Subscriber<? super SCServiceStatus> subscriber) {
+                subscriber.onNext(getStatus());
+                SpatialConnect sc = SpatialConnect.getInstance();
+                sc.serviceStarted(SCBackendService.serviceId()).subscribe(new Action1<SCServiceStatusEvent>() {
+                    @Override
+                    public void call(SCServiceStatusEvent scServiceStatusEvent) {
+                        try {
+                            setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
+                            String username = getUsername();
+                            String pwd = getPassword();
+                            if (username != null && pwd != null) {
+                                auth(username, pwd);
+                            } else {
+                                loginStatus.onNext(false);
+                            }
+                            subscriber.onNext(getStatus());
+                        } catch (Exception e) {
+                            subscriber.onError(e);
+                        }
+                    }
+                });
             }
         });
-        return Observable.empty();
     }
 
     @Override

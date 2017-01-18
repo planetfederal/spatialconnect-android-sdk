@@ -23,7 +23,7 @@ public class SCService implements SCServiceLifecycle{
         this.status = SCServiceStatus.SC_SERVICE_STOPPED;
     }
 
-    public Observable<Void> start() {
+    public Observable<SCServiceStatus> start() {
         this.status = SCServiceStatus.SC_SERVICE_STARTED;
         return Observable.empty();
     }

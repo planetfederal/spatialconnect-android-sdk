@@ -33,7 +33,6 @@ import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
-import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
@@ -75,7 +74,6 @@ import java.util.List;
 
 import rx.Subscriber;
 import rx.functions.Action1;
-import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 /**
@@ -373,18 +371,11 @@ public class SCBridge extends ReactContextBaseJavaModule {
                 if (connected) {
                     final SpatialConnect sc = SpatialConnect.getInstance();
                     sc.serviceStarted(SCBackendService.serviceId())
-                        .filter(new Func1<SCServiceStatusEvent, Boolean>() {
-                            @Override
-                            public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
-                                return scServiceStatusEvent.getStatus()
-                                        .equals(SCServiceStatus.SC_SERVICE_RUNNING);
-                            }
-                        })
                         .subscribe(new Action1<SCServiceStatusEvent>() {
                             @Override
                             public void call(SCServiceStatusEvent scServiceStatusEvent) {
                                 sc.getBackendService()
-                                    .getNotifications()
+                                    .notifications
                                     .subscribe(new Action1<SCNotification>() {
                                         @Override
                                         public void call(SCNotification scNotification) {

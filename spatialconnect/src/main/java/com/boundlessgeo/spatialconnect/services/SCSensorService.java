@@ -25,6 +25,7 @@ import com.github.pwittchen.reactivenetwork.library.Connectivity;
 import com.github.pwittchen.reactivenetwork.library.ReactiveNetwork;
 
 import rx.Observable;
+import rx.Subscriber;
 import rx.functions.Action1;
 import rx.subjects.BehaviorSubject;
 
@@ -52,19 +53,30 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
      * Calls the SCService#start() method to set the status to SC_SERVICE_RUNNING
      */
     @Override
-    public Observable<Void> start() {
+    public Observable<SCServiceStatus> start() {
         super.start();
-        running.onNext(1);
-        ReactiveNetwork.observeNetworkConnectivity(context)
-                .subscribe(new Action1<Connectivity>() {
-                    @Override
-                    public void call(Connectivity connectivity) {
-                        Log.d(LOG_TAG, "Connectivity is " + connectivity.getState().name());
-                        isConnected.onNext(connectivity.getState().equals(NetworkInfo.State.CONNECTED));
-                    }
-                });
 
-        return Observable.empty();
+        return Observable.create(new Observable.OnSubscribe<SCServiceStatus>() {
+            @Override
+            public void call(final Subscriber<? super SCServiceStatus> subscriber) {
+                subscriber.onNext(getStatus());
+                try {
+                    running.onNext(1);
+                    setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
+                    ReactiveNetwork.observeNetworkConnectivity(context)
+                            .subscribe(new Action1<Connectivity>() {
+                                @Override
+                                public void call(Connectivity connectivity) {
+                                    Log.d(LOG_TAG, "Connectivity is " + connectivity.getState().name());
+                                    isConnected.onNext(connectivity.getState().equals(NetworkInfo.State.CONNECTED));
+                                }
+                            });
+                    subscriber.onNext(getStatus());
+                } catch (Exception e) {
+                    subscriber.onError(e);
+                }
+            }
+        });
     }
 
     @Override

@@ -35,12 +35,10 @@ import java.util.Map;
 import java.util.UUID;
 
 import rx.Observable;
-import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
-
 import rx.observables.ConnectableObservable;
-import rx.subjects.BehaviorSubject;
+import rx.subjects.PublishSubject;
 
 /**
  * When instantiated, SpatialConnect adds the default services and registers all stores
@@ -59,10 +57,15 @@ public class SpatialConnect {
     private SCCache cache;
 
     private Context context;
-    public BehaviorSubject<SCServiceStatusEvent> serviceEventSubject;
+    private PublishSubject<SCServiceStatusEvent> serviceEventSubject;
     public ConnectableObservable<SCServiceStatusEvent> serviceEvents;
 
-    private SpatialConnect() {}
+    private SpatialConnect() {
+        this.serviceEventSubject = PublishSubject.create();
+        this.serviceEvents = serviceEventSubject.publish();
+
+        this.services = new HashMap<>();
+    }
 
     private static class SingletonHelper {
         private static final SpatialConnect INSTANCE = new SpatialConnect();
@@ -82,10 +85,7 @@ public class SpatialConnect {
     public void initialize(Context context) {
         Log.d(LOG_TAG, "Initializing SpatialConnect");
 
-        this.serviceEventSubject = BehaviorSubject.create();
-        this.serviceEvents = serviceEventSubject.publish();
 
-        this.services = new HashMap<>();
         this.sensorService = new SCSensorService(context);
         this.dataService = new SCDataService(context);
         this.configService = new SCConfigService(context);
@@ -114,26 +114,24 @@ public class SpatialConnect {
     }
 
     public void startService(final String id) {
-        this.services.get(id).start().subscribe(new Action1<Void>() {
-            @Override
-            public void call(Void aVoid) {}
+        this.services.get(id).start().subscribe(new Action1<SCServiceStatus>() {
+                @Override
+                public void call(SCServiceStatus scServiceStatus) {
+                    serviceEventSubject.onNext(
+                            new SCServiceStatusEvent(scServiceStatus, id));
+                }
             },
                 new Action1<Throwable>() {
                 @Override
                 public void call(Throwable t) {
-                    Log.d(LOG_TAG, t.getLocalizedMessage());
+                    String errorMsg = (t != null) ? t.getMessage() : "no message available";
+                    Log.e(LOG_TAG, String.format("Error starting service %s: %s", id, errorMsg));
                     // onError can happen if we cannot start the service b/c of some error or runtime exception
                     serviceEventSubject.onNext(
                             new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_ERROR, id)
                     );
                 }
-            }, new Action0() {
-                @Override
-                public void call() {
-                    serviceEventSubject.onNext(
-                            new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_STARTED, id));
-                }
-        });
+            });
     }
 
     public void stopService(String id) {
@@ -149,7 +147,8 @@ public class SpatialConnect {
         Log.d(LOG_TAG, "Starting all services.");
         HashMap<String, SCService> ss  = new HashMap<>(services);
         for (String key : ss.keySet()) {
-            this.services.get(key).start();
+//            this.services.get(key).start();//
+            startService(key);
         }
     }
 
@@ -169,17 +168,18 @@ public class SpatialConnect {
     public Observable<SCServiceStatusEvent> serviceStarted(final String serviceId) {
         SCService service = getServiceById(serviceId);
         if (service != null && service.getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
-            return Observable.just(new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_STARTED));
+            Log.e(LOG_TAG,"service NOT null for " + serviceId);
+            return Observable.just(new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_RUNNING));
         } else {
+            Log.e(LOG_TAG,"service null for " + serviceId);
             return serviceEvents.autoConnect()
                     .filter(new Func1<SCServiceStatusEvent, Boolean>() {
                         @Override
                         public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
                             return scServiceStatusEvent.getServiceId().equals(serviceId) &&
-                                    scServiceStatusEvent.getStatus().equals(SCServiceStatus.SC_SERVICE_STARTED);
+                                    scServiceStatusEvent.getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING);
                         }
-                    })
-                    .take(1);
+                    });
         }
     }
 

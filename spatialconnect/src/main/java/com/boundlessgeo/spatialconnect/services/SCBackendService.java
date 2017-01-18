@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import rx.Observable;
+import rx.Subscriber;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.subjects.BehaviorSubject;
@@ -50,9 +51,10 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private static final String SERVICE_NAME = "SC_BACKEND_SERVICE";
     private static Context context;
     private static MqttHandler mqttHandler;
-    private Observable<SCNotification> notifications;
+//    private Observable<SCNotification> notifications;
     public static BehaviorSubject<Boolean> configReceived = BehaviorSubject.create(false);
     public BehaviorSubject<Boolean> connectedToBroker = BehaviorSubject.create(false);
+    public BehaviorSubject<SCNotification> notifications = BehaviorSubject.create();
     public static String backendUri = null;
 
     public SCBackendService(final Context context) {
@@ -81,48 +83,59 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    public Observable<Void> start() {
+    public Observable<SCServiceStatus> start() {
+        super.start();
         mqttHandler.connect();
-        Log.d(LOG_TAG, "Subscribing to network connectivity updates.");
-        SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
-        sensorService.isConnected.subscribe(new Action1<Boolean>() {
-                @Override
-                public void call(Boolean connected) {
-                    if (connected) {
-                        Log.d(LOG_TAG, "waiting on auth to get remote from server");
-                        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
-                            @Override
-                            public void call(Boolean authenticated) {
-                                if (authenticated) {
-                                    registerAndFetchConfig();
-                                } else {
-                                    SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
-                                    configReceived.onNext(true);
-                                }
+        return Observable.create(new Observable.OnSubscribe<SCServiceStatus>() {
+             @Override
+             public void call(final Subscriber<? super SCServiceStatus> subscriber) {
+
+                 try {
+                     subscriber.onNext(getStatus());
+                     SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
+                     sensorService.isConnected.subscribe(new Action1<Boolean>() {
+                         @Override
+                         public void call(Boolean connected) {
+                             if (connected) {
+                                 Log.d(LOG_TAG, "waiting on auth to get remote from server");
+                                 SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
+                                     @Override
+                                     public void call(Boolean authenticated) {
+                                         if (authenticated) {
+                                             registerAndFetchConfig();
+                                         } else {
+                                             SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+                                             configReceived.onNext(true);
+                                         }
+                                     }
+                                 });
+                             } else {
+                                 //load config from cache
+                                 Log.d(LOG_TAG, "No internet get cached remote config");
+                                 SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+                                 configReceived.onNext(true);
+
+                             }
+                             subscriber.onNext(SCServiceStatus.SC_SERVICE_RUNNING);
                             }
                         });
-                    } else {
-                        //load config from cache
-                        Log.d(LOG_TAG, "No internet get cached remote config");
-                        SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
-                        configReceived.onNext(true);
-
-                    }
+                 } catch (Exception e) {
+                     subscriber.onError(e);
+                 }
+             }
+         });
 
 
-                }
-            });
-        return Observable.empty();
+//        return Observable.empty();
     }
 
     private void setupSubscriptions() {
-        notifications = listenOnTopic("/notify")
-                .flatMap(new Func1<SCMessageOuterClass.SCMessage, Observable<SCNotification>>() {
+        listenOnTopic("/notify")
+                .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
                     @Override
-                    public Observable<SCNotification> call(SCMessageOuterClass.SCMessage message) {
-                        SCNotification notification = new SCNotification(message);
-                        Log.d(LOG_TAG, "received notification message:" + notification.toJson().toString());
-                        return Observable.just(notification);
+                    public void call(SCMessageOuterClass.SCMessage scMessage) {
+                        SCNotification notification = new SCNotification(scMessage);
+                        notifications.onNext(notification);
                     }
                 });
     }
@@ -134,10 +147,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 connectedToBroker.onNext(clientConnected);
             }
         });
-    }
-
-    public Observable<SCNotification> getNotifications() {
-        return notifications;
     }
 
     private void registerAndFetchConfig() {
@@ -347,6 +356,11 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         //re subscribe to mqtt topics
         setupSubscriptions();
         listenForUpdates();
+    }
+
+    public void addNotification(SCNotification notification) {
+        Log.e(LOG_TAG,"add notification");
+        notifications.onNext(notification);
     }
 
     private Timestamp getTimestamp() {

@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import rx.Observable;
+import rx.Subscriber;
 
 /**
  * The SCConfigService is responsible for managing the configuration for SpatialConnect.  This includes downloading
@@ -254,13 +255,25 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    public Observable<Void> start() {
-        Log.d(LOG_TAG, "Starting SCConfig Service.  Loading all configs");
-        if (getStatus() != SCServiceStatus.SC_SERVICE_RUNNING) {
-            loadConfigs();
-            this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
-        }
-        return Observable.empty();
+    public Observable<SCServiceStatus> start() {
+        super.start();
+
+        return Observable.create(new Observable.OnSubscribe<SCServiceStatus>() {
+            @Override
+            public void call(final Subscriber<? super SCServiceStatus> subscriber) {
+                subscriber.onNext(getStatus());
+                try {
+                    Log.d(LOG_TAG, "Starting SCConfig Service.  Loading all configs");
+                    if (getStatus() != SCServiceStatus.SC_SERVICE_RUNNING) {
+                        loadConfigs();
+                        setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
+                    }
+                    subscriber.onNext(getStatus());
+                } catch (Exception e) {
+                    subscriber.onError(e);
+                }
+            }
+        });
     }
 
     @Override
