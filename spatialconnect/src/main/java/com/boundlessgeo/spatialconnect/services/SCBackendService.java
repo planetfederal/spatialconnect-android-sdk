@@ -19,6 +19,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
+import com.boundlessgeo.spatialconnect.cloudMessaging.CloudMessagingService;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
@@ -30,14 +31,13 @@ import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
+import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.google.protobuf.Timestamp;
 
 import java.io.IOException;
-import java.util.Map;
 
 import rx.Observable;
-import rx.Subscriber;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.subjects.BehaviorSubject;
@@ -49,11 +49,11 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private static final String LOG_TAG = SCBackendService.class.getSimpleName();
     private static final String SERVICE_NAME = "SC_BACKEND_SERVICE";
-    private static Context context;
-    private static MqttHandler mqttHandler;
+    private Context context;
+    private MqttHandler mqttHandler;
+    private Observable<SCNotification> notifications;
     public static BehaviorSubject<Boolean> configReceived = BehaviorSubject.create(false);
     public BehaviorSubject<Boolean> connectedToBroker = BehaviorSubject.create(false);
-    public BehaviorSubject<SCNotification> notifications = BehaviorSubject.create();
     public static String backendUri = null;
 
     public SCBackendService(final Context context) {
@@ -82,58 +82,52 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    public Observable<SCServiceStatus> start() {
+    public Observable<Void> start() {
         super.start();
         mqttHandler.connect();
-        return Observable.create(new Observable.OnSubscribe<SCServiceStatus>() {
-             @Override
-             public void call(final Subscriber<? super SCServiceStatus> subscriber) {
 
-                 try {
-                     subscriber.onNext(getStatus());
-                     SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
-                     sensorService.isConnected.subscribe(new Action1<Boolean>() {
-                         @Override
-                         public void call(Boolean connected) {
-                             if (connected) {
-                                 Log.d(LOG_TAG, "waiting on auth to get remote from server");
-                                 SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
-                                     @Override
-                                     public void call(Boolean authenticated) {
-                                         if (authenticated) {
-                                             registerAndFetchConfig();
-                                         } else {
-                                             SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
-                                             configReceived.onNext(true);
-                                         }
-                                     }
-                                 });
-                             } else {
-                                 //load config from cache
-                                 Log.d(LOG_TAG, "No internet get cached remote config");
-                                 SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
-                                 configReceived.onNext(true);
-
-                             }
-                             subscriber.onNext(SCServiceStatus.SC_SERVICE_RUNNING);
+        Log.d(LOG_TAG, "Subscribing to network connectivity updates.");
+        SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
+        sensorService.isConnected.subscribe(new Action1<Boolean>() {
+                @Override
+                public void call(Boolean connected) {
+                    if (connected) {
+                        Log.d(LOG_TAG, "waiting on auth to get remote from server");
+                        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
+                            @Override
+                            public void call(Boolean authenticated) {
+                                if (authenticated) {
+                                    registerAndFetchConfig();
+                                } else {
+                                    SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+                                    configReceived.onNext(true);
+                                }
                             }
                         });
-                 } catch (Exception e) {
-                     subscriber.onError(e);
-                 }
-             }
-         });
+                    } else {
+                        //load config from cache
+                        Log.d(LOG_TAG, "No internet get cached remote config");
+                        SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
+                        configReceived.onNext(true);
+
+                    }
+
+
+                }
+            });
+        return Observable.empty();
     }
 
     private void setupSubscriptions() {
-        listenOnTopic("/notify")
-                .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
+        notifications = listenOnTopic("/notify")
+                .mergeWith(listenOnTopic(String.format("/notify/%s", SpatialConnect.getInstance().getDeviceIdentifier())))
+                .map(new Func1<SCMessageOuterClass.SCMessage, SCNotification>() {
                     @Override
-                    public void call(SCMessageOuterClass.SCMessage scMessage) {
-                        SCNotification notification = new SCNotification(scMessage);
-                        notifications.onNext(notification);
+                    public SCNotification call(SCMessageOuterClass.SCMessage scMessage) {
+                        return new SCNotification(scMessage);
                     }
-                });
+                })
+                .mergeWith(CloudMessagingService.getMulticast());
     }
 
     private void setupMqttConnectionListener() {
@@ -143,6 +137,10 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 connectedToBroker.onNext(clientConnected);
             }
         });
+    }
+
+    public Observable<SCNotification> getNotifications() {
+        return notifications;
     }
 
     private void registerAndFetchConfig() {
@@ -258,17 +256,17 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     public Observable<SCMessageOuterClass.SCMessage> listenOnTopic(final String topic) {
         mqttHandler.subscribe(topic, QoS.EXACTLY_ONCE.value());
         // filter messages for this topic
-        return mqttHandler.scMessageSubject
-                .filter(new Func1<Map<String, SCMessageOuterClass.SCMessage>, Boolean>() {
+        return mqttHandler.getMulticast()
+                .filter(new Func1<SCTuple, Boolean>() {
                     @Override
-                    public Boolean call(Map<String, SCMessageOuterClass.SCMessage> stringSCMessageMap) {
-                        return stringSCMessageMap.keySet().contains(topic);
+                    public Boolean call(SCTuple tuple) {
+                        return tuple.first().toString().equalsIgnoreCase(topic);
                     }
                 })
-                .flatMap(new Func1<Map<String, SCMessageOuterClass.SCMessage>, Observable<SCMessageOuterClass.SCMessage>>() {
+                .map(new Func1<SCTuple, SCMessageOuterClass.SCMessage>() {
                     @Override
-                    public Observable<SCMessageOuterClass.SCMessage> call(Map<String, SCMessageOuterClass.SCMessage> stringSCMessageMap) {
-                        return Observable.just(stringSCMessageMap.get(topic));
+                    public SCMessageOuterClass.SCMessage call(SCTuple scTuple) {
+                        return (SCMessageOuterClass.SCMessage) scTuple.second();
                     }
                 });
     }
@@ -352,11 +350,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         //re subscribe to mqtt topics
         setupSubscriptions();
         listenForUpdates();
-    }
-
-    public void addNotification(SCNotification notification) {
-        Log.e(LOG_TAG,"add notification");
-        notifications.onNext(notification);
     }
 
     private Timestamp getTimestamp() {

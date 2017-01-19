@@ -21,6 +21,7 @@ import com.boundlessgeo.spatialconnect.R;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
+import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
@@ -38,9 +39,8 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
-import java.util.HashMap;
-import java.util.Map;
 
+import rx.Observable;
 import rx.functions.Action1;
 import rx.subjects.BehaviorSubject;
 import rx.subjects.PublishSubject;
@@ -59,13 +59,16 @@ public class MqttHandler implements MqttCallbackExtended {
     private static MqttHandler instance;
     private MqttAndroidClient client;
     private Context context;
-    public PublishSubject<Map<String, SCMessageOuterClass.SCMessage>> scMessageSubject = PublishSubject.create();
+    private PublishSubject<SCTuple> scMessageSubject;
     public final static String REPLY_TO_TOPIC = String.format("/device/%s-replyTo", SpatialConnect.getInstance().getDeviceIdentifier());
     public static BehaviorSubject<Boolean> clientConnected = BehaviorSubject.create(false);
     private boolean isSecure;
+    private Observable<SCTuple> multicast;
 
     private MqttHandler(Context context) {
         this.context = context;
+        scMessageSubject = PublishSubject.create();
+        multicast = scMessageSubject.share();
     }
 
     public static MqttHandler getInstance(Context context) {
@@ -110,6 +113,7 @@ public class MqttHandler implements MqttCallbackExtended {
      * Connect client to the MQTT broker with authToken as the username.
      */
     public void connect() {
+
         Log.d(LOG_TAG, "connecting to mqtt broker at " + client.getServerURI());
         // only try to connect to mqtt broker after the user has successfully authenticated
         SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
@@ -210,9 +214,8 @@ public class MqttHandler implements MqttCallbackExtended {
         Log.d(LOG_TAG, "received message on topic " + topic);
         SCMessageOuterClass.SCMessage scMessage = SCMessageOuterClass.SCMessage.parseFrom(message.getPayload());
         Log.d(LOG_TAG, "message payload: " + scMessage.getPayload());
-        HashMap<String, SCMessageOuterClass.SCMessage> map = new HashMap<>(1);
-        map.put(topic, scMessage);
-        scMessageSubject.onNext(map);
+        SCTuple scTuple = new SCTuple(topic, scMessage);
+        scMessageSubject.onNext(scTuple);
     }
 
     @Override
@@ -227,6 +230,10 @@ public class MqttHandler implements MqttCallbackExtended {
             //clean session, re-subscribe
             SpatialConnect.getInstance().getBackendService().reconnect();
         }
+    }
+
+    public Observable<SCTuple> getMulticast() {
+        return multicast;
     }
 
     /**

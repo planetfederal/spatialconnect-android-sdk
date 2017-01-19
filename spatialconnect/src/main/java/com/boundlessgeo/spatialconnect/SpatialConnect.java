@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Boundless, http://boundlessgeo.com
+ * Copyright 2015-2017 Boundless, http://boundlessgeo.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import rx.Observable;
+import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.observables.ConnectableObservable;
@@ -57,12 +58,13 @@ public class SpatialConnect {
     private SCCache cache;
 
     private Context context;
-    private PublishSubject<SCServiceStatusEvent> serviceEventSubject;
+    public PublishSubject<SCServiceStatusEvent> serviceEventSubject;
     public ConnectableObservable<SCServiceStatusEvent> serviceEvents;
 
     private SpatialConnect() {
         this.serviceEventSubject = PublishSubject.create();
         this.serviceEvents = serviceEventSubject.publish();
+
         this.services = new HashMap<>();
     }
 
@@ -113,24 +115,26 @@ public class SpatialConnect {
     }
 
     public void startService(final String id) {
-        this.services.get(id).start().subscribe(new Action1<SCServiceStatus>() {
-                @Override
-                public void call(SCServiceStatus scServiceStatus) {
-                    serviceEventSubject.onNext(
-                            new SCServiceStatusEvent(scServiceStatus, id));
-                }
+        this.services.get(id).start().subscribe(new Action1<Void>() {
+            @Override
+            public void call(Void aVoid) {}
             },
                 new Action1<Throwable>() {
                 @Override
                 public void call(Throwable t) {
-                    String errorMsg = (t != null) ? t.getMessage() : "no message available";
-                    Log.e(LOG_TAG, String.format("Error starting service %s: %s", id, errorMsg));
+                    Log.d(LOG_TAG, t.getLocalizedMessage());
                     // onError can happen if we cannot start the service b/c of some error or runtime exception
                     serviceEventSubject.onNext(
                             new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_ERROR, id)
                     );
                 }
-            });
+            }, new Action0() {
+                @Override
+                public void call() {
+                    serviceEventSubject.onNext(
+                            new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_RUNNING, id));
+                }
+        });
     }
 
     public void stopService(String id) {
@@ -146,7 +150,7 @@ public class SpatialConnect {
         Log.d(LOG_TAG, "Starting all services.");
         HashMap<String, SCService> ss  = new HashMap<>(services);
         for (String key : ss.keySet()) {
-            startService(key);
+            this.services.get(key).start();
         }
     }
 

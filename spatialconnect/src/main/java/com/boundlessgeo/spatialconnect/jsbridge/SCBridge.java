@@ -1,5 +1,5 @@
 /**
- * Copyright 2016 Boundless, http://boundlessgeo.com
+ * Copyright 2015-2017 Boundless, http://boundlessgeo.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -375,7 +375,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
                             @Override
                             public void call(SCServiceStatusEvent scServiceStatusEvent) {
                                 sc.getBackendService()
-                                    .notifications
+                                    .getNotifications()
                                     .subscribe(new Action1<SCNotification>() {
                                         @Override
                                         public void call(SCNotification scNotification) {

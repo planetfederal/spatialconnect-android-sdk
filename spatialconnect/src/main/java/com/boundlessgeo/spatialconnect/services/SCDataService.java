@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Boundless, http://boundlessgeo.com
+ * Copyright 2015-2017 Boundless, http://boundlessgeo.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -326,28 +326,15 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     /**
      * Calling start on the {@link SCDataService} will start all registered {@link SCDataStore}s.
      */
-    public Observable<SCServiceStatus> start() {
+    public Observable<Void> start() {
+        Log.d(LOG_TAG, "Starting SCDataService. Starting all registered data stores.");
         super.start();
-        return Observable.create(new Observable.OnSubscribe<SCServiceStatus>() {
-            @Override
-            public void call(final Subscriber<? super SCServiceStatus> subscriber) {
-
-                try {
-                    subscriber.onNext(getStatus());
-
-                    Log.d(LOG_TAG, "Starting SCDataService. Starting all registered data stores.");
-                    for (SCDataStore store : getAllStores()) {
-                        startStore(store);
-                    }
-                    setupSubscriptions();
-                    setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
-
-                    subscriber.onNext(getStatus());
-                } catch (Exception e) {
-                    subscriber.onError(e);
-                }
-            }
-        });
+        for (SCDataStore store : getAllStores()) {
+            startStore(store);
+        }
+        setupSubscriptions();
+        this.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
+        return Observable.empty();
     }
 
     @Override

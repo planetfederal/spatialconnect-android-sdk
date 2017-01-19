@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Boundless, http://boundlessgeo.com
+ * Copyright 2015-2017 Boundless, http://boundlessgeo.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ public class SCService implements SCServiceLifecycle{
         this.status = SCServiceStatus.SC_SERVICE_STOPPED;
     }
 
-    public Observable<SCServiceStatus> start() {
+    public Observable<Void> start() {
         this.status = SCServiceStatus.SC_SERVICE_STARTED;
         return Observable.empty();
     }
