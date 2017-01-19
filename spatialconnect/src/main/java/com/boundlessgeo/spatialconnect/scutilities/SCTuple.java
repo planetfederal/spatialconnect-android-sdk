@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Boundless, http://boundlessgeo.com
+ * Copyright 2015-2017 Boundless, http://boundlessgeo.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,10 @@ public class SCTuple<T, U, V> {
         this.first = first;
         this.second = second;
         this.third = third;
+    }
+
+    public SCTuple(T first, U second) {
+        this(first, second, null);
     }
 
     public T first() { return first; }

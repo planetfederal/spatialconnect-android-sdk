@@ -158,7 +158,7 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
     public Observable<Void> start() {
         super.start();
         SpatialConnect sc = SpatialConnect.getInstance();
-        sc.serviceStarted(SCBackendService.serviceId()).subscribe(new Action1<SCServiceStatusEvent>() {
+        sc.serviceRunning(SCBackendService.serviceId()).subscribe(new Action1<SCServiceStatusEvent>() {
             @Override
             public void call(SCServiceStatusEvent scServiceStatusEvent) {
                 String username = getUsername();

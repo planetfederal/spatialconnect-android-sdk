@@ -19,6 +19,7 @@ import android.content.Context;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
+import com.boundlessgeo.spatialconnect.cloudMessaging.CloudMessagingService;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
@@ -30,11 +31,11 @@ import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
+import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.google.protobuf.Timestamp;
 
 import java.io.IOException;
-import java.util.Map;
 
 import rx.Observable;
 import rx.functions.Action1;
@@ -48,8 +49,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private static final String LOG_TAG = SCBackendService.class.getSimpleName();
     private static final String SERVICE_NAME = "SC_BACKEND_SERVICE";
-    private static Context context;
-    private static MqttHandler mqttHandler;
+    private Context context;
+    private MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
     public static BehaviorSubject<Boolean> configReceived = BehaviorSubject.create(false);
     public BehaviorSubject<Boolean> connectedToBroker = BehaviorSubject.create(false);
@@ -82,7 +83,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     @Override
     public Observable<Void> start() {
+        super.start();
         mqttHandler.connect();
+
         Log.d(LOG_TAG, "Subscribing to network connectivity updates.");
         SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
         sensorService.isConnected.subscribe(new Action1<Boolean>() {
@@ -117,14 +120,14 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private void setupSubscriptions() {
         notifications = listenOnTopic("/notify")
-                .flatMap(new Func1<SCMessageOuterClass.SCMessage, Observable<SCNotification>>() {
+                .mergeWith(listenOnTopic(String.format("/notify/%s", SpatialConnect.getInstance().getDeviceIdentifier())))
+                .map(new Func1<SCMessageOuterClass.SCMessage, SCNotification>() {
                     @Override
-                    public Observable<SCNotification> call(SCMessageOuterClass.SCMessage message) {
-                        SCNotification notification = new SCNotification(message);
-                        Log.d(LOG_TAG, "received notification message:" + notification.toJson().toString());
-                        return Observable.just(notification);
+                    public SCNotification call(SCMessageOuterClass.SCMessage scMessage) {
+                        return new SCNotification(scMessage);
                     }
-                });
+                })
+                .mergeWith(CloudMessagingService.getMulticast());
     }
 
     private void setupMqttConnectionListener() {
@@ -253,17 +256,17 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     public Observable<SCMessageOuterClass.SCMessage> listenOnTopic(final String topic) {
         mqttHandler.subscribe(topic, QoS.EXACTLY_ONCE.value());
         // filter messages for this topic
-        return mqttHandler.scMessageSubject
-                .filter(new Func1<Map<String, SCMessageOuterClass.SCMessage>, Boolean>() {
+        return mqttHandler.getMulticast()
+                .filter(new Func1<SCTuple, Boolean>() {
                     @Override
-                    public Boolean call(Map<String, SCMessageOuterClass.SCMessage> stringSCMessageMap) {
-                        return stringSCMessageMap.keySet().contains(topic);
+                    public Boolean call(SCTuple tuple) {
+                        return tuple.first().toString().equalsIgnoreCase(topic);
                     }
                 })
-                .flatMap(new Func1<Map<String, SCMessageOuterClass.SCMessage>, Observable<SCMessageOuterClass.SCMessage>>() {
+                .map(new Func1<SCTuple, SCMessageOuterClass.SCMessage>() {
                     @Override
-                    public Observable<SCMessageOuterClass.SCMessage> call(Map<String, SCMessageOuterClass.SCMessage> stringSCMessageMap) {
-                        return Observable.just(stringSCMessageMap.get(topic));
+                    public SCMessageOuterClass.SCMessage call(SCTuple scTuple) {
+                        return (SCMessageOuterClass.SCMessage) scTuple.second();
                     }
                 });
     }

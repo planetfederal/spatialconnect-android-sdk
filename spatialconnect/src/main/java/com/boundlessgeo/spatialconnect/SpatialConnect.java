@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Boundless, http://boundlessgeo.com
+ * Copyright 2015-2017 Boundless, http://boundlessgeo.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,9 +38,8 @@ import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
-
 import rx.observables.ConnectableObservable;
-import rx.subjects.BehaviorSubject;
+import rx.subjects.PublishSubject;
 
 /**
  * When instantiated, SpatialConnect adds the default services and registers all stores
@@ -59,10 +58,15 @@ public class SpatialConnect {
     private SCCache cache;
 
     private Context context;
-    public BehaviorSubject<SCServiceStatusEvent> serviceEventSubject;
+    public PublishSubject<SCServiceStatusEvent> serviceEventSubject;
     public ConnectableObservable<SCServiceStatusEvent> serviceEvents;
 
-    private SpatialConnect() {}
+    private SpatialConnect() {
+        this.serviceEventSubject = PublishSubject.create();
+        this.serviceEvents = serviceEventSubject.publish();
+
+        this.services = new HashMap<>();
+    }
 
     private static class SingletonHelper {
         private static final SpatialConnect INSTANCE = new SpatialConnect();
@@ -82,10 +86,7 @@ public class SpatialConnect {
     public void initialize(Context context) {
         Log.d(LOG_TAG, "Initializing SpatialConnect");
 
-        this.serviceEventSubject = BehaviorSubject.create();
-        this.serviceEvents = serviceEventSubject.publish();
 
-        this.services = new HashMap<>();
         this.sensorService = new SCSensorService(context);
         this.dataService = new SCDataService(context);
         this.configService = new SCConfigService(context);
@@ -131,7 +132,7 @@ public class SpatialConnect {
                 @Override
                 public void call() {
                     serviceEventSubject.onNext(
-                            new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_STARTED, id));
+                            new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_RUNNING, id));
                 }
         });
     }
@@ -166,20 +167,19 @@ public class SpatialConnect {
         }
     }
 
-    public Observable<SCServiceStatusEvent> serviceStarted(final String serviceId) {
+    public Observable<SCServiceStatusEvent> serviceRunning(final String serviceId) {
         SCService service = getServiceById(serviceId);
         if (service != null && service.getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
-            return Observable.just(new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_STARTED));
+            return Observable.just(new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_RUNNING));
         } else {
             return serviceEvents.autoConnect()
                     .filter(new Func1<SCServiceStatusEvent, Boolean>() {
                         @Override
                         public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
                             return scServiceStatusEvent.getServiceId().equals(serviceId) &&
-                                    scServiceStatusEvent.getStatus().equals(SCServiceStatus.SC_SERVICE_STARTED);
+                                    scServiceStatusEvent.getStatus().equals(SCServiceStatus.SC_SERVICE_RUNNING);
                         }
-                    })
-                    .take(1);
+                    });
         }
     }
 
