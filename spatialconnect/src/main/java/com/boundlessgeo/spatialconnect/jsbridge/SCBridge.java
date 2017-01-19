@@ -370,7 +370,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
             public void call(Boolean connected) {
                 if (connected) {
                     final SpatialConnect sc = SpatialConnect.getInstance();
-                    sc.serviceStarted(SCBackendService.serviceId())
+                    sc.serviceRunning(SCBackendService.serviceId())
                         .subscribe(new Action1<SCServiceStatusEvent>() {
                             @Override
                             public void call(SCServiceStatusEvent scServiceStatusEvent) {

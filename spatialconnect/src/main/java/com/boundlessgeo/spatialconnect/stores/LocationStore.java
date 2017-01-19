@@ -143,7 +143,7 @@ public class LocationStore extends GeoPackageStore implements  SCSpatialStore, S
             public void call(Boolean connected) {
                 if (connected) {
                     //make sure backendService is running
-                    sc.serviceStarted(SCBackendService.serviceId())
+                    sc.serviceRunning(SCBackendService.serviceId())
                             .filter(new Func1<SCServiceStatusEvent, Boolean>() {
                                 @Override
                                 public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {

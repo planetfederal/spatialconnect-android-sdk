@@ -167,7 +167,7 @@ public class SpatialConnect {
         }
     }
 
-    public Observable<SCServiceStatusEvent> serviceStarted(final String serviceId) {
+    public Observable<SCServiceStatusEvent> serviceRunning(final String serviceId) {
         SCService service = getServiceById(serviceId);
         if (service != null && service.getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
             return Observable.just(new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_RUNNING));
