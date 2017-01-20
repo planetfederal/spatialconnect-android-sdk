@@ -87,6 +87,11 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
         super.startError();
     }
 
+    @Override
+    String getId() {
+        return SERVICE_NAME;
+    }
+
     /**
      * Initializes the LocationHelper to start listening to updates by the GPS LocationProvider.
      */

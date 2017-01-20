@@ -81,7 +81,7 @@ public class IntegratedTests {
 
             sc = SpatialConnect.getInstance();
             sc.initialize(activity);
-            sc.addConfig(remoteConfigFile);
+            sc.getConfigService().addConfig(remoteConfigFile);
             sc.startAllServices();
             sc.getAuthService().authenticate("admin@something.com", "admin");
 

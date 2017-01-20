@@ -32,7 +32,7 @@ public class WFSStoreTest extends BaseTestCase {
     public static void setUp() throws Exception {
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        sc.addConfig(localConfigFile);
+        sc.getConfigService().addConfig(localConfigFile);
         sc.startAllServices();
     }
 

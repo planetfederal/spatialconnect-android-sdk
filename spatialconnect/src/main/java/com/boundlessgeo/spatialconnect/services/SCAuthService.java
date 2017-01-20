@@ -26,8 +26,6 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 
-import okhttp3.Interceptor;
-import okhttp3.Request;
 import okhttp3.Response;
 import rx.Observable;
 import rx.functions.Action1;
@@ -35,126 +33,70 @@ import rx.subjects.BehaviorSubject;
 
 public class SCAuthService extends SCService implements SCServiceLifecycle {
 
+    public enum SCAuthStatus {
+        NOT_AUTHENTICATED(0),
+        AUTHENTICATED(1),
+        AUTHENTICATION_FAILED(2);
+
+        private final int value;
+
+        SCAuthStatus(final int v) {
+            value = v;
+        }
+
+        static SCAuthStatus fromValue(int v) {
+            for (SCAuthStatus scAuthStatus: SCAuthStatus.values()) {
+                if (scAuthStatus.value == v) {
+                    return  scAuthStatus;
+                }
+            }
+            return null;
+        }
+
+        public int value() {
+            return value;
+        }
+    }
+
     private static final String LOG_TAG = SCAuthService.class.getSimpleName();
     private static final String SERVICE_NAME = "SC_AUTH_SERVICE";
-    private static Context context;
-    public static BehaviorSubject<Boolean> loginStatus = BehaviorSubject.create(false);
-    public static final String AUTH_HEADER_NAME = "x-access-token";
-    private static String accessToken;
-    private static String password;
-    private static SecureSharedPreferences settings;
-    private static String username;
+    private static final String JSON_WEB_TOKEN = "x-access-token";
+    private static final String USERNAME = "username";
+    private static final String PWD = "pwd";
+    private Context context;
+    private String jsonWebToken;
+    private SecureSharedPreferences settings;
+    private  BehaviorSubject<Integer> loginStatus;
 
     public SCAuthService(Context context) {
         this.context = context;
         this.settings = new SecureSharedPreferences(context);
-        this.username = getUsername();
-        this.password = getPassword();
-        this.accessToken = getAccessToken();
-        if (this.accessToken != null) {
-            loginStatus.onNext(true);
-        }
+        loginStatus = BehaviorSubject.create(SCAuthStatus.NOT_AUTHENTICATED.value());
     }
 
     public void authenticate(String username, String password) {
         auth(username, password);
     }
 
-    public static void logout() {
-        // TODO: post to the API to logout and invalidate the auth token when it's implemented in the api
-        loginStatus.onNext(false);
+    public BehaviorSubject<Integer> getLoginStatus() {
+        return loginStatus;
     }
 
-    /**
-     * Interceptor to attach the auth token to every request if it isn't present.
-     */
-    public static class AuthHeaderInterceptor implements Interceptor {
-        @Override
-        public Response intercept(Interceptor.Chain chain) throws IOException {
-            Request originalRequest = chain.request();
-
-            // skip if the request already has the auth header or if this request is to authenticate
-            if (originalRequest.header(AUTH_HEADER_NAME) != null ||
-                    originalRequest.toString().contains("authenticate")) {
-                return chain.proceed(originalRequest);
-            }
-
-            if (accessToken == null) {
-                getAccessToken();
-            }
-            else {
-                Request updatedRequest = originalRequest.newBuilder()
-                        .header(AUTH_HEADER_NAME, accessToken)
-                        .build();
-                return chain.proceed(updatedRequest);
-            }
-            return chain.proceed(originalRequest);
-        }
+    public String getAccessToken() {
+        return settings.getString(JSON_WEB_TOKEN, null);
     }
 
-    private  void auth(final String username, final String pwd) {
-        final String theUrl = SCBackendService.backendUri + "/api/authenticate";
-        HttpHandler.getInstance()
-                .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", username, pwd))
-                .subscribe(
-                        new Action1<Response>() {
-                            @Override
-                            public void call(Response response) {
-                                if (response.isSuccessful()) {
-                                    try {
-                                        accessToken = new JSONObject(response.body().string())
-                                                .getJSONObject("result").getString("token");
-                                        if (accessToken != null) {
-                                            saveAccessToken(accessToken);
-                                            saveCredentials(username, pwd);
-                                            loginStatus.onNext(true);
-                                        }
-                                    } catch (JSONException e) {
-                                        e.printStackTrace();
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                    }
-                                } else {
-                                    loginStatus.onNext(false);
-                                }
-                            }
-                        },
-                        new Action1<Throwable>() {
-                            @Override
-                            public void call(Throwable throwable) {
-                                loginStatus.onNext(false);
-                                Log.e(LOG_TAG, "something went wrong refreshing token: " + throwable.getMessage());
-                            }
-                        });
+    public void logout() {
+        removeCredentials();
+        loginStatus.onNext(SCAuthStatus.NOT_AUTHENTICATED.value());
     }
 
-    public static String getAccessToken() {
-        return settings.getString(AUTH_HEADER_NAME, null);
-    }
-
-    public static void saveAccessToken(String accessToken) {
-        SecureSharedPreferences.Editor editor = settings.edit();
-        editor.putString(AUTH_HEADER_NAME, accessToken);
-        editor.commit();
-    }
-
-    public void saveCredentials(String username, String password) {
-        SecureSharedPreferences.Editor editor = settings.edit();
-        editor.putString("username", username);
-        editor.putString("password", password);
-        editor.commit();
-    }
-
-    public static String getPassword() {
+    public String getUsername() {
         SecureSharedPreferences settings = new SecureSharedPreferences(context);
-        return settings.getString("password", null);
+        return settings.getString(USERNAME, null);
     }
 
-    public static String getUsername() {
-        SecureSharedPreferences settings = new SecureSharedPreferences(context);
-        return settings.getString("username", null);
-    }
-
+    @Override
     public Observable<Void> start() {
         super.start();
         SpatialConnect sc = SpatialConnect.getInstance();
@@ -166,9 +108,8 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
                 if (username != null && pwd != null) {
                     auth(username, pwd);
                 } else {
-                    loginStatus.onNext(false);
+                    loginStatus.onNext(SCAuthStatus.NOT_AUTHENTICATED.value());
                 }
-
             }
         });
         return Observable.empty();
@@ -192,6 +133,75 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
     @Override
     public void startError() {
         super.startError();
+    }
+
+    @Override
+    String getId() {
+        return SERVICE_NAME;
+    }
+
+    private  void auth(final String username, final String pwd) {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        SCBackendService bs = sc.getBackendService();
+        final String theUrl = bs.backendUri + "/api/authenticate";
+        HttpHandler.getInstance()
+                .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", username, pwd))
+                .subscribe(
+                        new Action1<Response>() {
+                            @Override
+                            public void call(Response response) {
+                                if (response.isSuccessful()) {
+                                    try {
+                                        jsonWebToken = new JSONObject(response.body().string())
+                                                .getJSONObject("result").getString("token");
+                                        if (jsonWebToken != null) {
+                                            saveAccessToken(jsonWebToken);
+                                            saveCredentials(username, pwd);
+                                            loginStatus.onNext(SCAuthStatus.AUTHENTICATED.value());
+                                        }
+                                    } catch (JSONException e) {
+                                        e.printStackTrace();
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                } else {
+                                    logout();
+                                    loginStatus.onNext(SCAuthStatus.AUTHENTICATION_FAILED.value());
+                                }
+                            }
+                        },
+                        new Action1<Throwable>() {
+                            @Override
+                            public void call(Throwable throwable) {
+                                loginStatus.onNext(SCAuthStatus.NOT_AUTHENTICATED.value());
+                                Log.e(LOG_TAG, "something went wrong refreshing token: " + throwable.getMessage());
+                            }
+                        });
+    }
+
+    private void saveAccessToken(String accessToken) {
+        SecureSharedPreferences.Editor editor = settings.edit();
+        editor.putString(JSON_WEB_TOKEN, accessToken);
+        editor.commit();
+    }
+
+    private void saveCredentials(String username, String password) {
+        SecureSharedPreferences.Editor editor = settings.edit();
+        editor.putString(USERNAME, username);
+        editor.putString(PWD, password);
+        editor.commit();
+    }
+
+    private String getPassword() {
+        SecureSharedPreferences settings = new SecureSharedPreferences(context);
+        return settings.getString(PWD, null);
+    }
+
+    private void removeCredentials() {
+        SecureSharedPreferences.Editor editor = settings.edit();
+        editor.remove(USERNAME);
+        editor.remove(PWD);
+        editor.commit();
     }
 
     public static String serviceId() {

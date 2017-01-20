@@ -16,8 +16,6 @@ package com.boundlessgeo.spatialconnect.scutilities;
 
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.services.SCAuthService;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -52,7 +50,6 @@ public class HttpHandler {
     private HttpHandler() {
         this.client = new OkHttpClient.Builder()
                 .addNetworkInterceptor(new LoggingInterceptor())
-                .addNetworkInterceptor(new SCAuthService.AuthHeaderInterceptor())
                 .build();
     }
 

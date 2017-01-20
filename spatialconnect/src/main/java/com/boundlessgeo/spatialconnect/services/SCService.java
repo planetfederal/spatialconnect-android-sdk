@@ -15,9 +15,10 @@
 package com.boundlessgeo.spatialconnect.services;
 
 import rx.Observable;
-
-public class SCService implements SCServiceLifecycle{
+//TODO add service key
+public abstract class SCService implements SCServiceLifecycle{
     private SCServiceStatus status;
+    private String serviceId;
 
     public SCService() {
         this.status = SCServiceStatus.SC_SERVICE_STOPPED;
@@ -52,4 +53,10 @@ public class SCService implements SCServiceLifecycle{
     public void setStatus(SCServiceStatus status) {
         this.status = status;
     }
+
+    public String getServiceId() {
+        return getId();
+    }
+
+    abstract String getId();
 }

@@ -397,7 +397,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
     private void handleLogout(ReadableMap message) {
         Log.d(LOG_TAG, "Handling AUTHSERVICE_LOGOUT message " + message.toString());
-        SCAuthService.logout();
+        SpatialConnect.getInstance().getAuthService().logout();
     }
 
     /**
@@ -407,18 +407,19 @@ public class SCBridge extends ReactContextBaseJavaModule {
      */
     private void handleLoginStatus(final ReadableMap message) {
         Log.d(LOG_TAG, "Handling AUTHSERVICE_LOGIN_STATUS message " + message.toString());
-        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
+        SCAuthService authService = SpatialConnect.getInstance().getAuthService();
+        authService.getLoginStatus().subscribe(new Action1<Integer>() {
             @Override
-            public void call(Boolean authenticated) {
-                int loginStatus = authenticated ? 1 : 0;
-                sendEvent(message.getInt("type"), loginStatus);
+            public void call(Integer status) {
+                sendEvent(message.getInt("type"), status);
             }
         });
     }
 
     private void handleAccessToken(ReadableMap message) {
         Log.d(LOG_TAG, "Handling AUTHSERVICE_ACCESS_TOKEN message " + message.toString());
-        String accessToken = SCAuthService.getAccessToken();
+        SCAuthService authService = SpatialConnect.getInstance().getAuthService();
+        String accessToken = authService.getAccessToken();
         if (accessToken != null) {
             sendEvent(message.getInt("type"), accessToken);
         }

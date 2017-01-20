@@ -70,7 +70,7 @@ public class GeoPackageTest extends BaseTestCase {
     public static void setUp() throws Exception {
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        sc.addConfig(localConfigFile);
+        sc.getConfigService().addConfig(localConfigFile);
         sc.startAllServices();
         haiti = new SCSqliteHelper(testContext, HAITI_GPKG_ID).db();
         waitForStoreToStart(HAITI_GPKG_ID);

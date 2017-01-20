@@ -25,7 +25,6 @@ import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCPoint;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
-import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
@@ -161,7 +160,7 @@ public class LocationStore extends GeoPackageStore implements  SCSpatialStore, S
                                             .build();
                                     SpatialConnect.getInstance()
                                             .getBackendService()
-                                            .publish("/store/tracking", message, QoS.AT_MOST_ONCE);
+                                            .publishAtMostOnce("/store/tracking", message);
                                 }
                             });
                 }

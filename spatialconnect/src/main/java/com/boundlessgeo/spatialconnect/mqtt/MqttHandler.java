@@ -116,11 +116,12 @@ public class MqttHandler implements MqttCallbackExtended {
 
         Log.d(LOG_TAG, "connecting to mqtt broker at " + client.getServerURI());
         // only try to connect to mqtt broker after the user has successfully authenticated
-        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
+        final SCAuthService authService = SpatialConnect.getInstance().getAuthService();
+        authService.getLoginStatus().subscribe(new Action1<Integer>() {
             @Override
-            public void call(Boolean authenticated) {
-                if (authenticated) {
-                    String accessToken = SCAuthService.getAccessToken();
+            public void call(Integer status) {
+                if (status == SCAuthService.SCAuthStatus.AUTHENTICATED.value()) {
+                    String accessToken = authService.getAccessToken();
                     try {
                         // set the clean session to remove any previous connection the broker may have for this client
                         MqttConnectOptions options = new MqttConnectOptions();

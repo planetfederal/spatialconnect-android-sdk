@@ -357,6 +357,11 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         super.startError();
     }
 
+    @Override
+    String getId() {
+        return SERVICE_NAME;
+    }
+
     public void registerAndStartStoreByConfig(SCStoreConfig config) {
         if (registerStoreByConfig(config)) {
             SCDataStore store = stores.get(config.getUniqueID());

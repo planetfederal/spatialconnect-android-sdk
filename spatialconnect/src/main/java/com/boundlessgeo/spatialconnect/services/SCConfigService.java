@@ -47,8 +47,8 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
 
     private static final String LOG_TAG = SCConfigService.class.getSimpleName();
     private static final String SERVICE_NAME = "SC_CONFIG_SERVICE";
-    private Context context;
     private static final String CONFIGS_DIR = "configs";
+    private Context context;
     private ArrayList<File> localConfigFiles = new ArrayList<>();
     private SCDataService dataService;
 
@@ -189,7 +189,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
         return false;
     }
 
-    public static String getAndroidVersion() {
+    public String getAndroidVersion() {
         String release = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
         return "Android SDK: " + sdkVersion + " (" + release + ")";
@@ -281,6 +281,11 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     @Override
     public void startError() {
         super.startError();
+    }
+
+    @Override
+    String getId() {
+        return SERVICE_NAME;
     }
 
     public static String serviceId() {

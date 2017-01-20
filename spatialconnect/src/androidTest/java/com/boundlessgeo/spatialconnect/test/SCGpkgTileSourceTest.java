@@ -31,7 +31,7 @@ public class SCGpkgTileSourceTest extends BaseTestCase {
     public static void setUp() throws Exception {
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        sc.addConfig(localConfigFile);
+        sc.getConfigService().addConfig(localConfigFile);
         sc.startAllServices();
         waitForStoreToStart(WHITEHORSE_GPKG_ID);
     }
