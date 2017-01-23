@@ -16,6 +16,7 @@ package com.boundlessgeo.spatialconnect.services;
 
 
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
@@ -326,18 +327,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 loadCachedConfig();
             }
         });
-
-        authService.getLoginStatus().subscribe(new Action1<Integer>() {
-            @Override
-            public void call(Integer status) {
-                if (status == SCAuthService.SCAuthStatus.AUTHENTICATED.value()) {
-                    registerAndFetchConfig();
-                } else {
-                    SpatialConnect.getInstance().getConfigService().loadConfigFromCache();
-                    configReceived.onNext(true);
-                }
-            }
-        });
     }
 
     private void listenForNetworkConnection() {
@@ -401,7 +390,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 .setPayload(
                         String.format("{\"identifier\": \"%s\", \"device_info\": \"%s\", \"mobile\": \"%s\"}",
                                 sc.getDeviceIdentifier(),
-                                sc.getConfigService().getAndroidVersion(),
+                                getAndroidVersion(),
                                 sc.getAuthService().getUsername())
                 )
                 .build();
@@ -518,6 +507,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 .setSeconds(millis / 1000)
                 .setNanos((int) ((millis % 1000) * 1000000))
                 .build();
+    }
+
+    private String getAndroidVersion() {
+        String release = Build.VERSION.RELEASE;
+        int sdkVersion = Build.VERSION.SDK_INT;
+        return "Android SDK: " + sdkVersion + " (" + release + ")";
     }
 
     public static String serviceId() {
