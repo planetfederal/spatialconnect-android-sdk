@@ -70,7 +70,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
      * The storeEventSubject is like an internal event bus, its job is to receive {@link SCStoreStatusEvent}s
      * published by a {@link SCDataStore}.
      */
-    public BehaviorSubject<SCStoreStatusEvent> storeEventSubject;
+    private BehaviorSubject<SCStoreStatusEvent> storeEventSubject;
 
     /**
      * This is the Observable that subscribers in your app will subscribe to so that they can receive {@link
@@ -415,6 +415,10 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
 
     public void setContext(Context context) {
         this.context = context;
+    }
+
+    public ConnectableObservable<SCStoreStatusEvent> getStoreEvents() {
+        return storeEvents;
     }
 
     /**
