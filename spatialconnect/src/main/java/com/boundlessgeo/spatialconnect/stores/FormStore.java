@@ -38,7 +38,7 @@ import rx.Observable;
 import rx.functions.Action0;
 import rx.subjects.BehaviorSubject;
 
-public class FormStore extends GeoPackageStore implements  SCSpatialStore, SCDataStoreLifeCycle {
+public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDataStoreLifeCycle {
 
     private final String LOG_TAG = FormStore.class.getSimpleName();
     public static final String NAME = "FORM_STORE";

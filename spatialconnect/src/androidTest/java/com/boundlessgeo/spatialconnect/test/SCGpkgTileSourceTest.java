@@ -47,7 +47,7 @@ public class SCGpkgTileSourceTest extends BaseTestCase {
 
     @Test
     public void testTileSourcesAreCreatedCorrectly() {
-        GeoPackageStore store = (GeoPackageStore)sc.getDataService().getStoreById(WHITEHORSE_GPKG_ID);
+        GeoPackageStore store = (GeoPackageStore)sc.getDataService().getStoreByIdentifier(WHITEHORSE_GPKG_ID);
         Map<String, SCGpkgTileSource> tileSources = store.getTileSources();
         assertEquals("The Whitehorse gpkg should have 1 tile source.", 1, tileSources.size());
         SCGpkgTileSource whiteHorseTileSource = tileSources.get("WhiteHorse");
@@ -80,9 +80,9 @@ public class SCGpkgTileSourceTest extends BaseTestCase {
             @Override
             public void call(final Subscriber<? super Void> subscriber) {
                 SCDataService dataService = sc.getDataService();
-                SCDataStore store = dataService.getStoreById(storeId);
+                SCDataStore store = dataService.getStoreByIdentifier(storeId);
                 if (store != null) {
-                    if (dataService.getStoreById(storeId).getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+                    if (dataService.getStoreByIdentifier(storeId).getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
                         subscriber.onCompleted();
                     } else {
                         dataService.storeEvents.autoConnect()

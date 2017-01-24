@@ -443,7 +443,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     case CONFIG_REMOVE_STORE:
                         String storeId = utilities.getMapFromJson(scMessage.getPayload())
                                 .get("id").toString();
-                        SCDataStore store = sc.getDataService().getStoreById(storeId);
+                        SCDataStore store = sc.getDataService().getStoreByIdentifier(storeId);
                         cachedConfig.removeStore(storeId);
                         sc.getDataService().unregisterStore(store);
                         break;

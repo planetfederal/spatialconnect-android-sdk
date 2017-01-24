@@ -52,13 +52,13 @@ public class WFSStoreTest extends BaseTestCase {
             if (store.getType().equals(WFSStore.TYPE)) containsWFSStore = true;
         }
         assertTrue("A wfs store should be running.", containsWFSStore);
-        SCDataStore wfsStore = sc.getDataService().getStoreById(WFS_STORE_ID);
+        SCDataStore wfsStore = sc.getDataService().getStoreByIdentifier(WFS_STORE_ID);
         assertEquals("The wfs store should be running", SCDataStoreStatus.SC_DATA_STORE_RUNNING, wfsStore.getStatus());
     }
 
     @Test
     public void testGetCapabilitesUrlIsBuiltCorrectly() {
-        WFSStore store = (WFSStore) sc.getDataService().getStoreById(WFS_STORE_ID);
+        WFSStore store = (WFSStore) sc.getDataService().getStoreByIdentifier(WFS_STORE_ID);
         assertEquals("The WFS store url was not built correctly.",
                 "http://efc-dev.boundlessgeo.com:8080/geoserver/spatialconnect/ows?service=WFS&version=1.1.0&request=GetCapabilities",
                 store.getGetCapabilitiesUrl()
@@ -67,7 +67,7 @@ public class WFSStoreTest extends BaseTestCase {
 
     @Test
     public void testLayerNamesAreParsedFromCapabilities() {
-        WFSStore store = (WFSStore) sc.getDataService().getStoreById(WFS_STORE_ID);
+        WFSStore store = (WFSStore) sc.getDataService().getStoreByIdentifier(WFS_STORE_ID);
         assertTrue("There should be multiple layers.",
                 store.layers().size() > 0
         );
@@ -79,7 +79,7 @@ public class WFSStoreTest extends BaseTestCase {
         SCQueryFilter filter = new SCQueryFilter(
                 new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
         );
-        WFSStore store = (WFSStore) sc.getDataService().getStoreById(WFS_STORE_ID);
+        WFSStore store = (WFSStore) sc.getDataService().getStoreByIdentifier(WFS_STORE_ID);
         filter.addLayerId("baseball_team");
         TestSubscriber testSubscriber = new TestSubscriber();
         store.query(filter).timeout(5, TimeUnit.SECONDS).subscribe(testSubscriber);

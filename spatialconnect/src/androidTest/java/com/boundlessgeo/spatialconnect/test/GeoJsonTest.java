@@ -25,7 +25,7 @@ import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
-import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
+import com.boundlessgeo.spatialconnect.stores.ISCSpatialStore;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -82,13 +82,13 @@ public class GeoJsonTest extends BaseTestCase {
 
     @Test
     public void testSearchGeoJsonStore() {
-        SCDataStore geoJsonStore = sc.getDataService().getStoreById(BARS_GEO_JSON_ID);
+        SCDataStore geoJsonStore = sc.getDataService().getStoreByIdentifier(BARS_GEO_JSON_ID);
         SCBoundingBox bbox = new SCBoundingBox(-77.11974,38.803149,-76.909393,38.995548);
         SCQueryFilter filter = new SCQueryFilter(
                 new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
         );
         TestSubscriber testSubscriber = new TestSubscriber();
-        ((SCSpatialStore) geoJsonStore).query(filter).subscribe(testSubscriber);
+        ((ISCSpatialStore) geoJsonStore).query(filter).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertCompleted();
         testSubscriber.assertNoErrors();
@@ -112,7 +112,7 @@ public class GeoJsonTest extends BaseTestCase {
 
     @Test
     public void testStoreDestroy() {
-        GeoJsonStore store = (GeoJsonStore) sc.getDataService().getStoreById(BARS_GEO_JSON_ID);
+        GeoJsonStore store = (GeoJsonStore) sc.getDataService().getStoreByIdentifier(BARS_GEO_JSON_ID);
         final File geoJsonFile = new File(store.getPath());
         assertTrue("GeoJson file should exist", geoJsonFile.exists());
 

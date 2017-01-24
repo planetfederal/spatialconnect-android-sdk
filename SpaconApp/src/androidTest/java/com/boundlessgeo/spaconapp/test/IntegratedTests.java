@@ -130,7 +130,7 @@ public class IntegratedTests {
                     @Override
                     public void call(List<Boolean> booleen) {
                         assertEquals("The remote config file has at least 2 stores",
-                                2, sc.getDataService().getAllStores().size());
+                                2, sc.getDataService().getStoreList().size());
                     }
         });
     }

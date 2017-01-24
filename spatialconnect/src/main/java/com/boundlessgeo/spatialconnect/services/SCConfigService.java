@@ -119,7 +119,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
 
     public void removeStore(SCStoreConfig c) {
         SCDataService dataService = sc.getDataService();
-        dataService.unregisterStore(dataService.getStoreById(c.getUniqueID()));
+        dataService.unregisterStore(dataService.getStoreByIdentifier(c.getUniqueID()));
     }
 
     public void setCachedConfig(SCConfig config) {
