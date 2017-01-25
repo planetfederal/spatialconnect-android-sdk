@@ -332,7 +332,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private void listenForNetworkConnection() {
         Log.d(LOG_TAG, "Subscribing to network connectivity updates.");
         SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
-        sensorService.isConnected.subscribe(new Action1<Boolean>() {
+        sensorService.isConnected().subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {

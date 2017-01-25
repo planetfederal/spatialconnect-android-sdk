@@ -175,7 +175,7 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
                 SCSensorService ss = SpatialConnect.getInstance().getSensorService();
 
                 // try to connect to WFS store to get the layers from the capabilities documents
-                ss.isConnected.subscribe(new Action1<Boolean>() {
+                ss.isConnected().subscribe(new Action1<Boolean>() {
                     @Override
                     public void call(Boolean connected) {
                         if (connected) {

@@ -65,7 +65,6 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     }
 
     public void sweepDataDirectory() {
-        Log.e(LOG_TAG, "Sweeping data directory");
         File[] configFiles = SCFileUtilities.findFilesByExtension(context.getFilesDir(), ".scfg");
         if (configFiles.length > 0) {
             for (File file : configFiles) {

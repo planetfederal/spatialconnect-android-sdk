@@ -19,6 +19,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -192,11 +193,16 @@ public class LocationHelper implements ActivityCompat.OnRequestPermissionsResult
     /**
      * Enable GPS updates.  (start listening)
      */
-    public void enableGps() {
+    public void enableGps(int accuracy, float distance ) {
+
+        Criteria criteria = new Criteria();
+        criteria.setAccuracy(accuracy);
+        String provider = locationManager.getBestProvider(criteria, true);
+
         locationManager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
+                provider,
                 MIN_TIME_BETWEEN_UPDATES,
-                MIN_DISTANCE_CHANGE_FOR_UPDATES,
+                distance,
                 this
         );
     }

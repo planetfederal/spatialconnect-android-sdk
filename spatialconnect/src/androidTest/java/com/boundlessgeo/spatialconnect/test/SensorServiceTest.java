@@ -46,12 +46,12 @@ public class SensorServiceTest extends BaseTestCase {
     @Test
     public void testSCSensorService() {
         SCSensorService sensorService = new SCSensorService(testContext);
-        sensorService.startGPSListener();
+        sensorService.enableGPS();
         assertTrue("The GPS listener should have started.", sensorService.gpsListenerStarted());
         TestSubscriber<Location> testSubscriber = new TestSubscriber<>();
         sensorService.getLastKnownLocation().subscribe(testSubscriber);
         testSubscriber.assertNotCompleted();
-        sensorService.disableGPSListener();
+        sensorService.disableGPS();
         assertTrue("The GPS listener should have stopped.", !sensorService.gpsListenerStarted());
     }
 

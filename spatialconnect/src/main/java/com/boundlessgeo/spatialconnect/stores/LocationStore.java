@@ -80,10 +80,12 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
     }
 
     private void listenForLocationUpdate() {
-        SCSensorService.running.subscribe(new Action1<Integer>() {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        SCSensorService ss = sc.getSensorService();
+        ss.isConnected().subscribe(new Action1<Boolean>() {
             @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
+            public void call(Boolean connected) {
+                if (connected) {
                     SpatialConnect sc = SpatialConnect.getInstance();
                     if (sc.getSensorService() != null) {
                         SpatialConnect.getInstance()
@@ -137,7 +139,7 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
     private void publishLocation(final SCPoint point) {
         final SpatialConnect sc = SpatialConnect.getInstance();
         SCSensorService sensorService = sc.getSensorService();
-        sensorService.isConnected.subscribe(new Action1<Boolean>() {
+        sensorService.isConnected().subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {

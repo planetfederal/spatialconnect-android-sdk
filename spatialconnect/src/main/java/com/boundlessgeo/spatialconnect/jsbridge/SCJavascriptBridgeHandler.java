@@ -84,7 +84,7 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 Integer payloadNumber = getPayloadNumber(bridgeMessage);
 
                 if (payloadNumber == 1) {
-                    sensorService.startGPSListener();
+                    sensorService.enableGPS();
                     sensorService.getLastKnownLocation()
                             .subscribeOn(Schedulers.newThread())
                             .subscribe(new Action1<Location>() {
@@ -98,7 +98,7 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                     return;
                 }
                 if (payloadNumber == 0) {
-                    sensorService.disableGPSListener();
+                    sensorService.disableGPS();
                     return;
                 }
             }

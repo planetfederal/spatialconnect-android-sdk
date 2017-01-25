@@ -42,7 +42,7 @@ public class SCRemoteDataStore extends SCDataStore implements SCDataStoreLifeCyc
 
     private void listenForConnection() {
         SCSensorService ss = SpatialConnect.getInstance().getSensorService();
-        ss.isConnected.subscribe(new Action1<Boolean>() {
+        ss.isConnected().subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {

@@ -409,14 +409,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         return null;
     }
 
-    public Context getContext() {
-        return context;
-    }
-
-    public void setContext(Context context) {
-        this.context = context;
-    }
-
     public ConnectableObservable<SCStoreStatusEvent> getStoreEvents() {
         return storeEvents;
     }
@@ -551,7 +543,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
 
     private void setupSubscriptions() {
         SCSensorService ss = SpatialConnect.getInstance().getSensorService();
-        ss.isConnected.subscribe(new Action1<Boolean>() {
+        ss.isConnected().subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {

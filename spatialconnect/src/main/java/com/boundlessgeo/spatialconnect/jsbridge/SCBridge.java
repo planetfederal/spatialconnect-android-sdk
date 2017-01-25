@@ -365,7 +365,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     private void handleNotificationSubscribe(final ReadableMap message) {
         Log.d(LOG_TAG, "Subscribing to notifications");
         SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
-        sensorService.isConnected.subscribe(new Action1<Boolean>() {
+        sensorService.isConnected().subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {
@@ -452,7 +452,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
         SCSensorService sensorService = sc.getSensorService();
         Integer payloadNumber = message.getInt("payload");
         if (payloadNumber == 1) {
-            sensorService.startGPSListener();
+            sensorService.enableGPS();
             sensorService.getLastKnownLocation()
                     .subscribeOn(Schedulers.newThread())
                     .subscribe(new Action1<Location>() {
@@ -466,7 +466,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
                     });
         }
         if (payloadNumber == 0) {
-            sensorService.disableGPSListener();
+            sensorService.disableGPS();
         }
     }
 
