@@ -16,8 +16,6 @@
 package com.boundlessgeo.spatialconnect.services;
 
 import android.content.Context;
-import android.os.Build;
-import android.os.Environment;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
@@ -32,7 +30,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import rx.Observable;
@@ -73,18 +70,9 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
         }
     }
 
-    /**
-     * Loads all config files and registers the stores for each config.
-     * <p/>
-     * <p>First, we try to load the default config from internal storage, then we try to load other configs from the
-     * external storage folder.  Note that both internal and external storage supports the "no network" use case
-     * where the SDcard has data on it and the config file points to that data.  Next, we try to download any
-     * configuration files from the SpatialConnect backend service defined in the {@code remote} attribute of a
-     * config.  Then we load any configs that were added with {@link SCConfigService#addConfig(File)}.</p>
-     */
     public void loadConfigs() {
         for (String path: configPaths) {
-            File config = SCFileUtilities.getInternalFileObject(path, context);
+            File config = new File(path);
             final SCConfig scConfig;
             try {
                 scConfig = SCObjectMapper.getMapper().readValue(config, SCConfig.class);

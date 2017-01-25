@@ -36,10 +36,7 @@ public class FormStoreTest extends BaseTestCase {
     public static void setUp() throws Exception {
         sc = SpatialConnect.getInstance();
         sc.initialize(activity);
-        sc.getConfigService().addConfigFilePath(
-                String.format("%s/s%",
-                        localConfigFile.getAbsolutePath(),
-                        localConfigFile.getName()));
+        sc.getConfigService().addConfigFilePath(localConfigFile.getAbsolutePath());
         sc.startAllServices();
         waitForStoreToStart(FormStore.NAME);
     }

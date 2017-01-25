@@ -39,8 +39,6 @@ import rx.functions.Func1;
 import rx.observables.ConnectableObservable;
 import rx.subjects.PublishSubject;
 
-import static android.R.attr.id;
-
 /**
  * When instantiated, SpatialConnect adds the default services and registers all stores
  * defined in the config file.  SpatialConnect is also used to manage the services (starting,
@@ -113,7 +111,7 @@ public class SpatialConnect {
      * @param serviceId the id of the service that needs to start
      */
     public void startService(final String serviceId) {
-        this.services.get(id).start().subscribe(new Action1<Void>() {
+        this.services.get(serviceId).start().subscribe(new Action1<Void>() {
             @Override
             public void call(Void aVoid) {}
             },
