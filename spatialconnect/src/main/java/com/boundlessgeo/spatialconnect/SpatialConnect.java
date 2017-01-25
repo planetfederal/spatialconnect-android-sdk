@@ -156,8 +156,9 @@ public class SpatialConnect {
      * Stops all SCServices that was added to SpatialConnect
      */
     public void stopAllServices() {
-        for (String key : this.services.keySet()) {
-            this.services.get(key).stop();
+        HashMap<String, SCService> ss  = new HashMap<>(services);
+        for (String key : ss.keySet()) {
+            stopService(key);
         }
     }
 

@@ -348,7 +348,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void loadConfig(SCMessageOuterClass.SCMessage message) {
-        Log.d(LOG_TAG, "mqtt message received on thread " + Thread.currentThread().getName());
         try {
             SCConfig config = SCObjectMapper.getMapper().readValue(
                     message.getPayload(),
@@ -374,6 +373,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         Log.d(LOG_TAG, "fetching config from mqtt config topic");
         SCMessageOuterClass.SCMessage getConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
                 .setAction(SCCommand.CONFIG_FULL.value()).build();
+
         publishReplyTo("/config", getConfigMsg)
                 .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
                     @Override

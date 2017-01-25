@@ -19,7 +19,6 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
-import com.boundlessgeo.spatialconnect.db.SCStoreConfigRepository;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.stores.DefaultStore;
@@ -171,9 +170,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
                 registerStore(new WFSStore(context, scStoreConfig));
             }
 
-            // now persist the store's properties
-            SCStoreConfigRepository storeConfigRepository = new SCStoreConfigRepository(context);
-            storeConfigRepository.addStoreConfig(scStoreConfig);
             Log.d(LOG_TAG,"returning true from register store by config");
             return true;
         }
@@ -219,10 +215,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
                 Log.d(LOG_TAG, "Updating wfs store " + scStoreConfig.getName() + " with SCDataService.");
                 updatedStore = new WFSStore(context, scStoreConfig);
             }
-
-            // now persist the store's properties
-            SCStoreConfigRepository storeConfigRepository = new SCStoreConfigRepository(context);
-            storeConfigRepository.addStoreConfig(scStoreConfig);
 
             if (currentStore == null) {
                 Log.e(LOG_TAG, String.format("Store %s does not exists", scStoreConfig.getUniqueID()));
