@@ -51,6 +51,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     public SCConfigService(Context context) {
         this.context = context;
         sc = SpatialConnect.getInstance();
+        sweepDataDirectory();
     }
 
     public void addConfigFilePath(String fp) {
@@ -65,7 +66,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
         File[] configFiles = SCFileUtilities.findFilesByExtension(context.getFilesDir(), ".scfg");
         if (configFiles.length > 0) {
             for (File file : configFiles) {
-                configPaths.add(String.format("s%/s%", file.getAbsolutePath(), file.getName()));
+                configPaths.add(file.getAbsolutePath());
             }
         }
     }

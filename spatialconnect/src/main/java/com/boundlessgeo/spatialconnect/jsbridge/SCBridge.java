@@ -749,13 +749,17 @@ public class SCBridge extends ReactContextBaseJavaModule {
      *
      * @param message the message received from the Javascript
      */
-    private void handleBackendServiceHTTPUri(ReadableMap message) {
-        String backendUri = SpatialConnect.getInstance()
-                .getBackendService()
-                .backendUri + "/api/";
-        WritableMap eventPayload = Arguments.createMap();
-        eventPayload.putString("backendUri", backendUri);
-        sendEvent(message.getInt("type"), message.getString("responseId"), eventPayload);
+    private void handleBackendServiceHTTPUri(final ReadableMap message) {
+        sc.serviceRunning(SCBackendService.serviceId())
+                .subscribe(new Action1<SCServiceStatusEvent>() {
+                    @Override
+                    public void call(SCServiceStatusEvent scServiceStatusEvent) {
+                        String backendUri = sc.getBackendService().backendUri + "/api/";
+                        WritableMap eventPayload = Arguments.createMap();
+                        eventPayload.putString("backendUri", backendUri);
+                        sendEvent(message.getInt("type"), message.getString("responseId"), eventPayload);
+                    }
+                });
 
     }
 
