@@ -401,8 +401,8 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         return null;
     }
 
-    public ConnectableObservable<SCStoreStatusEvent> getStoreEvents() {
-        return storeEvents;
+    public BehaviorSubject<SCStoreStatusEvent> getStoreEvents() {
+        return storeEventSubject;
     }
 
     /**
@@ -470,7 +470,8 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
                     }, new Action1<Throwable>() {
                         @Override
                         public void call(Throwable t) {
-                            Log.d(LOG_TAG, t.getLocalizedMessage());
+                            String errorMsg = (t != null) ? t.getLocalizedMessage() : "no message available";
+                            Log.e(LOG_TAG,"Unable to start store: " + store.getStoreId() + " with error: " + errorMsg);
                             // onError can happen if we cannot start the store b/c of some error or runtime exception
                             storeEventSubject.onNext(
                                     new SCStoreStatusEvent(SCDataStoreStatus.SC_DATA_STORE_START_FAILED, store.getStoreId())

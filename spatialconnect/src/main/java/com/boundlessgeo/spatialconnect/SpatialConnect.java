@@ -111,15 +111,18 @@ public class SpatialConnect {
      * @param serviceId the id of the service that needs to start
      */
     public void startService(final String serviceId) {
-        this.services.get(serviceId).start().subscribe(new Action1<Void>() {
+        final SCService service = this.services.get(serviceId);
+        service.start().subscribe(new Action1<Void>() {
             @Override
             public void call(Void aVoid) {}
             },
                 new Action1<Throwable>() {
                 @Override
                 public void call(Throwable t) {
-                    Log.d(LOG_TAG, t.getLocalizedMessage());
+                    String errorMsg = (t != null) ? t.getLocalizedMessage() : "no message available";
+                    Log.e(LOG_TAG,"Unable to start service: " + serviceId + " with error: " + errorMsg);
                     // onError can happen if we cannot start the service b/c of some error or runtime exception
+                    service.setStatus(SCServiceStatus.SC_SERVICE_ERROR);
                     serviceEventSubject.onNext(
                             new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_ERROR, serviceId)
                     );
@@ -127,6 +130,7 @@ public class SpatialConnect {
             }, new Action0() {
                 @Override
                 public void call() {
+                    service.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
                     serviceEventSubject.onNext(
                             new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_RUNNING, serviceId));
                 }
