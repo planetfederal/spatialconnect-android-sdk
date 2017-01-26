@@ -25,7 +25,7 @@ public abstract class SCService implements SCServiceLifecycle{
     }
 
     public Observable<Void> start() {
-        this.status = SCServiceStatus.SC_SERVICE_STARTED;
+        this.status = SCServiceStatus.SC_SERVICE_RUNNING;
         return Observable.empty();
     }
 

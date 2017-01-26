@@ -130,7 +130,6 @@ public class SpatialConnect {
             }, new Action0() {
                 @Override
                 public void call() {
-                    service.setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
                     serviceEventSubject.onNext(
                             new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_RUNNING, serviceId));
                 }
