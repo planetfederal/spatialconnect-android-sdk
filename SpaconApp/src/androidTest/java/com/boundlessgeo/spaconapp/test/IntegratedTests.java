@@ -30,7 +30,6 @@ import rx.functions.Action1;
 import rx.observers.TestSubscriber;
 import rx.schedulers.Schedulers;
 
-import static com.boundlessgeo.spatialconnect.db.SCKVPStore.LOG_TAG;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
@@ -38,6 +37,7 @@ import static junit.framework.Assert.assertTrue;
 @RunWith(AndroidJUnit4.class)
 public class IntegratedTests {
 
+    private static String LOG_TAG = IntegratedTests.class.getSimpleName();
     /**
      * Activity
      */
@@ -81,7 +81,7 @@ public class IntegratedTests {
 
             sc = SpatialConnect.getInstance();
             sc.initialize(activity);
-            sc.addConfig(remoteConfigFile);
+            sc.getConfigService().addConfigFilePath(remoteConfigFile.getAbsolutePath());
             sc.startAllServices();
             sc.getAuthService().authenticate("admin@something.com", "admin");
 
@@ -92,7 +92,6 @@ public class IntegratedTests {
 
     @After
     public void afterTest() throws Exception {
-        sc.stopAllServices();
     }
 
     @Test
@@ -127,7 +126,7 @@ public class IntegratedTests {
                     @Override
                     public void call(List<Boolean> booleen) {
                         assertEquals("The remote config file has at least 2 stores",
-                                2, sc.getDataService().getAllStores().size());
+                                2, sc.getDataService().getStoreList().size());
                     }
         });
     }

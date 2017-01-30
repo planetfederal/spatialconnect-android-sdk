@@ -20,7 +20,6 @@ import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
 
 import com.boundlessgeo.spatialconnect.SpatialConnectActivity;
-import com.boundlessgeo.spatialconnect.db.SCKVPStore;
 import com.boundlessgeo.spatialconnect.stores.DefaultStore;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.boundlessgeo.spatialconnect.stores.LocationStore;
@@ -94,7 +93,6 @@ public abstract class BaseTestCase {
        testContext.deleteDatabase(POLYGONS_GPKG_ID);
        testContext.deleteDatabase(HAITI_GPKG_ID);
        testContext.deleteDatabase(WHITEHORSE_GPKG_ID);
-       testContext.deleteDatabase(SCKVPStore.DATABASE_NAME);
        testContext.deleteDatabase(DefaultStore.NAME);
        testContext.deleteDatabase(FormStore.NAME);
        testContext.deleteDatabase(LocationStore.NAME);

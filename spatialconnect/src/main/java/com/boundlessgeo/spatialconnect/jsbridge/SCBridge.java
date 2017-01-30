@@ -38,7 +38,7 @@ import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.boundlessgeo.spatialconnect.stores.SCRasterStore;
-import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
+import com.boundlessgeo.spatialconnect.stores.ISCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 import com.boundlessgeo.spatialconnect.tiles.GpkgRasterSource;
 import com.facebook.react.bridge.Arguments;
@@ -365,7 +365,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     private void handleNotificationSubscribe(final ReadableMap message) {
         Log.d(LOG_TAG, "Subscribing to notifications");
         SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
-        sensorService.isConnected.subscribe(new Action1<Boolean>() {
+        sensorService.isConnected().subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {
@@ -397,7 +397,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
 
     private void handleLogout(ReadableMap message) {
         Log.d(LOG_TAG, "Handling AUTHSERVICE_LOGOUT message " + message.toString());
-        SCAuthService.logout();
+        SpatialConnect.getInstance().getAuthService().logout();
     }
 
     /**
@@ -407,18 +407,19 @@ public class SCBridge extends ReactContextBaseJavaModule {
      */
     private void handleLoginStatus(final ReadableMap message) {
         Log.d(LOG_TAG, "Handling AUTHSERVICE_LOGIN_STATUS message " + message.toString());
-        SCAuthService.loginStatus.subscribe(new Action1<Boolean>() {
+        SCAuthService authService = SpatialConnect.getInstance().getAuthService();
+        authService.getLoginStatus().subscribe(new Action1<Integer>() {
             @Override
-            public void call(Boolean authenticated) {
-                int loginStatus = authenticated ? 1 : 0;
-                sendEvent(message.getInt("type"), loginStatus);
+            public void call(Integer status) {
+                sendEvent(message.getInt("type"), status);
             }
         });
     }
 
     private void handleAccessToken(ReadableMap message) {
         Log.d(LOG_TAG, "Handling AUTHSERVICE_ACCESS_TOKEN message " + message.toString());
-        String accessToken = SCAuthService.getAccessToken();
+        SCAuthService authService = SpatialConnect.getInstance().getAuthService();
+        String accessToken = authService.getAccessToken();
         if (accessToken != null) {
             sendEvent(message.getInt("type"), accessToken);
         }
@@ -451,7 +452,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
         SCSensorService sensorService = sc.getSensorService();
         Integer payloadNumber = message.getInt("payload");
         if (payloadNumber == 1) {
-            sensorService.startGPSListener();
+            sensorService.enableGPS();
             sensorService.getLastKnownLocation()
                     .subscribeOn(Schedulers.newThread())
                     .subscribe(new Action1<Location>() {
@@ -465,7 +466,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
                     });
         }
         if (payloadNumber == 0) {
-            sensorService.disableGPSListener();
+            sensorService.disableGPS();
         }
     }
 
@@ -498,7 +499,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     }
 
     private WritableMap getAllStoresPayload() {
-        List<SCDataStore> stores = sc.getDataService().getAllStores();
+        List<SCDataStore> stores = sc.getDataService().getStoreList();
         WritableMap eventPayload = Arguments.createMap();
         WritableArray storesArray = Arguments.createArray();
         for (SCDataStore store : stores) {
@@ -543,7 +544,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     private void handleActiveStoreById(ReadableMap message) {
         Log.d(LOG_TAG, "Handling ACTIVESTOREBYID message :" + message.toString());
         String storeId = message.getMap("payload").getString("storeId");
-        SCDataStore store = sc.getDataService().getStoreById(storeId);
+        SCDataStore store = sc.getDataService().getStoreByIdentifier(storeId);
         sendEvent(message.getInt("type"), getStoreMap(store));
     }
 
@@ -556,7 +557,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
         Log.d(LOG_TAG, "Handling STORELIST message :" + message.toString());
         sendEvent(message.getInt("type"), message.getString("responseId"), getAllStoresPayload());
 
-        sc.getDataService().storeEventSubject.subscribe(new Action1<SCStoreStatusEvent>() {
+        sc.getDataService().getStoreEvents().subscribe(new Action1<SCStoreStatusEvent>() {
             @Override
             public void call(SCStoreStatusEvent scStoreStatusEvent) {
                 sendEvent(message.getInt("type"), message.getString("responseId"), getAllStoresPayload());
@@ -629,8 +630,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
             SCSpatialFeature featureToUpdate = getFeatureToUpdate(
                     convertMapToJson(message.getMap("payload").getMap("feature")).toString()
             );
-            SCDataStore store = sc.getDataService().getStoreById(featureToUpdate.getKey().getStoreId());
-            ((SCSpatialStore) store).update(featureToUpdate)
+            SCDataStore store = sc.getDataService().getStoreByIdentifier(featureToUpdate.getKey().getStoreId());
+            ((ISCSpatialStore) store).update(featureToUpdate)
                     .subscribeOn(Schedulers.io())
                     .subscribe(
                             new Subscriber<SCSpatialFeature>() {
@@ -665,8 +666,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
         Log.d(LOG_TAG, "Handling DELETEFEATURE message :" + message.toString());
         try {
             SCKeyTuple featureKey = new SCKeyTuple(message.getString("payload"));
-            SCDataStore store = sc.getDataService().getStoreById(featureKey.getStoreId());
-            ((SCSpatialStore) store).delete(featureKey)
+            SCDataStore store = sc.getDataService().getStoreByIdentifier(featureKey.getStoreId());
+            ((ISCSpatialStore) store).delete(featureKey)
                     .subscribeOn(Schedulers.io())
                     .subscribe(
                             new Subscriber<Boolean>() {
@@ -706,8 +707,8 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (newFeature.getKey().getStoreId() == null || newFeature.getKey().getStoreId().isEmpty()) {
                 newFeature.setStoreId(newFeature.getKey().getStoreId());
             }
-            SCDataStore store = sc.getDataService().getStoreById(newFeature.getKey().getStoreId());
-            ((SCSpatialStore) store).create(newFeature)
+            SCDataStore store = sc.getDataService().getStoreByIdentifier(newFeature.getKey().getStoreId());
+            ((ISCSpatialStore) store).create(newFeature)
                     .subscribeOn(Schedulers.io())
                     .subscribe(
                             new Subscriber<SCSpatialFeature>() {
@@ -748,13 +749,17 @@ public class SCBridge extends ReactContextBaseJavaModule {
      *
      * @param message the message received from the Javascript
      */
-    private void handleBackendServiceHTTPUri(ReadableMap message) {
-        String backendUri = SpatialConnect.getInstance()
-                .getBackendService()
-                .backendUri + "/api/";
-        WritableMap eventPayload = Arguments.createMap();
-        eventPayload.putString("backendUri", backendUri);
-        sendEvent(message.getInt("type"), message.getString("responseId"), eventPayload);
+    private void handleBackendServiceHTTPUri(final ReadableMap message) {
+        sc.serviceRunning(SCBackendService.serviceId())
+                .subscribe(new Action1<SCServiceStatusEvent>() {
+                    @Override
+                    public void call(SCServiceStatusEvent scServiceStatusEvent) {
+                        String backendUri = sc.getBackendService().backendUri + "/api/";
+                        WritableMap eventPayload = Arguments.createMap();
+                        eventPayload.putString("backendUri", backendUri);
+                        sendEvent(message.getInt("type"), message.getString("responseId"), eventPayload);
+                    }
+                });
 
     }
 
@@ -870,9 +875,9 @@ public class SCBridge extends ReactContextBaseJavaModule {
         params.putString("key", store.getKey());
         params.putInt("status", store.getStatus().ordinal());
         params.putDouble("downloadProgress", store.getDownloadProgress());
-        if (store instanceof SCSpatialStore) {
+        if (store instanceof ISCSpatialStore) {
             WritableArray a = Arguments.createArray();
-            for (String vectorLayerName : ((SCSpatialStore) store).vectorLayers()) {
+            for (String vectorLayerName : ((ISCSpatialStore) store).vectorLayers()) {
                 a.pushString(vectorLayerName);
             }
             params.putArray("vectorLayers", a);

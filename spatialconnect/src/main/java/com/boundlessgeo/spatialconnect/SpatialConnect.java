@@ -29,9 +29,7 @@ import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
 import com.github.rtoshiro.secure.SecureSharedPreferences;
 
-import java.io.File;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 import rx.Observable;
@@ -64,28 +62,24 @@ public class SpatialConnect {
     private SpatialConnect() {
         this.serviceEventSubject = PublishSubject.create();
         this.serviceEvents = serviceEventSubject.publish();
-
         this.services = new HashMap<>();
     }
 
-    private static class SingletonHelper {
-        private static final SpatialConnect INSTANCE = new SpatialConnect();
-    }
-
+    /** Singleton of SpatialConnect
+     *
+     * @return instance of the SpatialConnect object singleton
+     */
     public static SpatialConnect getInstance() {
         return SingletonHelper.INSTANCE;
     }
 
     /**
-     * Calling {@code SpatialConnect#initialize()} will scan through the app's config directory in its
-     * <a href="http://developer.android.com/guide/topics/data/data-storage.html#filesExternal">external storage</a>
-     * and register all stores defined within those config files.
+     * Sets up the SpatialConnect instance that is the entry point of the library
      *
      * @param context
      */
     public void initialize(Context context) {
         Log.d(LOG_TAG, "Initializing SpatialConnect");
-
 
         this.sensorService = new SCSensorService(context);
         this.dataService = new SCDataService(context);
@@ -97,69 +91,92 @@ public class SpatialConnect {
     }
 
     /**
-     * Adds all the default services to the services hash map maintained by the SpatialConnect.
+     * Adds a {@link SCService} to SpatialConnect
+     * @param service the service object
      */
-    private void addDefaultServices() {
-        addService(SCDataService.serviceId(), this.dataService);
-        addService(SCSensorService.serviceId(), this.sensorService);
-        addService(SCConfigService.serviceId(), this.configService);
-        addService(SCAuthService.serviceId(), this.authService);
+    public void addService(SCService service) {
+        this.services.put(service.getServiceId(), service);
     }
 
-    public void addService(String serviceKey, SCService service) {
-        this.services.put(serviceKey, service);
+    /**
+     * Removes a service
+     * @param serviceId the id of the service to be removed
+     */
+    public void removeService(String serviceId) {
+        this.services.remove(serviceId);
     }
 
-    public void removeService(String id) {
-        this.services.remove(id);
-    }
-
-    public void startService(final String id) {
-        this.services.get(id).start().subscribe(new Action1<Void>() {
+    /**
+     * Starts {@link SCService} based on service id
+     * @param serviceId the id of the service that needs to start
+     */
+    public void startService(final String serviceId) {
+        final SCService service = this.services.get(serviceId);
+        service.start().subscribe(new Action1<Void>() {
             @Override
             public void call(Void aVoid) {}
             },
                 new Action1<Throwable>() {
                 @Override
                 public void call(Throwable t) {
-                    Log.d(LOG_TAG, t.getLocalizedMessage());
+                    String errorMsg = (t != null) ? t.getLocalizedMessage() : "no message available";
+                    Log.e(LOG_TAG,"Unable to start service: " + serviceId + " with error: " + errorMsg);
                     // onError can happen if we cannot start the service b/c of some error or runtime exception
+                    service.setStatus(SCServiceStatus.SC_SERVICE_ERROR);
                     serviceEventSubject.onNext(
-                            new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_ERROR, id)
+                            new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_ERROR, serviceId)
                     );
                 }
             }, new Action0() {
                 @Override
                 public void call() {
                     serviceEventSubject.onNext(
-                            new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_RUNNING, id));
+                            new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_RUNNING, serviceId));
                 }
         });
     }
 
-    public void stopService(String id) {
-        this.services.get(id).stop();
-    }
-
-    public void restartService(String id) {
-        this.services.get(id).stop();
-        this.services.get(id).start();
-    }
-
+    /**
+     * Starts all services added to SpatialConnect
+     */
     public void startAllServices() {
         Log.d(LOG_TAG, "Starting all services.");
         HashMap<String, SCService> ss  = new HashMap<>(services);
         for (String key : ss.keySet()) {
-            this.services.get(key).start();
+            startService(key);
         }
     }
 
+    /**
+     * Stops an SCService based on service id
+     * @param serviceId the id of the service that needs to be stopped.
+     */
+    public void stopService(String serviceId) {
+        this.services.get(serviceId).stop();
+    }
+
+    /**
+     * Stops all SCServices that was added to SpatialConnect
+     */
     public void stopAllServices() {
-        for (String key : this.services.keySet()) {
-            this.services.get(key).stop();
+        HashMap<String, SCService> ss  = new HashMap<>(services);
+        for (String key : ss.keySet()) {
+            stopService(key);
         }
     }
 
+    /**
+     * Restarts SCService based on service id
+     * @param serviceId the id of the service that needs to be restarted.
+     */
+    public void restartService(String serviceId) {
+        this.services.get(serviceId).stop();
+        this.services.get(serviceId).start();
+    }
+
+    /**
+     * Restarts all SCServices taht was added to SpatialConnect
+     */
     public void restartAllServices() {
         for (String key : this.services.keySet()) {
             this.services.get(key).stop();
@@ -167,6 +184,20 @@ public class SpatialConnect {
         }
     }
 
+    /**
+     * Finds service from service id
+     * @param serviceId the id of the service that needs to be retrieved
+     * @return instance of service found by id
+     */
+    public SCService getServiceById(String serviceId) {
+        return this.services.get(serviceId);
+    }
+
+    /**
+     * Checks to see if an {@link SCService}  is running by sending {@link SCServiceStatusEvent }
+     * @param serviceId the id of the service that needs to be retrieved
+     * @return Observable of SCServiceStatusEvent
+     */
     public Observable<SCServiceStatusEvent> serviceRunning(final String serviceId) {
         SCService service = getServiceById(serviceId);
         if (service != null && service.getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
@@ -183,30 +214,18 @@ public class SpatialConnect {
         }
     }
 
+    /**
+     * Creates {@link SCBackendService} and connects via the SCRemoteConfig
+     * @param remoteConfig object that represents http and mqtt endpoints.
+     */
     public void connectBackend(final SCRemoteConfig remoteConfig) {
         if (remoteConfig != null && backendService == null) {
             Log.d(LOG_TAG, "connecting backend");
             backendService = new SCBackendService(context);
             backendService.initialize(remoteConfig);
-            addService(SCBackendService.serviceId(), backendService);
-            startService(SCBackendService.serviceId());
+            addService(backendService);
+            startService(backendService.getServiceId());
         }
-    }
-
-    public Context getContext() {
-        return context;
-    }
-
-    public void addConfig(File f) {
-        this.configService.addConfig(f);
-    }
-
-    public Map<String, SCService> getServices() {
-        return services;
-    }
-
-    public SCService getServiceById(String id) {
-        return this.services.get(id);
     }
 
     public SCDataService getDataService() {
@@ -244,6 +263,20 @@ public class SpatialConnect {
             editor.apply();
         }
         return deviceId;
+    }
+
+    /**
+     * Adds all the default services to the services hash map maintained by the SpatialConnect.
+     */
+    private void addDefaultServices() {
+        addService(this.dataService);
+        addService(this.sensorService);
+        addService(this.configService);
+        addService(this.authService);
+    }
+
+    private static class SingletonHelper {
+        private static final SpatialConnect INSTANCE = new SpatialConnect();
     }
 }
 

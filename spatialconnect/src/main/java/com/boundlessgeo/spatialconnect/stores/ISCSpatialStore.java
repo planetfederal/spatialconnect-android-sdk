@@ -25,7 +25,8 @@ import rx.Observable;
 /**
  * Interface definition for the spatial store.
  */
-public interface SCSpatialStore
+
+public interface ISCSpatialStore
 {
     Observable query(SCQueryFilter scFilter);
     Observable queryById(SCKeyTuple keyTuple);

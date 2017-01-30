@@ -29,7 +29,7 @@ import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
-import com.boundlessgeo.spatialconnect.stores.SCSpatialStore;
+import com.boundlessgeo.spatialconnect.stores.ISCSpatialStore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -84,7 +84,7 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 Integer payloadNumber = getPayloadNumber(bridgeMessage);
 
                 if (payloadNumber == 1) {
-                    sensorService.startGPSListener();
+                    sensorService.enableGPS();
                     sensorService.getLastKnownLocation()
                             .subscribeOn(Schedulers.newThread())
                             .subscribe(new Action1<Location>() {
@@ -98,7 +98,7 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                     return;
                 }
                 if (payloadNumber == 0) {
-                    sensorService.disableGPSListener();
+                    sensorService.disableGPS();
                     return;
                 }
             }
@@ -122,7 +122,7 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 String storeId = getStoreId(bridgeMessage);
                 String dataStoreString = null;
                 try {
-                    dataStoreString = MAPPER.writeValueAsString(manager.getDataService().getStoreById(storeId));
+                    dataStoreString = MAPPER.writeValueAsString(manager.getDataService().getStoreByIdentifier(storeId));
                 } catch (JsonProcessingException e) {
                     e.printStackTrace();
                     return;
@@ -169,8 +169,8 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 SCSpatialFeature featureToUpdate = getFeatureToUpdate(
                   bridgeMessage.get("payload").get("feature").asText()
                 );
-                SCDataStore store = manager.getDataService().getStoreById(featureToUpdate.getKey().getStoreId());
-                  ((SCSpatialStore) store).update(featureToUpdate)
+                SCDataStore store = manager.getDataService().getStoreByIdentifier(featureToUpdate.getKey().getStoreId());
+                  ((ISCSpatialStore) store).update(featureToUpdate)
                   .subscribeOn(Schedulers.io())
                   .subscribe(
                     new Subscriber<Boolean>() {
@@ -198,8 +198,8 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
             if (command.equals(SCCommand.DATASERVICE_DELETEFEATURE)) {
               try {
                 SCKeyTuple featureKey = new SCKeyTuple(bridgeMessage.get("payload").asText());
-                SCDataStore store = manager.getDataService().getStoreById(featureKey.getStoreId());
-                  ((SCSpatialStore) store).delete(featureKey)
+                SCDataStore store = manager.getDataService().getStoreByIdentifier(featureKey.getStoreId());
+                  ((ISCSpatialStore) store).delete(featureKey)
                   .subscribeOn(Schedulers.io())
                   .subscribe(
                     new Subscriber<Boolean>() {
@@ -227,8 +227,8 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
             if (command.equals(SCCommand.DATASERVICE_CREATEFEATURE)) {
               try {
                 SCSpatialFeature newFeature = getNewFeature(bridgeMessage.get("payload"));
-                SCDataStore store = manager.getDataService().getStoreById(newFeature.getKey().getStoreId());
-                  ((SCSpatialStore) store).create(newFeature)
+                SCDataStore store = manager.getDataService().getStoreByIdentifier(newFeature.getKey().getStoreId());
+                  ((ISCSpatialStore) store).create(newFeature)
                   .subscribeOn(Schedulers.io())
                   .subscribe(
                     new Subscriber<SCSpatialFeature>() {

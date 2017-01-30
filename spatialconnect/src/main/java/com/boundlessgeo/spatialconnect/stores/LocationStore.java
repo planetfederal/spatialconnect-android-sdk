@@ -25,7 +25,6 @@ import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCPoint;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
-import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
@@ -46,7 +45,7 @@ import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
 
-public class LocationStore extends GeoPackageStore implements  SCSpatialStore, SCDataStoreLifeCycle {
+public class LocationStore extends GeoPackageStore implements ISCSpatialStore, SCDataStoreLifeCycle {
 
     private static final String LOG_TAG = LocationStore.class.getSimpleName();
     private final String LAST_KNOWN_TABLE = "last_known_location";
@@ -81,10 +80,12 @@ public class LocationStore extends GeoPackageStore implements  SCSpatialStore, S
     }
 
     private void listenForLocationUpdate() {
-        SCSensorService.running.subscribe(new Action1<Integer>() {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        SCSensorService ss = sc.getSensorService();
+        ss.isConnected().subscribe(new Action1<Boolean>() {
             @Override
-            public void call(Integer integer) {
-                if (integer == 1) {
+            public void call(Boolean connected) {
+                if (connected) {
                     SpatialConnect sc = SpatialConnect.getInstance();
                     if (sc.getSensorService() != null) {
                         SpatialConnect.getInstance()
@@ -138,7 +139,7 @@ public class LocationStore extends GeoPackageStore implements  SCSpatialStore, S
     private void publishLocation(final SCPoint point) {
         final SpatialConnect sc = SpatialConnect.getInstance();
         SCSensorService sensorService = sc.getSensorService();
-        sensorService.isConnected.subscribe(new Action1<Boolean>() {
+        sensorService.isConnected().subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {
@@ -161,7 +162,7 @@ public class LocationStore extends GeoPackageStore implements  SCSpatialStore, S
                                             .build();
                                     SpatialConnect.getInstance()
                                             .getBackendService()
-                                            .publish("/store/tracking", message, QoS.AT_MOST_ONCE);
+                                            .publishAtMostOnce("/store/tracking", message);
                                 }
                             });
                 }

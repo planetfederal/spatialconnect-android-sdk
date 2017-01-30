@@ -48,7 +48,7 @@ import rx.functions.Action1;
  * <p></p>
  * Note that all features will be queried and created in a workspace named <i>spatialconnect</i>.
  */
-public class WFSStore extends SCRemoteDataStore implements  SCSpatialStore {
+public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
 
     private static final String LOG_TAG = WFSStore.class.getSimpleName();
     private String baseUrl;
@@ -175,7 +175,7 @@ public class WFSStore extends SCRemoteDataStore implements  SCSpatialStore {
                 SCSensorService ss = SpatialConnect.getInstance().getSensorService();
 
                 // try to connect to WFS store to get the layers from the capabilities documents
-                ss.isConnected.subscribe(new Action1<Boolean>() {
+                ss.isConnected().subscribe(new Action1<Boolean>() {
                     @Override
                     public void call(Boolean connected) {
                         if (connected) {

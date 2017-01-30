@@ -81,7 +81,7 @@ public class LocationHelperTest extends BaseTestCase {
             locationJellyBeanFixMethod.invoke(mockLocation);
         }
 
-        locationHelper.enableGps();
+        locationHelper.enableGps(Criteria.ACCURACY_FINE, 1000);
 
         locationHelper.getLocation().subscribe(testSubscriber);
 
