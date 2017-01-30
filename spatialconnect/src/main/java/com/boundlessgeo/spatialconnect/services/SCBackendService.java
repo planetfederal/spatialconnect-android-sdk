@@ -86,59 +86,47 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     public void publish(String topic, SCMessageOuterClass.SCMessage message) {
-
-
-
-        SCMessageOuterClass.SCMessage.Builder jwtMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
-        jwtMessagebuilder.setAction(message.getAction())
+        SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
+        scMessagebuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
                 .setReplyTo(message.getReplyTo())
                 .setJwt(getJwt())
                 .setTime(getTimestamp());
 
-        mqttHandler.publish(topic, jwtMessagebuilder.build(), QoS.EXACTLY_ONCE.value());
+        mqttHandler.publish(topic, scMessagebuilder.build(), QoS.EXACTLY_ONCE.value());
     }
 
     public void publishAtMostOnce(String topic, SCMessageOuterClass.SCMessage message) {
-
-
-
-        SCMessageOuterClass.SCMessage.Builder jwtMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
-        jwtMessagebuilder.setAction(message.getAction())
+        SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
+        scMessagebuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
                 .setReplyTo(message.getReplyTo())
                 .setJwt(getJwt())
                 .setTime(getTimestamp());
 
-        mqttHandler.publish(topic, jwtMessagebuilder.build(), QoS.AT_MOST_ONCE.value());
+        mqttHandler.publish(topic, scMessagebuilder.build(), QoS.AT_MOST_ONCE.value());
     }
 
     public void publishAtLeastOnce(String topic, SCMessageOuterClass.SCMessage message) {
-
-
-
-        SCMessageOuterClass.SCMessage.Builder jwtMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
-        jwtMessagebuilder.setAction(message.getAction())
+        SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
+        scMessagebuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
                 .setReplyTo(message.getReplyTo())
                 .setJwt(getJwt())
                 .setTime(getTimestamp());
 
-        mqttHandler.publish(topic, jwtMessagebuilder.build(), QoS.AT_LEAST_ONCE.value());
+        mqttHandler.publish(topic, scMessagebuilder.build(), QoS.AT_LEAST_ONCE.value());
     }
 
     public void publishExactlyOnce(String topic, SCMessageOuterClass.SCMessage message) {
-
-
-
-        SCMessageOuterClass.SCMessage.Builder jwtMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
-        jwtMessagebuilder.setAction(message.getAction())
+        SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
+        scMessagebuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
                 .setReplyTo(message.getReplyTo())
                 .setJwt(getJwt())
                 .setTime(getTimestamp());
 
-        mqttHandler.publish(topic, jwtMessagebuilder.build(), QoS.EXACTLY_ONCE.value());
+        mqttHandler.publish(topic, scMessagebuilder.build(), QoS.EXACTLY_ONCE.value());
     }
 
     /**
