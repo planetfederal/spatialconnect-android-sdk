@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import okhttp3.Response;
 import rx.Observable;
@@ -52,7 +53,7 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
 
     private static final String LOG_TAG = WFSStore.class.getSimpleName();
     private String baseUrl;
-    private List<String> layerNames = new ArrayList<>();
+    private List<String> vectorLayers = new ArrayList<>();
     private List<String> defaultLayers;
     public static final String TYPE = "wfs";
     private static final String VERSION = "1.1.0";
@@ -62,15 +63,12 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
         this.setName(scStoreConfig.getName());
         this.setType(TYPE);
         this.setVersion(scStoreConfig.getVersion());
-        this.setDefaultLayers(scStoreConfig.getDefaultLayers());
+        this.defaultLayers = scStoreConfig.getDefaultLayers();
         baseUrl = scStoreConfig.getUri();
         if (baseUrl == null) {
             throw new IllegalArgumentException("WFS store must have a uri property.");
         }
-    }
-
-    public List<String> defaultLayers() {
-        return this.defaultLayers;
+        getLayers();
     }
 
     public List<String> layers() {
@@ -78,7 +76,19 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
     }
 
     public List<String> vectorLayers() {
-        return this.layerNames;
+        return this.vectorLayers;
+    }
+
+    public String getGetCapabilitiesUrl() {
+        return String.format(
+                "%s?service=WFS&version=%s&request=GetCapabilities",
+                baseUrl,
+                this.getVersion()
+        );
+    }
+
+    public static String getVersionKey() {
+        return String.format("%s.%s",TYPE, VERSION);
     }
 
     @Override
@@ -86,11 +96,11 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
         // if there are no layer names supplied in the query filter, then search only on the default layers
         final List<String> layerNames = scFilter.getLayerIds().size() > 0 ?
                 scFilter.getLayerIds() :
-                defaultLayers();
+                defaultLayers;
 
         // TODO: when implmenting version 2.0.0, "maxFeatures" has been changed to "count"
         // see: http://docs.geoserver.org/latest/en/user/services/wfs/reference.html#getfeature
-        String getFeatureUrl = String.format("%s?service=WFS&version=%s&request=GetFeature&typeName=%s" +
+        String getFeatureUrl = String.format(Locale.US, "%s?service=WFS&version=%s&request=GetFeature&typeName=%s" +
                 "&outputFormat=application/json&srsname=EPSG:4326&maxFeatures=%d",
                 baseUrl,
                 getVersion(),
@@ -98,7 +108,7 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
                 scFilter.getLimit()
         );
         if (scFilter.getPredicate() != null) {
-            getFeatureUrl = String.format("%s&bbox=%f,%f,%f,%f,EPSG:4326",
+            getFeatureUrl = String.format(Locale.US, "%s&bbox=%f,%f,%f,%f,EPSG:4326",
                     getFeatureUrl,
                     scFilter.getPredicate().getBoundingBox().getMinX(),
                     scFilter.getPredicate().getBoundingBox().getMinY(),
@@ -107,6 +117,7 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
             );
         }
         final String featureUrl = getFeatureUrl;
+        Log.e(LOG_TAG,"feature Url: " + featureUrl);
         return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>(){
             @Override
             public void call(final Subscriber<? super SCSpatialFeature> subscriber) {
@@ -119,6 +130,7 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
                                     try {
                                         String response = res.body().string();
                                         SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(response);
+                                        Log.e(LOG_TAG, "collection size: " + collection.getFeatures().size());
                                         for (SCSpatialFeature feature : collection.getFeatures()) {
                                             feature.setLayerId(feature.getId().split("\\.")[0]);  // the first part of the id is the layer name
                                             feature.setStoreId(getStoreId());
@@ -165,60 +177,9 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
     }
 
     @Override
-    public Observable<SCStoreStatusEvent> start() {
-        Log.d(LOG_TAG, "Starting store " + this.getName());
-        final WFSStore storeInstance = this;
-
-        return Observable.create(new Observable.OnSubscribe<SCStoreStatusEvent>() {
-            @Override
-            public void call(final Subscriber<? super SCStoreStatusEvent> subscriber) {
-                SCSensorService ss = SpatialConnect.getInstance().getSensorService();
-
-                // try to connect to WFS store to get the layers from the capabilities documents
-                ss.isConnected().subscribe(new Action1<Boolean>() {
-                    @Override
-                    public void call(Boolean connected) {
-                        if (connected) {
-                            try {
-                                HttpHandler.getInstance().get(getGetCapabilitiesUrl())
-                                        .subscribe(new Action1<Response>() {
-                                            @Override
-                                            public void call(Response response) {
-                                                layerNames = getLayerNames(response.body().byteStream());
-                                                if (layerNames != null) {
-                                                    storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                                                    subscriber.onNext(
-                                                            new SCStoreStatusEvent(
-                                                                    SCDataStoreStatus.SC_DATA_STORE_RUNNING,
-                                                                    storeInstance.getStoreId()
-                                                            )
-                                                    );
-                                                    subscriber.onCompleted();
-                                                }
-                                            }
-                                        },
-                                        new Action1<Throwable>() {
-                                            @Override
-                                            public void call(Throwable t) {
-                                                storeInstance.setStatus(SCDataStoreStatus.SC_DATA_STORE_START_FAILED);
-                                                subscriber.onNext(
-                                                        new SCStoreStatusEvent(
-                                                                SCDataStoreStatus.SC_DATA_STORE_START_FAILED,
-                                                                storeInstance.getStoreId()
-                                                        )
-                                                );
-                                                subscriber.onCompleted();
-                                            }
-                                        });
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-
-                    }
-                });
-            }
-        });
+    public void stop() {
+        super.stop();
+        this.vectorLayers.clear();
     }
 
     private List<String> getLayerNames(InputStream response) {
@@ -273,11 +234,6 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
         return entries;
     }
 
-
-    private void setDefaultLayers(List<String> defaultLayers) {
-        this.defaultLayers = defaultLayers;
-    }
-
     private String readFeatureType(XmlPullParser parser) throws XmlPullParserException, IOException {
         parser.require(XmlPullParser.START_TAG, null, "FeatureType");
         String layerName = null;
@@ -329,23 +285,38 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
         }
     }
 
+    private void getLayers() {
+        SCSensorService ss = SpatialConnect.getInstance().getSensorService();
 
-    @Override
-    public void stop() {
-        super.stop();
-        this.layerNames.clear();
-    }
+        // try to connect to WFS store to get the layers from the capabilities documents
+        ss.isConnected().subscribe(new Action1<Boolean>() {
+            @Override
+            public void call(Boolean connected) {
+                if (connected) {
+                    try {
+                        HttpHandler.getInstance().get(getGetCapabilitiesUrl())
+                                .subscribe(new Action1<Response>() {
+                                               @Override
+                                               public void call(Response response) {
+                                                   vectorLayers = getLayerNames(response.body().byteStream());
+                                                   if (vectorLayers != null) {
+                                                       setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                                   }
+                                               }
+                                           },
+                                        new Action1<Throwable>() {
+                                            @Override
+                                            public void call(Throwable t) {
+                                                setStatus(SCDataStoreStatus.SC_DATA_STORE_START_FAILED);
+                                            }
+                                        });
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
 
-    public String getGetCapabilitiesUrl() {
-        return String.format(
-                "%s?service=WFS&version=%s&request=GetCapabilities",
-                baseUrl,
-                this.getVersion()
-        );
-    }
-
-    public static String getVersionKey() {
-        return String.format("%s.%s",TYPE, VERSION);
+            }
+        });
     }
 
 }

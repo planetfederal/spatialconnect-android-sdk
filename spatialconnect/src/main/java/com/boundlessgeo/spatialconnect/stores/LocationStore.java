@@ -57,6 +57,14 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
         super(context, scStoreConfig);
     }
 
+    public Observable<SCSpatialFeature> create(final SCPoint point) {
+        point.setLayerId("last_known_location");
+        point.setStoreId(getStoreId());
+        Log.d(LOG_TAG, "writing new location row " + point.toJson());
+        return super.create(point);
+    }
+
+    @Override
     public Observable<SCStoreStatusEvent> start() {
         Observable<SCStoreStatusEvent> storeStatusEvent;
         storeStatusEvent = super.start();
@@ -75,50 +83,6 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
         });
     }
 
-    public void destroy() {
-        super.destroy();
-    }
-
-    private void listenForLocationUpdate() {
-        SpatialConnect sc = SpatialConnect.getInstance();
-        SCSensorService ss = sc.getSensorService();
-        ss.isConnected().subscribe(new Action1<Boolean>() {
-            @Override
-            public void call(Boolean connected) {
-                if (connected) {
-                    SpatialConnect sc = SpatialConnect.getInstance();
-                    if (sc.getSensorService() != null) {
-                        SpatialConnect.getInstance()
-                                .getSensorService()
-                                .getLastKnownLocation()
-                                .subscribe(new Action1<Location>() {
-                                    @Override
-                                    public void call(Location location) {
-                                        GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 0);
-                                        Geometry point = geometryFactory.createPoint(
-                                                new Coordinate(
-                                                    location.getLongitude(),
-                                                    location.getLatitude(),
-                                                    location.getAltitude()
-                                                )
-                                        );
-                                        SCGeometry scFeatureLocationUpdate = new SCGeometry(point);
-                                        scFeatureLocationUpdate.setLayerId(LAST_KNOWN_TABLE);
-                                        scFeatureLocationUpdate.getProperties().put(TIMESTAMP_COLUMN, System.currentTimeMillis());
-                                        scFeatureLocationUpdate.getProperties().put(ACCURACY_COLUMN, "GPS");
-
-                                        publishLocation(new SCPoint(point));
-
-                                        LocationStore locationStore = SpatialConnect.getInstance().getDataService().getLocationStore();
-                                        locationStore.create(scFeatureLocationUpdate).subscribe();
-                                    }
-                                });
-                    }
-                }
-            }
-        });
-    }
-
     @Override
     public Observable<SCSpatialFeature> query(final SCQueryFilter scFilter) {
         return Observable.empty();
@@ -129,11 +93,14 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
         return Observable.empty();
     }
 
-    public Observable<SCSpatialFeature> create(final SCPoint point) {
-        point.setLayerId("last_known_location");
-        point.setStoreId(getStoreId());
-        Log.d(LOG_TAG, "writing new location row " + point.toJson());
-        return super.create(point);
+    @Override
+    public Observable<SCSpatialFeature> update(final SCSpatialFeature scSpatialFeature) {
+        return Observable.empty();
+    }
+
+    @Override
+    public Observable<Void> delete(final SCKeyTuple keyTuple) {
+        return Observable.empty();
     }
 
     private void publishLocation(final SCPoint point) {
@@ -170,13 +137,44 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
         });
     }
 
-    public Observable<SCSpatialFeature> update(final SCSpatialFeature scSpatialFeature) {
-        return Observable.empty();
-    }
+    private void listenForLocationUpdate() {
+        SpatialConnect sc = SpatialConnect.getInstance();
+        SCSensorService ss = sc.getSensorService();
+        ss.isConnected().subscribe(new Action1<Boolean>() {
+            @Override
+            public void call(Boolean connected) {
+                if (connected) {
+                    SpatialConnect sc = SpatialConnect.getInstance();
+                    if (sc.getSensorService() != null) {
+                        SpatialConnect.getInstance()
+                                .getSensorService()
+                                .getLastKnownLocation()
+                                .subscribe(new Action1<Location>() {
+                                    @Override
+                                    public void call(Location location) {
+                                        GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 0);
+                                        Geometry point = geometryFactory.createPoint(
+                                                new Coordinate(
+                                                        location.getLongitude(),
+                                                        location.getLatitude(),
+                                                        location.getAltitude()
+                                                )
+                                        );
+                                        SCGeometry scFeatureLocationUpdate = new SCGeometry(point);
+                                        scFeatureLocationUpdate.setLayerId(LAST_KNOWN_TABLE);
+                                        scFeatureLocationUpdate.getProperties().put(TIMESTAMP_COLUMN, System.currentTimeMillis());
+                                        scFeatureLocationUpdate.getProperties().put(ACCURACY_COLUMN, "GPS");
 
-    @Override
-    public Observable<Void> delete(final SCKeyTuple keyTuple) {
-        return Observable.empty();
+                                        publishLocation(new SCPoint(point));
+
+                                        LocationStore locationStore = SpatialConnect.getInstance().getDataService().getLocationStore();
+                                        locationStore.create(scFeatureLocationUpdate).subscribe();
+                                    }
+                                });
+                    }
+                }
+            }
+        });
     }
 
 }
