@@ -117,7 +117,6 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
             );
         }
         final String featureUrl = getFeatureUrl;
-        Log.e(LOG_TAG,"feature Url: " + featureUrl);
         return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>(){
             @Override
             public void call(final Subscriber<? super SCSpatialFeature> subscriber) {
@@ -130,7 +129,6 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
                                     try {
                                         String response = res.body().string();
                                         SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(response);
-                                        Log.e(LOG_TAG, "collection size: " + collection.getFeatures().size());
                                         for (SCSpatialFeature feature : collection.getFeatures()) {
                                             feature.setLayerId(feature.getId().split("\\.")[0]);  // the first part of the id is the layer name
                                             feature.setStoreId(getStoreId());
