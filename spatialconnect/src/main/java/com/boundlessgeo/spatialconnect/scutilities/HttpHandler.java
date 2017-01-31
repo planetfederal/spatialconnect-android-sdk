@@ -50,7 +50,7 @@ public class HttpHandler {
 
     private HttpHandler() {
         this.client = new OkHttpClient.Builder()
-                .readTimeout(3, TimeUnit.MINUTES)
+                .readTimeout(2, TimeUnit.MINUTES)
                 .addNetworkInterceptor(new LoggingInterceptor())
                 .build();
     }
