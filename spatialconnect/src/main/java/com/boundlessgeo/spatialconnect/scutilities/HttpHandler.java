@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Interceptor;
 import okhttp3.MediaType;
@@ -49,6 +50,7 @@ public class HttpHandler {
 
     private HttpHandler() {
         this.client = new OkHttpClient.Builder()
+                .readTimeout(2, TimeUnit.MINUTES)
                 .addNetworkInterceptor(new LoggingInterceptor())
                 .build();
     }

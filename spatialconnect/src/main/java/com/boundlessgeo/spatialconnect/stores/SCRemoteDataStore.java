@@ -19,7 +19,7 @@ public class SCRemoteDataStore extends SCDataStore implements SCDataStoreLifeCyc
     @Override
     public Observable<SCStoreStatusEvent> start() {
         listenForConnection();
-        return null;
+        return Observable.empty();
     }
 
     @Override

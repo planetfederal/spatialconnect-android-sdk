@@ -8,15 +8,24 @@ import android.util.Log;
 
 import com.boundlessgeo.spaconapp.MainActivity;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
+import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
+import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
+import com.boundlessgeo.spatialconnect.query.SCPredicate;
+import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
+import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
+import com.boundlessgeo.spatialconnect.stores.WFSStore;
 
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.MethodSorters;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -35,17 +44,12 @@ import static junit.framework.Assert.assertTrue;
 
 
 @RunWith(AndroidJUnit4.class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class IntegratedTests {
 
     private static String LOG_TAG = IntegratedTests.class.getSimpleName();
-    /**
-     * Activity
-     */
+    private static final String WFS_STORE_ID = "3987516d-0418-4bcd-8e94-b05609a870f4";
     protected static Activity activity = null;
-
-    /**
-     * Test context
-     */
     protected static Context testContext = null;
 
     /**
@@ -84,6 +88,7 @@ public class IntegratedTests {
             sc.getConfigService().addConfigFilePath(remoteConfigFile.getAbsolutePath());
             sc.startAllServices();
             sc.getAuthService().authenticate("admin@something.com", "admin");
+            waitForStoreToStart(WFS_STORE_ID);
 
         } catch (IOException ex) {
             System.exit(0);
@@ -95,7 +100,7 @@ public class IntegratedTests {
     }
 
     @Test
-    public void testNetworkServiceCanPublishAndSubscribe() {
+    public void testMqttNetworkServiceCanPublishAndSubscribe() {
         SCBackendService networkService = sc.getBackendService();
         SCMessageOuterClass.SCMessage.Builder builder =  SCMessageOuterClass.SCMessage.newBuilder();
         builder.setAction(0)
@@ -118,15 +123,15 @@ public class IntegratedTests {
     }
 
     @Test
-    public void testSpatialConnectCanLoadLocalConfigs() {
+    public void testMqttLoadLocalConfigs() {
         sc.getDataService()
                 .hasStores
                 .buffer(2)
                 .subscribe(new Action1<List<Boolean>>() {
                     @Override
                     public void call(List<Boolean> booleen) {
-                        assertEquals("The remote config file has at least 2 stores",
-                                2, sc.getDataService().getStoreList().size());
+                        assertTrue("The remote config file has at least 2 stores",
+                                sc.getDataService().getStoreList().size() >= 2);
                     }
         });
     }
@@ -154,5 +159,56 @@ public class IntegratedTests {
                                 connected);
                     }
                 });
+    }
+
+    @Test
+    public void testWFS_1_StoreCorrectly() {
+        boolean containsWFSStore = false;
+        for (SCDataStore store : sc.getDataService().getActiveStores()) {
+            if (store.getType().equals(WFSStore.TYPE)) containsWFSStore = true;
+        }
+        assertTrue("A wfs store should be running.", containsWFSStore);
+        SCDataStore wfsStore = sc.getDataService().getStoreByIdentifier(WFS_STORE_ID);
+        assertEquals("The wfs store should be running", SCDataStoreStatus.SC_DATA_STORE_RUNNING, wfsStore.getStatus());
+    }
+
+    @Test
+    public void testWFS_2_GetCapabilitesUrlIsBuiltCorrectly() {
+        WFSStore store = (WFSStore) sc.getDataService().getStoreByIdentifier(WFS_STORE_ID);
+        assertEquals("The WFS store url was not built correctly.",
+                "http://demo.boundlessgeo.com/geoserver/osm/ows?service=WFS&version=1.1.0&request=GetCapabilities",
+                store.getGetCapabilitiesUrl()
+        );
+    }
+
+    @Test
+    public void testWFS_3_LayerNamesAreParsedFromCapabilities() {
+        WFSStore store = (WFSStore) sc.getDataService().getStoreByIdentifier(WFS_STORE_ID);
+        assertTrue("There should be multiple layers.",
+                store.layers().size() > 0
+        );
+    }
+
+    @Test
+    public void testWFS_4_QueryWithBbox() {
+        SCBoundingBox bbox = new SCBoundingBox(-127.056432967933, 42.03578985948257, -52.696780484684545, 62.464526783166164);
+        SCQueryFilter filter = new SCQueryFilter(
+                new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
+        );
+        WFSStore store = (WFSStore) sc.getDataService().getStoreByIdentifier(WFS_STORE_ID);
+        filter.addLayerId("buildings");
+        TestSubscriber testSubscriber = new TestSubscriber();
+        store.query(filter).timeout(3, TimeUnit.MINUTES).subscribe(testSubscriber);
+        testSubscriber.awaitTerminalEvent(); // it never completes, only times out
+        assertTrue("The query observable should have emitted features", testSubscriber.getOnNextEvents().size() > 0);
+        // TODO: test that the onNext events are valid scSpatialFeatures
+    }
+
+    private static void waitForStoreToStart(final String storeId) {
+        TestSubscriber testSubscriber = new TestSubscriber();
+        sc.getDataService().storeStarted(storeId).timeout(2, TimeUnit.MINUTES).subscribe(testSubscriber);
+        testSubscriber.awaitTerminalEvent();
+        testSubscriber.assertNoErrors();
+        testSubscriber.assertCompleted();
     }
 }
