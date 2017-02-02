@@ -322,7 +322,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
             if (command.equals(SCCommand.DATASERVICE_STORELIST)) {
                 handleStoreList(message);
             }
-            if (command.equals(SCCommand.DATASERVICE_GEOSPATIALQUERY)
+            if (command.equals(SCCommand.DATASERVICE_QUERY)
                     || command.equals(SCCommand.DATASERVICE_SPATIALQUERY)) {
                 handleQuery(message);
             }
@@ -566,7 +566,7 @@ public class SCBridge extends ReactContextBaseJavaModule {
     }
 
     /**
-     * Handles the {@link SCCommand#DATASERVICE_GEOSPATIALQUERYALL} and
+     * Handles the {@link SCCommand#DATASERVICE_QUERYALL} and
      * {@link SCCommand#DATASERVICE_SPATIALQUERYALL} commands.
      *
      * @param message
