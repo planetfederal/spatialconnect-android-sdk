@@ -19,6 +19,7 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.scutilities.SCCache;
+import com.boundlessgeo.spatialconnect.services.ISCAuth;
 import com.boundlessgeo.spatialconnect.services.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
@@ -84,7 +85,6 @@ public class SpatialConnect {
         this.sensorService = new SCSensorService(context);
         this.dataService = new SCDataService(context);
         this.configService = new SCConfigService(context);
-        this.authService = new SCAuthService(context);
         this.cache = new SCCache(context);
         this.context = context;
         addDefaultServices();
@@ -112,9 +112,9 @@ public class SpatialConnect {
      */
     public void startService(final String serviceId) {
         final SCService service = this.services.get(serviceId);
-        service.start().subscribe(new Action1<Void>() {
+        service.start().subscribe(new Action1<SCServiceStatus>() {
             @Override
-            public void call(Void aVoid) {}
+            public void call(SCServiceStatus serviceStatus) {}
             },
                 new Action1<Throwable>() {
                 @Override
@@ -228,6 +228,12 @@ public class SpatialConnect {
         }
     }
 
+    public void connectAuth(ISCAuth authMethod) {
+        authService = new SCAuthService(context, authMethod);
+        addService(authService);
+        startService((SCAuthService.serviceId()));
+    }
+
     public SCDataService getDataService() {
         return dataService;
     }
@@ -272,7 +278,6 @@ public class SpatialConnect {
         addService(this.dataService);
         addService(this.sensorService);
         addService(this.configService);
-        addService(this.authService);
     }
 
     private static class SingletonHelper {

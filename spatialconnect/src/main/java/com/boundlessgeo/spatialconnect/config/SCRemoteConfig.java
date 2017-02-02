@@ -17,6 +17,8 @@ package com.boundlessgeo.spatialconnect.config;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Locale;
+
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class SCRemoteConfig {
 
@@ -84,5 +86,9 @@ public class SCRemoteConfig {
 
     public void setMqttPort(Integer mqttPort) {
         this.mqttPort = mqttPort;
+    }
+
+    public String getHttpUri() {
+        return String.format(Locale.US,"%s://%s:%s", httpProtocol, httpHost, httpPort);
     }
 }

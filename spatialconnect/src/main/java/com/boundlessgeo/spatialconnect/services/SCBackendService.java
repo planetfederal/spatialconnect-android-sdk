@@ -204,7 +204,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    public Observable<Void> start() {
+    public Observable<SCServiceStatus> start() {
         super.start();
         listenForNetworkConnection();
         return Observable.empty();

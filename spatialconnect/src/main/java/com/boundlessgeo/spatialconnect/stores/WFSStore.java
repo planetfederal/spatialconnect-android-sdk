@@ -101,7 +101,7 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
         // TODO: when implmenting version 2.0.0, "maxFeatures" has been changed to "count"
         // see: http://docs.geoserver.org/latest/en/user/services/wfs/reference.html#getfeature
         String getFeatureUrl = String.format(Locale.US, "%s?service=WFS&version=%s&request=GetFeature&typeName=%s" +
-                "&outputFormat=application/json&srsname=EPSG:4326&maxFeatures=%d",
+                        "&outputFormat=application/json&srsname=EPSG:4326&maxFeatures=%d",
                 baseUrl,
                 getVersion(),
                 TextUtils.join(",", layerNames),
@@ -141,8 +141,8 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
                                 }
                             },
                             new Action1<Throwable>() {
-                                    @Override
-                                    public void call (Throwable throwable){
+                                @Override
+                                public void call (Throwable throwable){
                                     Log.e(LOG_TAG, "something went wrong querying wfs: " + throwable.getMessage());
                                 }
 

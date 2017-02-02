@@ -15,20 +15,9 @@
 package com.boundlessgeo.spatialconnect.services;
 
 import android.content.Context;
-import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
-import com.github.rtoshiro.secure.SecureSharedPreferences;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.IOException;
-
-import okhttp3.Response;
 import rx.Observable;
-import rx.functions.Action1;
+import rx.Subscriber;
 import rx.subjects.BehaviorSubject;
 
 public class SCAuthService extends SCService implements SCServiceLifecycle {
@@ -60,22 +49,22 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
 
     private static final String LOG_TAG = SCAuthService.class.getSimpleName();
     private static final String SERVICE_NAME = "SC_AUTH_SERVICE";
-    private static final String JSON_WEB_TOKEN = "x-access-token";
-    private static final String USERNAME = "username";
-    private static final String PWD = "pwd";
-    private Context context;
-    private String jsonWebToken;
-    private SecureSharedPreferences settings;
     private  BehaviorSubject<Integer> loginStatus;
+    private ISCAuth authMethod;
 
-    public SCAuthService(Context context) {
-        this.context = context;
-        this.settings = new SecureSharedPreferences(context);
+    public SCAuthService(Context context, ISCAuth authMethod) {
         loginStatus = BehaviorSubject.create(SCAuthStatus.NOT_AUTHENTICATED.value());
+        this.authMethod = authMethod;
     }
 
     public void authenticate(String username, String password) {
-        auth(username, password);
+        boolean authed = authMethod.authenticate(username, password);
+        if (authed) {
+            loginStatus.onNext(SCAuthStatus.AUTHENTICATED.value());
+        } else {
+            authMethod.logout();
+            loginStatus.onNext(SCAuthStatus.AUTHENTICATION_FAILED.value());
+        }
     }
 
     public BehaviorSubject<Integer> getLoginStatus() {
@@ -83,36 +72,37 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
     }
 
     public String getAccessToken() {
-        return settings.getString(JSON_WEB_TOKEN, null);
+        return authMethod.xAccessToken();
     }
 
     public void logout() {
-        removeCredentials();
+        authMethod.logout();
         loginStatus.onNext(SCAuthStatus.NOT_AUTHENTICATED.value());
     }
 
     public String getUsername() {
-        SecureSharedPreferences settings = new SecureSharedPreferences(context);
-        return settings.getString(USERNAME, null);
+        return authMethod.username();
     }
 
     @Override
-    public Observable<Void> start() {
-        super.start();
-        SpatialConnect sc = SpatialConnect.getInstance();
-        sc.serviceRunning(SCBackendService.serviceId()).subscribe(new Action1<SCServiceStatusEvent>() {
+    public Observable<SCServiceStatus> start() {
+
+        return Observable.create(new Observable.OnSubscribe<SCServiceStatus>() {
             @Override
-            public void call(SCServiceStatusEvent scServiceStatusEvent) {
-                String username = getUsername();
-                String pwd = getPassword();
-                if (username != null && pwd != null) {
-                    auth(username, pwd);
+            public void call(Subscriber<? super SCServiceStatus> subscriber) {
+                setStatus(SCServiceStatus.SC_SERVICE_STARTED);
+                subscriber.onNext(getStatus());
+                boolean authed = authMethod.authFromCache();
+                if (authed) {
+                    loginStatus.onNext(SCAuthStatus.AUTHENTICATED.value());
                 } else {
                     loginStatus.onNext(SCAuthStatus.NOT_AUTHENTICATED.value());
                 }
+                setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
+                subscriber.onNext(getStatus());
+                subscriber.onCompleted();
             }
         });
-        return Observable.empty();
     }
 
     @Override
@@ -138,70 +128,6 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
     @Override
     String getId() {
         return SERVICE_NAME;
-    }
-
-    private  void auth(final String username, final String pwd) {
-        SpatialConnect sc = SpatialConnect.getInstance();
-        SCBackendService bs = sc.getBackendService();
-        final String theUrl = bs.backendUri + "/api/authenticate";
-        HttpHandler.getInstance()
-                .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", username, pwd))
-                .subscribe(
-                        new Action1<Response>() {
-                            @Override
-                            public void call(Response response) {
-                                if (response.isSuccessful()) {
-                                    try {
-                                        jsonWebToken = new JSONObject(response.body().string())
-                                                .getJSONObject("result").getString("token");
-                                        if (jsonWebToken != null) {
-                                            saveAccessToken(jsonWebToken);
-                                            saveCredentials(username, pwd);
-                                            loginStatus.onNext(SCAuthStatus.AUTHENTICATED.value());
-                                        }
-                                    } catch (JSONException e) {
-                                        e.printStackTrace();
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                    }
-                                } else {
-                                    logout();
-                                    loginStatus.onNext(SCAuthStatus.AUTHENTICATION_FAILED.value());
-                                }
-                            }
-                        },
-                        new Action1<Throwable>() {
-                            @Override
-                            public void call(Throwable throwable) {
-                                loginStatus.onNext(SCAuthStatus.NOT_AUTHENTICATED.value());
-                                Log.e(LOG_TAG, "something went wrong refreshing token: " + throwable.getMessage());
-                            }
-                        });
-    }
-
-    private void saveAccessToken(String accessToken) {
-        SecureSharedPreferences.Editor editor = settings.edit();
-        editor.putString(JSON_WEB_TOKEN, accessToken);
-        editor.commit();
-    }
-
-    private void saveCredentials(String username, String password) {
-        SecureSharedPreferences.Editor editor = settings.edit();
-        editor.putString(USERNAME, username);
-        editor.putString(PWD, password);
-        editor.commit();
-    }
-
-    private String getPassword() {
-        SecureSharedPreferences settings = new SecureSharedPreferences(context);
-        return settings.getString(PWD, null);
-    }
-
-    private void removeCredentials() {
-        SecureSharedPreferences.Editor editor = settings.edit();
-        editor.remove(USERNAME);
-        editor.remove(PWD);
-        editor.commit();
     }
 
     public static String serviceId() {
