@@ -130,8 +130,8 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 bridge.callHandler("store", dataStoreString);
                 return;
             }
-            if (command.equals(SCCommand.DATASERVICE_GEOSPATIALQUERYALL) || command.equals(
-                SCCommand.DATASERVICE_SPATIALQUERYALL)) {
+            if (command.equals(SCCommand.DATASERVICE_SPATIALQUERYALL) || command.equals(
+                SCCommand.DATASERVICE_QUERYALL)) {
                 SCQueryFilter filter = getFilter(bridgeMessage);
                 if (filter != null) {
                     manager.getDataService().queryAllStores(filter)
