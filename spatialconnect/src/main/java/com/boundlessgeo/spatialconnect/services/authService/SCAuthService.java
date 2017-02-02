@@ -12,9 +12,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and limitations under the License
  */
-package com.boundlessgeo.spatialconnect.services;
+package com.boundlessgeo.spatialconnect.services.authService;
 
 import android.content.Context;
+
+import com.boundlessgeo.spatialconnect.services.SCService;
+import com.boundlessgeo.spatialconnect.services.SCServiceLifecycle;
+import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
 
 import rx.Observable;
 import rx.Subscriber;
@@ -33,7 +37,7 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
             value = v;
         }
 
-        static SCAuthStatus fromValue(int v) {
+        public static SCAuthStatus fromValue(int v) {
             for (SCAuthStatus scAuthStatus: SCAuthStatus.values()) {
                 if (scAuthStatus.value == v) {
                     return  scAuthStatus;
@@ -126,7 +130,7 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    String getId() {
+    public String getId() {
         return SERVICE_NAME;
     }
 

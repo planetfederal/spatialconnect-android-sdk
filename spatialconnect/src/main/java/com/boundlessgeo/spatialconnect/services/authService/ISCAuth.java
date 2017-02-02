@@ -1,4 +1,4 @@
-package com.boundlessgeo.spatialconnect.services;
+package com.boundlessgeo.spatialconnect.services.authService;
 
 /**
  * Copyright 2017 Boundless http://boundlessgeo.com

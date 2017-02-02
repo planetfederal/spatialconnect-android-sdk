@@ -94,7 +94,7 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
     }
 
     @Override
-    String getId() {
+    public String getId() {
         return SERVICE_NAME;
     }
 

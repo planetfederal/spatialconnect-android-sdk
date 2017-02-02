@@ -1,4 +1,4 @@
-package com.boundlessgeo.spatialconnect.services;
+package com.boundlessgeo.spatialconnect.services.authService;
 
 import android.content.Context;
 

@@ -58,5 +58,5 @@ public abstract class SCService implements SCServiceLifecycle{
         return getId();
     }
 
-    abstract String getId();
+    public abstract String getId();
 }

@@ -440,7 +440,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    String getId() {
+    public String getId() {
         return SERVICE_NAME;
     }
 
