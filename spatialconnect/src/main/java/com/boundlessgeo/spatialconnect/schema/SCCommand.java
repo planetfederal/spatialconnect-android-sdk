@@ -7,10 +7,10 @@ public enum SCCommand {
 	DATASERVICE_ACTIVESTORESLIST(100),
 	DATASERVICE_ACTIVESTOREBYID(101),
 	DATASERVICE_STORELIST(102),
-	DATASERVICE_SPATIALQUERY(110),
-	DATASERVICE_SPATIALQUERYALL(111),
-	DATASERVICE_GEOSPATIALQUERY(112),
-	DATASERVICE_GEOSPATIALQUERYALL(113),
+	DATASERVICE_QUERY(110),
+	DATASERVICE_QUERYALL(111),
+	DATASERVICE_SPATIALQUERY(112),
+	DATASERVICE_SPATIALQUERYALL(113),
 	DATASERVICE_CREATEFEATURE(114),
 	DATASERVICE_UPDATEFEATURE(115),
 	DATASERVICE_DELETEFEATURE(116),
@@ -39,25 +39,25 @@ public enum SCCommand {
 	BACKENDSERVICE_HTTP_URI(701),
 	BACKENDSERVICE_MQTT_CONNECTED(702);
 
-	private final int actionNumber;
+    private final int actionNumber;
 
-	SCCommand(int actionNumber) {
-		this.actionNumber = actionNumber;
-	}
+    SCCommand(int actionNumber) {
+        this.actionNumber = actionNumber;
+    }
 
-	public int value() {
-		return actionNumber;
-	}
+    public int value() {
+        return actionNumber;
+    }
 
-	public static SCCommand fromActionNumber(int actionNumber) {
-		for (SCCommand v : values()) {
-			if (v.actionNumber == actionNumber) {
-				return v;
-			}
-		}
-		throw new IllegalArgumentException(
-				String.valueOf(actionNumber) + " is not an action number associated with a SCCommand."
-		);
-	}
+    public static SCCommand fromActionNumber(int actionNumber) {
+        for (SCCommand v : values()) {
+            if (v.actionNumber == actionNumber) {
+                return v;
+            }
+        }
+        throw new IllegalArgumentException(
+            String.valueOf(actionNumber) + " is not an action number associated with a SCCommand."
+        );
+    }
 
 };
