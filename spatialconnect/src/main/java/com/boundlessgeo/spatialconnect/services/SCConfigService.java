@@ -90,7 +90,6 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
         loadForms(config.getForms());
         loadDataStores(config.getStores());
         if (config.getRemote() != null) {
-            Log.e(LOG_TAG, "Url: " + config.getRemote().getHttpUri());
             sc.connectAuth(new SCServerAuthMethod(context, config.getRemote().getHttpUri()));
             sc.connectBackend(config.getRemote());
         }

@@ -1,10 +1,10 @@
 {
   "remote": {
     "http_protocol": "http",
-    "http_host": "192.168.86.103",
+    "http_host": "dev.spatialconnect.boundlessgeo.com",
     "http_port": 8085,
     "mqtt_protocol": "tcp",
-    "mqtt_host": "192.168.86.103",
+    "mqtt_host": "dev.spatialconnect.boundlessgeo.com",
     "mqtt_port": 1883
   }
 }
