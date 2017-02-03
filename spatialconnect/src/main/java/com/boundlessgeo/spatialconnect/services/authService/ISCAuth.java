@@ -1,5 +1,3 @@
-package com.boundlessgeo.spatialconnect.services.authService;
-
 /**
  * Copyright 2017 Boundless http://boundlessgeo.com
  *
@@ -15,6 +13,8 @@ package com.boundlessgeo.spatialconnect.services.authService;
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
+
+package com.boundlessgeo.spatialconnect.services.authService;
 
 public interface ISCAuth {
     boolean authFromCache();

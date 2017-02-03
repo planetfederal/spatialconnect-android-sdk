@@ -231,7 +231,7 @@ public class SpatialConnect {
     public void connectAuth(ISCAuth authMethod) {
         authService = new SCAuthService(context, authMethod);
         addService(authService);
-        startService((SCAuthService.serviceId()));
+        startService(SCAuthService.serviceId());
     }
 
     public SCDataService getDataService() {

@@ -1,18 +1,3 @@
-package com.boundlessgeo.spatialconnect.services.authService;
-
-import android.content.Context;
-
-import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
-import com.github.rtoshiro.secure.SecureSharedPreferences;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.IOException;
-import java.util.Locale;
-
-import okhttp3.Response;
-
 /**
  * Copyright 2017 Boundless http://boundlessgeo.com
  *
@@ -28,6 +13,21 @@ import okhttp3.Response;
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
+
+package com.boundlessgeo.spatialconnect.services.authService;
+
+import android.content.Context;
+
+import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
+import com.github.rtoshiro.secure.SecureSharedPreferences;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.util.Locale;
+
+import okhttp3.Response;
 
 public class SCServerAuthMethod implements ISCAuth {
 
@@ -49,7 +49,7 @@ public class SCServerAuthMethod implements ISCAuth {
 
     @Override
     public boolean authFromCache() {
-        String u = getUsername();
+        String u = username();
         String p = getPassword();
         if (u != null && p != null) {
             return authenticate(u,p);
@@ -75,7 +75,8 @@ public class SCServerAuthMethod implements ISCAuth {
 
     @Override
     public String username() {
-        return getUsername();
+        SecureSharedPreferences settings = new SecureSharedPreferences(context);
+        return settings.getString(USERNAME, null);
     }
 
     private boolean auth(final String username, final String pwd) {
@@ -101,7 +102,6 @@ public class SCServerAuthMethod implements ISCAuth {
                 e.printStackTrace();
             }
         } else {
-            authed = false;
             logout();
         }
         return authed;
@@ -123,11 +123,6 @@ public class SCServerAuthMethod implements ISCAuth {
     private String getPassword() {
         SecureSharedPreferences settings = new SecureSharedPreferences(context);
         return settings.getString(PWD, null);
-    }
-
-    private String getUsername() {
-        SecureSharedPreferences settings = new SecureSharedPreferences(context);
-        return settings.getString(USERNAME, null);
     }
 
     private void removeCredentials() {
