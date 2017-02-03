@@ -408,7 +408,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     /**
      * Calling start on the {@link SCDataService} will start all registered {@link SCDataStore}s.
      */
-    public Observable<Void> start() {
+    public Observable<SCServiceStatus> start() {
         Log.d(LOG_TAG, "Starting SCDataService. Starting all registered data stores.");
         super.start();
         startAllStores();
@@ -440,7 +440,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    String getId() {
+    public String getId() {
         return SERVICE_NAME;
     }
 

@@ -23,7 +23,7 @@ import rx.Observable;
 
 public interface SCServiceLifecycle {
 
-    Observable<Void> start();
+    Observable<SCServiceStatus> start();
     void stop();
     void resume();
     void pause();

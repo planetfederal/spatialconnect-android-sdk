@@ -67,7 +67,7 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
      * Calls the SCService#start() method to set the status to SC_SERVICE_RUNNING
      */
     @Override
-    public Observable<Void> start() {
+    public Observable<SCServiceStatus> start() {
         super.start();
         setupObservables();
         return Observable.empty();
@@ -94,7 +94,7 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
     }
 
     @Override
-    String getId() {
+    public String getId() {
         return SERVICE_NAME;
     }
 

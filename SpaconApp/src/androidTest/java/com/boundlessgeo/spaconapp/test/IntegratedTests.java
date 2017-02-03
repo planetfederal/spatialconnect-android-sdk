@@ -48,7 +48,7 @@ import static junit.framework.Assert.assertTrue;
 public class IntegratedTests {
 
     private static String LOG_TAG = IntegratedTests.class.getSimpleName();
-    private static final String WFS_STORE_ID = "3987516d-0418-4bcd-8e94-b05609a870f4";
+    private static final String WFS_STORE_ID = "280d72a9-eb45-4ba1-a5b4-c7f5bc2dd7fe";
     protected static Activity activity = null;
     protected static Context testContext = null;
 
