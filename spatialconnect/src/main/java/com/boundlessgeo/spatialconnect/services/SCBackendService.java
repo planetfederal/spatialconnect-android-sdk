@@ -54,8 +54,18 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private Context context;
     private MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
+    /**
+     * Behavior Observable emitting YES when the SpatialConnect SCConfig has been received
+     */
     public BehaviorSubject<Boolean> configReceived = BehaviorSubject.create(false);
+
+    /**
+     * Behavior Observable emitting YES when Connected, NO when the Connection is down
+     */
     public BehaviorSubject<Boolean> connectedToBroker = BehaviorSubject.create(false);
+    /**
+     * Endpoint running SpatialConnect Server
+     */
     public String backendUri = null;
 
     public SCBackendService(final Context context) {
@@ -82,10 +92,19 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         setupMqttConnectionListener();
     }
 
+    /**
+     * Observable emiting SCNotifications
+     * @return Observable<{@link SCRemoteConfig}>
+     */
     public Observable<SCNotification> getNotifications() {
         return notifications;
     }
 
+    /**
+     * Publishes an SCMessage to the SpatialConnect Server
+     * @param topic topic MQTT destination topic
+     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
+     */
     public void publish(String topic, SCMessageOuterClass.SCMessage message) {
         SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
         scMessagebuilder.setAction(message.getAction())
@@ -97,6 +116,11 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         mqttHandler.publish(topic, scMessagebuilder.build(), QoS.EXACTLY_ONCE.value());
     }
 
+    /**
+     * Publishes an SCMessage to the SpatialConnect Server with At Most Once Delivery QoS 0
+     * @param topic topic MQTT destination topic
+     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
+     */
     public void publishAtMostOnce(String topic, SCMessageOuterClass.SCMessage message) {
         SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
         scMessagebuilder.setAction(message.getAction())
@@ -108,6 +132,11 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         mqttHandler.publish(topic, scMessagebuilder.build(), QoS.AT_MOST_ONCE.value());
     }
 
+    /**
+     * Publishes an SCMessage to the SpatialConnect Server with At Least Once Delivery QoS 1
+     * @param topic topic MQTT destination topic
+     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
+     */
     public void publishAtLeastOnce(String topic, SCMessageOuterClass.SCMessage message) {
         SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
         scMessagebuilder.setAction(message.getAction())
@@ -119,6 +148,11 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         mqttHandler.publish(topic, scMessagebuilder.build(), QoS.AT_LEAST_ONCE.value());
     }
 
+    /**
+     * Publishes an SCMessage to the SpatialConnect Server with Exactly Once Delivery QoS 2
+     * @param topic topic MQTT destination topic
+     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
+     */
     public void publishExactlyOnce(String topic, SCMessageOuterClass.SCMessage message) {
         SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
         scMessagebuilder.setAction(message.getAction())
@@ -131,10 +165,11 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     /**
-     * Publish a message on a topic and listen for the response message.
+     * Publishes a message with a reply-to observable returned for creating a request
+     * reply with the server.
      *
-     * @param topic   topic to publish to
-     * @param message SCMessage with the action and payload
+     * @param topic topic MQTT destination topic
+     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
      * @return Observable of the {@link SCMessageOuterClass.SCMessage} filtered by the correlation id
      */
     public Observable<SCMessageOuterClass.SCMessage> publishReplyTo(
@@ -169,10 +204,11 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     /**
-     * Subscribes to an MQTT topic and returns an Observable with messages received on that topic.
+     * Subscribes to an MQTT Topic
      *
-     * @param topic topic to subscribe to
-     * @return Observable of {@link SCMessageOuterClass.SCMessage}s published to the topic
+     * @param topic topic to listen on
+     * @return Observable of {@link SCMessageOuterClass.SCMessage}
+     * filtered to only receive messages from the stated topic
      */
     public Observable<SCMessageOuterClass.SCMessage> listenOnTopic(final String topic) {
         mqttHandler.subscribe(topic, QoS.EXACTLY_ONCE.value());

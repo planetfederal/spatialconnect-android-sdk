@@ -61,6 +61,11 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
         this.authMethod = authMethod;
     }
 
+    /**
+     * sets the token and auth status in the library for the user and pass
+     * @param username user's email address
+     * @param password clear text password
+     */
     public void authenticate(String username, String password) {
         boolean authed = authMethod.authenticate(username, password);
         if (authed) {
@@ -71,19 +76,35 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
         }
     }
 
+    /**
+     * Observable that will send current status and will send updates as subscribed
+     * @return BehaviorSubject<Integer>
+     */
     public BehaviorSubject<Integer> getLoginStatus() {
         return loginStatus;
     }
 
+    /**
+     * JSONWebToken from auth server
+     * @return String
+     */
     public String getAccessToken() {
         return authMethod.xAccessToken();
     }
 
+    /**
+     * this will void the x-access-token
+     */
     public void logout() {
         authMethod.logout();
         loginStatus.onNext(SCAuthStatus.NOT_AUTHENTICATED.value());
     }
 
+    /**
+     * The user's email address
+     *
+     * @return String
+     */
     public String getUsername() {
         return authMethod.username();
     }

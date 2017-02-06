@@ -19,8 +19,6 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.scutilities.SCCache;
-import com.boundlessgeo.spatialconnect.services.authService.ISCAuth;
-import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
@@ -28,6 +26,8 @@ import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.services.SCService;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
+import com.boundlessgeo.spatialconnect.services.authService.ISCAuth;
+import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
 import com.github.rtoshiro.secure.SecureSharedPreferences;
 
 import java.util.HashMap;
@@ -91,7 +91,8 @@ public class SpatialConnect {
     }
 
     /**
-     * Adds a {@link SCService} to SpatialConnect
+     * Adds an instantiated instance of Service that extends the {@link SCService} class.
+     * The 'service' must extend the {@link SCService} class.
      * @param service the service object
      */
     public void addService(SCService service) {
@@ -99,7 +100,7 @@ public class SpatialConnect {
     }
 
     /**
-     * Removes a service
+     * This stops and removes a {@link SCService} from the SpatialConnect instance.
      * @param serviceId the id of the service to be removed
      */
     public void removeService(String serviceId) {
@@ -107,7 +108,10 @@ public class SpatialConnect {
     }
 
     /**
-     * Starts {@link SCService} based on service id
+     * This is the preferred way to start a service.
+     *
+     * Do not call service start on the service instance. Use this method to
+     * start a {@link SCService}.
      * @param serviceId the id of the service that needs to start
      */
     public void startService(final String serviceId) {
@@ -137,7 +141,9 @@ public class SpatialConnect {
     }
 
     /**
-     * Starts all services added to SpatialConnect
+     * This starts all the services in the order they were added. Data,
+     * Sensor, Config, and Auth are all started. Backend Service waits for the Config
+     * service to find a remote backend.
      */
     public void startAllServices() {
         Log.d(LOG_TAG, "Starting all services.");
@@ -148,7 +154,10 @@ public class SpatialConnect {
     }
 
     /**
-     * Stops an SCService based on service id
+     * This is the preferred way to stop a service.
+     *
+     * Do not call service stop on the service instance. Use this method to
+     * stop a {@link SCService}.
      * @param serviceId the id of the service that needs to be stopped.
      */
     public void stopService(String serviceId) {
@@ -156,7 +165,7 @@ public class SpatialConnect {
     }
 
     /**
-     * Stops all SCServices that was added to SpatialConnect
+     * Stops all the services in the order they were added to the services.
      */
     public void stopAllServices() {
         HashMap<String, SCService> ss  = new HashMap<>(services);
@@ -166,7 +175,12 @@ public class SpatialConnect {
     }
 
     /**
-     * Restarts SCService based on service id
+     * This is the preferred way to restart a service.
+     *
+     * Restarts a single service
+     *
+     * Do not call service restart on the service instance. Use this method
+     * to start a {@link SCService}.
      * @param serviceId the id of the service that needs to be restarted.
      */
     public void restartService(String serviceId) {
@@ -194,7 +208,14 @@ public class SpatialConnect {
     }
 
     /**
-     * Checks to see if an {@link SCService}  is running by sending {@link SCServiceStatusEvent }
+     * Emits an {@link SCServiceStatusEvent } when the service is running. If the
+     * service isn't started, this will wait until it is started. This can be used by
+     * your app to start wiring up functionality waiting for it to occur.
+     *
+     * This is the best way to know if a {@link SCService}  is started. If the service is already started, it will
+     * return an event immediately. You can also receive errors in the subscribe's
+     * error block. The observable will complete when the store is confirmed to have started.
+     *
      * @param serviceId the id of the service that needs to be retrieved
      * @return Observable of SCServiceStatusEvent
      */
@@ -215,8 +236,9 @@ public class SpatialConnect {
     }
 
     /**
-     * Creates {@link SCBackendService} and connects via the SCRemoteConfig
-     * @param remoteConfig object that represents http and mqtt endpoints.
+     * If you have an instance of SpatialConnect Server, this is how you would register it.
+     * Passing in a remote configuration object will use the info to start the connection to the backend.
+     * @param remoteConfig object that represents http and mqtt endpoints {@link SCRemoteConfig}.
      */
     public void connectBackend(final SCRemoteConfig remoteConfig) {
         if (remoteConfig != null && backendService == null) {
@@ -258,6 +280,13 @@ public class SpatialConnect {
         return cache;
     }
 
+    /**
+     *
+     * this is the unique identifier that is App Store compliant and used
+     * to uniquely identify the installation id which is unique per install on a
+     * device. ID's tied to the hardware are not allowed to be used by the app store
+     * @return String UUID string of the install id
+     */
     public String getDeviceIdentifier() {
         String deviceId;
         SecureSharedPreferences ssp = new SecureSharedPreferences(context);
