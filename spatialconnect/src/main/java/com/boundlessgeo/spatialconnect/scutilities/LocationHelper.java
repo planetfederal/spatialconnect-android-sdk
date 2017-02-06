@@ -160,7 +160,7 @@ public class LocationHelper implements ActivityCompat.OnRequestPermissionsResult
 
     /**
      * Convenience method to check if the GPS
-     * @return
+     * @return boolean
      */
     public boolean isGPSPermissionGranted() {
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) &&

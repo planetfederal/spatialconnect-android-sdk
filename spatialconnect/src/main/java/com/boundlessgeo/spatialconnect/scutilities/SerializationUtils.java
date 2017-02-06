@@ -27,7 +27,7 @@ public class SerializationUtils {
      * Turn an array of bytes containing a serialized Object into the deserialized Object.
      *
      * @param bytes
-     * @return
+     * @return Object
      * @throws IOException
      * @throws ClassNotFoundException
      */
@@ -59,7 +59,7 @@ public class SerializationUtils {
      * Transform an Object into an array of bytes.
      *
      * @param object
-     * @return
+     * @return byte[] of serialized object
      * @throws IOException
      * @throws ClassNotFoundException
      */

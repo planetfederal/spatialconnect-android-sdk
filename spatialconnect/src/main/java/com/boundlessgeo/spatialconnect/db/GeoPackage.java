@@ -4,7 +4,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.boundlessgeo.spatialconnect.tiles.SCTileMatrixRow;
 import com.squareup.sqlbrite.BriteDatabase;
@@ -449,7 +448,7 @@ public class GeoPackage {
      * @param table
      * @param sql
      * @param args
-     * @return
+     * @return {@link QueryObservable}
      */
     public QueryObservable createQuery(String table, String sql, String...args) {
         return db.createQuery(table, sql, args);
@@ -470,7 +469,7 @@ public class GeoPackage {
      *
      * @param sql
      * @param args
-     * @return
+     * @return {@link Cursor}
      */
     public Cursor query(String sql, String...args) {
         return db.query(sql, args);
