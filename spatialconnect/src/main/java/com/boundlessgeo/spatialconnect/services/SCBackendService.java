@@ -55,12 +55,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
     /**
-     * Behavior Observable emitting YES when the SpatialConnect SCConfig has been received
+     * Behavior Observable emitting True when the SpatialConnect SCConfig has been received
      */
     public BehaviorSubject<Boolean> configReceived = BehaviorSubject.create(false);
 
     /**
-     * Behavior Observable emitting YES when Connected, NO when the Connection is down
+     * Behavior Observable emitting True when Connected, False when the Connection is down
      */
     public BehaviorSubject<Boolean> connectedToBroker = BehaviorSubject.create(false);
     /**

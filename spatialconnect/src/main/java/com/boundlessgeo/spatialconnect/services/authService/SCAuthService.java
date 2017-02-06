@@ -93,7 +93,7 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
     }
 
     /**
-     * this will void the x-access-token
+     * this will void the JWT
      */
     public void logout() {
         authMethod.logout();

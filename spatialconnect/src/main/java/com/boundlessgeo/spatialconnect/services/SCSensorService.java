@@ -165,7 +165,7 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
     }
 
     /**
-     * Last known location of the device emiting {@link SCPoint} over an Observable
+     * Last known location of the device emitting {@link SCPoint} over an Observable
      * @return Observable stream of Lo{@link SCPoint}cation
      */
     public Observable<SCPoint> getLastKnown() {

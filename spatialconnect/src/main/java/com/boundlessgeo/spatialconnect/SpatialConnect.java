@@ -281,10 +281,8 @@ public class SpatialConnect {
     }
 
     /**
-     *
-     * this is the unique identifier that is App Store compliant and used
-     * to uniquely identify the installation id which is unique per install on a
-     * device. ID's tied to the hardware are not allowed to be used by the app store
+     * Identifies an application instance running on a device. This is the recommended
+     * solution for non-ads use-cases.
      * @return String UUID string of the install id
      */
     public String getDeviceIdentifier() {
