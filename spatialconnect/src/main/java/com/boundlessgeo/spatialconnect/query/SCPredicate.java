@@ -68,7 +68,7 @@ public class SCPredicate {
      * The geometry is contained in a bounding box if all of its points lie within the filter's bbox.
      *
      * @param scGeometry
-     * @return
+     * @return boolean
      */
     public boolean isContainedInBoundingBox(SCGeometry scGeometry) {
         Double[] bboxCoords = this.filterBbox.getBbox();
@@ -80,7 +80,7 @@ public class SCPredicate {
      * The geometry is within a bounding box if one of its points lies within the filter's bbox.
      *
      * @param scGeometry
-     * @return
+     * @return boolean
      */
     public boolean isWithinBoundingBox(SCGeometry scGeometry) {
         Double[] bboxCoords = this.filterBbox.getBbox();

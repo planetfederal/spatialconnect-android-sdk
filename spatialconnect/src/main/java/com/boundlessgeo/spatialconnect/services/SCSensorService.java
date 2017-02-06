@@ -63,9 +63,6 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
         locationHelper = new LocationHelper(context);
     }
 
-    /**
-     * Calls the SCService#start() method to set the status to SC_SERVICE_RUNNING
-     */
     @Override
     public Observable<SCServiceStatus> start() {
         super.start();
@@ -98,12 +95,16 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
         return SERVICE_NAME;
     }
 
+    /**
+     * Behavior subject return YES for Internet access, NO for offline
+     * @return BehaviorSubject<Boolean>
+     */
     public BehaviorSubject<Boolean> isConnected() {
         return isConnected;
     }
 
     /**
-     *
+     * Sets location accuracy for location updates
      * @param accuracy Criteria.ACCURACY_COARSE, Criteria.ACCURACY_FINE, Criteria.ACCURACY_HIGH
      *                 Criteria.ACCURACY_LOW
      * @param distance
@@ -114,7 +115,7 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
     }
 
     /**
-     * Initializes the LocationHelper to start listening to updates by the GPS LocationProvider.
+     * Turns on location updates
      */
     public void enableGPS() {
         SpatialConnect sc = SpatialConnect.getInstance();
@@ -144,7 +145,7 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
     }
 
     /**
-     * Disables the GPS listener by unsubscribing it from the GPS LocationProvider.
+     * Turns off location updates
      */
     public void disableGPS() {
         locationHelper.disableGps();
@@ -155,7 +156,7 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
     }
 
     /**
-     * Returns an Observable sequence of Location instances.
+     * Last known location of the device emiting {@link Location} over an Observable
      *
      * @return Observable stream of Location
      */
@@ -163,6 +164,10 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
         return locationHelper.getLocation();
     }
 
+    /**
+     * Last known location of the device emitting {@link SCPoint} over an Observable
+     * @return Observable stream of Lo{@link SCPoint}cation
+     */
     public Observable<SCPoint> getLastKnown() {
         return lastKnown;
     }
@@ -176,7 +181,7 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
         return this.gpsListenerStarted;
     }
 
-    public void setupObservables() {
+    private void setupObservables() {
         lastKnown = locationHelper.getLocation()
                 .map(new Func1<Location, SCPoint>() {
                     @Override
@@ -197,6 +202,7 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
                     }
                 });
     }
+
     public static String serviceId() {
         return SERVICE_NAME;
     }

@@ -49,12 +49,17 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     private Context context;
     private List<String> configPaths = new ArrayList<>();
     private SpatialConnect sc;
+
     public SCConfigService(Context context) {
         this.context = context;
         sc = SpatialConnect.getInstance();
         sweepDataDirectory();
     }
 
+    /**
+     * Add a new config to be loaded into SpatialConnect on Start
+     * @param fp Full path to file
+     */
     public void addConfigFilePath(String fp) {
         configPaths.add(fp);
     }
@@ -72,6 +77,9 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
         }
     }
 
+    /**
+     * Load config in a running Config Service
+     */
     public void loadConfigs() {
         for (String path: configPaths) {
             File config = new File(path);
@@ -86,6 +94,10 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
         }
     }
 
+    /**
+     * Load config in a running Config Service
+     * @param config {@link SCConfig} Config object to be loaded
+     */
     public void loadConfig(SCConfig config) {
         loadForms(config.getForms());
         loadDataStores(config.getStores());
@@ -95,23 +107,44 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
         }
     }
 
+    /**
+     * Add form to SpatialConnect using a Form Config object
+     * @param c {@link SCConfig} Config object to be loaded
+     */
     public void addForm(SCFormConfig c) {
         sc.getDataService().getFormStore().registerFormByConfig(c);
     }
 
+    /**
+     * Remove form from SpatialConnect using a config
+     * @param c {@link SCConfig} Config object to be loaded
+     */
     public void removeForm(SCFormConfig c) {
         sc.getDataService().getFormStore().unregisterFormByConfig(c);
     }
 
+    /**
+     * Add store to SpatialConnect using a Store Config object
+     * @param c {@link SCConfig} Config object to be loaded
+     */
     public void addStore(SCStoreConfig c) {
         sc.getDataService().registerAndStartStoreByConfig(c);
     }
 
+    /**
+     * Remove store from SpatialConnect using a config
+     * @param c {@link SCConfig} Config object to be loaded
+     */
     public void removeStore(SCStoreConfig c) {
         SCDataService dataService = sc.getDataService();
         dataService.unregisterStore(dataService.getStoreByIdentifier(c.getUniqueID()));
     }
 
+    /**
+     * This will overwrite the current cached config and will be used to configure the
+     * system if the Backend Service is unable to fetch a config from the server.
+     * @param config {@link SCConfig} Config object to be loaded
+     */
     public void setCachedConfig(SCConfig config) {
 
         try {
@@ -123,6 +156,11 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
 
     }
 
+    /**
+     * Retrieves the last cached config. This is used when the Backend Service is not
+     able to fetch a config from the SpatialConnect server
+     * @return {@link SCConfig}
+     */
     public SCConfig getCachedConfig() {
         SCConfig returnConfig = null;
         try {

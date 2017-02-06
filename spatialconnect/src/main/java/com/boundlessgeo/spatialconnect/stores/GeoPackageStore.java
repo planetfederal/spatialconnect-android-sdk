@@ -131,15 +131,15 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
             Cursor cursor = null;
             BriteDatabase.Transaction tx = gpkg.newTransaction();
             try {
-                // first create the table 
+                //first create the table
                 cursor = gpkg.query(createTableSQL(layer, fields));
                 cursor.moveToFirst(); // force query to execute
-                // then add it to gpkg_contents and any other tables (gpkg_metadata, ,etc) 
+                //then add it to gpkg contents and any other tables (gpkg metadata, etc)
                 cursor = gpkg.query(addToGpkgContentsSQL(tableName));
                 cursor.moveToFirst(); // force query to execute
-                // add a geometry column to the table b/c we want to store where the package was submitted (if needed). 
-                // also, note that this function will add the geometry to gpkg_geometry_columns, which has a foreign key 
-                // constraint on the table name, which requires the table to exist in gpkg_contents 
+                //add a geometry column to the table b/c we want to store where the package was submitted (if needed)
+                //also, note the this function will add the geometry to gpkg geometry_columns, which has a foreign key
+                //constraint on the table name, which requires the table to exist in gpkg contents
                 cursor = gpkg.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
                 cursor.moveToFirst(); // force query to execute
                 tx.markSuccessful();
