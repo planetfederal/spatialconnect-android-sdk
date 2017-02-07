@@ -411,36 +411,21 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
      * Calling start on the {@link SCDataService} will start all registered {@link SCDataStore}s.
      */
     @Override
-    public void start(Map<String, SCService> deps) {
+    public boolean start(Map<String, SCService> deps) {
         Log.d(LOG_TAG, "Starting SCDataService. Starting all registered data stores.");
-        super.start(deps);
         sensorService = (SCSensorService)deps.get(SCSensorService.serviceId());
         startAllStores();
         setupSubscriptions();
 //        return Observable.empty();
+        return super.start(deps);
     }
 
     @Override
-    public void stop() {
-        super.stop();
+    public boolean stop() {
         stopAllStores();
         stores.clear();
         hasStores.onNext(false);
-    }
-
-    @Override
-    public void resume() {
-        super.resume();
-    }
-
-    @Override
-    public void pause() {
-        super.pause();
-    }
-
-    @Override
-    public void startError() {
-        super.startError();
+        return super.stop();
     }
 
     @Override

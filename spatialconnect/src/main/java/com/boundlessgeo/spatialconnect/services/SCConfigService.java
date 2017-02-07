@@ -181,11 +181,11 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    public void start(Map<String, SCService> deps) {
-        super.start(deps);
+    public boolean start(Map<String, SCService> deps) {
         dataService = (SCDataService) deps.get(SCDataService.serviceId());
         loadConfigs();
 //        return Observable.empty();
+        return super.start(deps);
     }
 
     @Override

@@ -110,8 +110,7 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    public void start(Map<String, SCService> deps) {
-        super.start(deps);
+    public boolean start(Map<String, SCService> deps) {
         boolean authed = authMethod.authFromCache();
         if (authed) {
             loginStatus.onNext(SCAuthStatus.AUTHENTICATED.value());
@@ -135,26 +134,7 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
 //                subscriber.onCompleted();
 //            }
 //        });
-    }
-
-    @Override
-    public void stop() {
-        super.stop();
-    }
-
-    @Override
-    public void resume() {
-        super.resume();
-    }
-
-    @Override
-    public void pause() {
-        super.pause();
-    }
-
-    @Override
-    public void startError() {
-        super.startError();
+        return super.start(deps);
     }
 
     @Override

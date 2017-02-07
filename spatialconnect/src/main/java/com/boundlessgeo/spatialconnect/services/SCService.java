@@ -27,20 +27,24 @@ public abstract class SCService implements SCServiceLifecycle{
     }
 
     @Override
-    public void start(Map<String, SCService> deps) {
+    public boolean start(Map<String, SCService> deps) {
         this.status = SCServiceStatus.SC_SERVICE_RUNNING;
+        return true;
     }
 
-    public void stop() {
+    public boolean stop() {
         this.status = SCServiceStatus.SC_SERVICE_STOPPED;
+        return true;
     }
 
-    public void resume() {
+    public boolean resume() {
         this.status = SCServiceStatus.SC_SERVICE_RUNNING;
+        return true;
     }
 
-    public void pause() {
+    public boolean pause() {
         this.status = SCServiceStatus.SC_SERVICE_PAUSED;
+        return true;
     }
 
     @Override

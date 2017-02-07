@@ -249,34 +249,14 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    public void start(Map<String, SCService> deps) {
-        super.start(deps);
+    public boolean start(Map<String, SCService> deps) {
         authService = (SCAuthService)deps.get(SCAuthService.serviceId());
         configService = (SCConfigService) deps.get(SCConfigService.serviceId());
         sensorService = (SCSensorService) deps.get(SCSensorService.serviceId());
         dataService = (SCDataService) deps.get(SCDataService.serviceId());
         listenForNetworkConnection();
 //        return Observable.empty();
-    }
-
-    @Override
-    public void stop() {
-        super.stop();
-    }
-
-    @Override
-    public void resume() {
-        super.resume();
-    }
-
-    @Override
-    public void pause() {
-        super.pause();
-    }
-
-    @Override
-    public void startError() {
-        super.startError();
+        return super.start(deps);
     }
 
     @Override

@@ -23,9 +23,9 @@ import java.util.Map;
 
 public interface SCServiceLifecycle {
 
-    void start(Map<String, SCService> deps);
-    void stop();
-    void resume();
-    void pause();
+    boolean start(Map<String, SCService> deps);
+    boolean stop();
+    boolean resume();
+    boolean pause();
     void startError();
 }

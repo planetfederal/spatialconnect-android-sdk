@@ -32,6 +32,11 @@ public class SCServiceGraph {
     public PublishSubject<SCServiceStatusEvent> serviceEventSubject;
     public ConnectableObservable<SCServiceStatusEvent> serviceEvents;
 
+    public SCServiceGraph() {
+        this.serviceEventSubject = PublishSubject.create();
+        this.serviceEvents = serviceEventSubject.publish();
+    }
+
     public void addServivce(SCService service) {
         List<String> requires = service.getRequires();
         List<SCServiceNode> deps = new ArrayList<>();
@@ -71,36 +76,83 @@ public class SCServiceGraph {
     }
 
     public void startAllServices() {
-        for (Object value: servicesNodes.values()) {
-            startService(((SCServiceNode) value).getService().getId());
+        HashMap<String, SCServiceNode> sn  = new HashMap<>(servicesNodes);
+        for (Object value : sn.values()) {
+            String serviceId = ((SCServiceNode) value).getService().getId();
+            boolean started = startService(serviceId);
+            if (started) {
+                serviceEventSubject.onNext(
+                        new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_RUNNING, serviceId));
+            } else {
+                serviceEventSubject.onNext(
+                        new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_ERROR, serviceId));
+            }
         }
     }
 
-    public void startService(String serviceId) {
+    public boolean startService(String serviceId) {
         Log.e(LOG_TAG, "Starting ..." + serviceId);
         SCServiceNode node = getNodeById(serviceId);
 
-//        if (node.getDependencies().size() > 0) {
-//            for (SCServiceNode dep: node.getDependencies()) {
-//                SCService service = dep.getService();
-//                checkAndStartService(service);
-//            }
-//            checkAndStartService(node.getService());
-//        } else {
-//            checkAndStartService(node.getService());
-//        }
-
-        for (SCServiceNode dep: node.getDependencies()) {
-            SCService service = dep.getService();
-            //grap dep for dep service
-            Map<String, SCService> deps = new HashMap<>();
-            for (SCServiceNode serviceNodeDep: dep.getDependencies()) {
-                deps.put(serviceNodeDep.getService().getId(), serviceNodeDep.getService());
-            }
-            checkAndStartService(service, deps);
+        //check to see if running
+        if (node.getService().getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
+            return true;
         }
-        //after all dependencies and or no dependencies, start the service
-        checkAndStartService(node.getService(), null);
+
+        List<Boolean> depsStarts = new ArrayList<>();
+        SCService svc;
+        for (SCServiceNode serviceNodeDep : node.getDependencies()) {
+            svc = serviceNodeDep.getService();
+            if (svc.getStatus() == SCServiceStatus.SC_SERVICE_RUNNING) {
+                depsStarts.add(true);
+            } else {
+                depsStarts.add(startService(svc.getServiceId()));
+            }
+        }
+
+        //No Deps, just start
+        if (depsStarts.size() == 0) {
+            return node.getService().start(null);
+        } else {
+            if (node.getDependencies().size() != depsStarts.size()) {
+                Log.e(LOG_TAG, "Not all of the dependencies started");
+                return false;
+            }
+
+            Map<String, SCService> deps = new HashMap<>();
+            for (SCServiceNode dep : node.getDependencies()) {
+                deps.put(dep.getService().getId(), dep.getService());
+            }
+
+            return node.getService().start(deps);
+        }
+
+//        if (node.getDependencies().size() > 0) {
+//            //get staring svc deps
+//            Map<String, SCService> startingSvcDeps = new HashMap<>();
+//            SCService svc;
+//            for (SCServiceNode serviceNodeDep : node.getDependencies()) {
+//                svc = serviceNodeDep.getService();
+//                startingSvcDeps.put(serviceNodeDep.getService().getId(), serviceNodeDep.getService());
+//            }
+//
+//            //get deps and it's deps and start
+//            for (SCServiceNode dep : node.getDependencies()) {
+//                SCService service = dep.getService();
+//                //grap dep for dep services
+//                Map<String, SCService> deps = new HashMap<>();
+//                for (SCServiceNode serviceNodeDep : dep.getDependencies()) {
+//                    deps.put(serviceNodeDep.getService().getId(), serviceNodeDep.getService());
+//                }
+//                checkAndStartService(service, deps);
+//            }
+//
+//            //after deps started, start service
+//            checkAndStartService(node.getService(), startingSvcDeps);
+//        } else {
+//            //after all dependencies and or no dependencies, start the service
+//            checkAndStartService(node.getService(), null);
+//        }
 
 
     }
@@ -109,8 +161,35 @@ public class SCServiceGraph {
 
     }
 
-    public void stopService(String serviceId) {
+    public boolean stopService(String serviceId) {
+        SCServiceNode node = getNodeById(serviceId);
 
+        //check to see if running
+        if (node.getService().getStatus() == SCServiceStatus.SC_SERVICE_STOPPED) {
+            return true;
+        }
+
+        List<Boolean> depsStops = new ArrayList<>();
+        SCService svc;
+        for (SCServiceNode serviceNodeDep : node.getDependencies()) {
+            svc = serviceNodeDep.getService();
+            if (svc.getStatus() == SCServiceStatus.SC_SERVICE_STOPPED) {
+                depsStops.add(true);
+            } else {
+                depsStops.add(stopService(svc.getServiceId()));
+            }
+        }
+
+        if (depsStops.size() > 0) {
+            return node.getService().stop();
+        } else {
+            if (node.getDependencies().size() != depsStops.size()) {
+                Log.e(LOG_TAG, "Not all of the dependencies stopped");
+                return false;
+            } else {
+                return node.getService().stop();
+            }
+        }
     }
 
     public void restartAllServices() {
