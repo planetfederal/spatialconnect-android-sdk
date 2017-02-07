@@ -19,11 +19,11 @@
 
 package com.boundlessgeo.spatialconnect.services;
 
-import rx.Observable;
+import java.util.Map;
 
 public interface SCServiceLifecycle {
 
-    Observable<SCServiceStatus> start();
+    void start(Map<String, SCService> deps);
     void stop();
     void resume();
     void pause();

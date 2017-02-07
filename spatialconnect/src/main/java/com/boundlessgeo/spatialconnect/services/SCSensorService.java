@@ -34,6 +34,9 @@ import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.PrecisionModel;
 
+import java.util.List;
+import java.util.Map;
+
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
@@ -64,10 +67,10 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
     }
 
     @Override
-    public Observable<SCServiceStatus> start() {
-        super.start();
+    public void start(Map<String, SCService> deps) {
+        super.start(deps);
         setupObservables();
-        return Observable.empty();
+//        return Observable.empty();
     }
 
     @Override
@@ -93,6 +96,11 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
     @Override
     public String getId() {
         return SERVICE_NAME;
+    }
+
+    @Override
+    public List<String> getRequires() {
+        return null;
     }
 
     /**
