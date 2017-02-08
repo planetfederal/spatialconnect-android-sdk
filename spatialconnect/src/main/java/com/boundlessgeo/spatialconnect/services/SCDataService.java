@@ -416,7 +416,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         sensorService = (SCSensorService)deps.get(SCSensorService.serviceId());
         startAllStores();
         setupSubscriptions();
-//        return Observable.empty();
         return super.start(deps);
     }
 
@@ -529,7 +528,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     }
 
     private void setupSubscriptions() {
-//        SCSensorService ss = SpatialConnect.getInstance().getSensorService();
         sensorService.isConnected().subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {

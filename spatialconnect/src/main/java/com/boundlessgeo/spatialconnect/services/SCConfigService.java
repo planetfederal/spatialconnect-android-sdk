@@ -138,7 +138,6 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
      * @param c {@link SCConfig} Config object to be loaded
      */
     public void removeStore(SCStoreConfig c) {
-//        SCDataService dataService = sc.getDataService();
         dataService.unregisterStore(dataService.getStoreByIdentifier(c.getUniqueID()));
     }
 
@@ -184,7 +183,6 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     public boolean start(Map<String, SCService> deps) {
         dataService = (SCDataService) deps.get(SCDataService.serviceId());
         loadConfigs();
-//        return Observable.empty();
         return super.start(deps);
     }
 

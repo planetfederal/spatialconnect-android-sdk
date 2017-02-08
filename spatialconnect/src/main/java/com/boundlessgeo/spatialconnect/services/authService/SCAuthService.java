@@ -117,23 +117,6 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
         } else {
             loginStatus.onNext(SCAuthStatus.NOT_AUTHENTICATED.value());
         }
-
-//        return Observable.create(new Observable.OnSubscribe<SCServiceStatus>() {
-//            @Override
-//            public void call(Subscriber<? super SCServiceStatus> subscriber) {
-//                setStatus(SCServiceStatus.SC_SERVICE_STARTED);
-//                subscriber.onNext(getStatus());
-//                boolean authed = authMethod.authFromCache();
-//                if (authed) {
-//                    loginStatus.onNext(SCAuthStatus.AUTHENTICATED.value());
-//                } else {
-//                    loginStatus.onNext(SCAuthStatus.NOT_AUTHENTICATED.value());
-//                }
-//                setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
-//                subscriber.onNext(getStatus());
-//                subscriber.onCompleted();
-//            }
-//        });
         return super.start(deps);
     }
 

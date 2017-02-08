@@ -70,7 +70,6 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
     public boolean start(Map<String, SCService> deps) {
         setupObservables();
         return super.start(deps);
-//        return Observable.empty();
     }
 
     @Override

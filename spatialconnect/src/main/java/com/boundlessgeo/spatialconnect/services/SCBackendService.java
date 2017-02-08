@@ -255,7 +255,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         sensorService = (SCSensorService) deps.get(SCSensorService.serviceId());
         dataService = (SCDataService) deps.get(SCDataService.serviceId());
         listenForNetworkConnection();
-//        return Observable.empty();
         return super.start(deps);
     }
 
@@ -289,8 +288,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void loadCachedConfig () {
-//        SpatialConnect sc = SpatialConnect.getInstance();
-//        SCConfigService configService = sc.getConfigService();
         SCConfig config = configService.getCachedConfig();
         if (config != null) {
             configService.loadConfig(config);
@@ -300,8 +297,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private void authListener() {
         Log.d(LOG_TAG, "waiting on auth to get remote from server");
-//        SpatialConnect sc = SpatialConnect.getInstance();
-//        SCAuthService authService = sc.getAuthService();
 
         Observable<Integer> authed = authService.getLoginStatus()
                 .filter(new Func1<Integer, Boolean>() {
