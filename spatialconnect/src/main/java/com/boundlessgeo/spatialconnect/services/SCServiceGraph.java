@@ -173,4 +173,9 @@ public class SCServiceGraph {
             }
         }
     }
+
+    public void restartAllServices() {
+        stopAllServices();
+        startAllServices();
+    }
 }

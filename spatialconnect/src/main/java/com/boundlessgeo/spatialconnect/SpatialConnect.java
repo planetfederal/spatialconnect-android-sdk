@@ -154,8 +154,7 @@ public class SpatialConnect {
      * Restarts all SCServices taht was added to SpatialConnect
      */
     public void restartAllServices() {
-        serviceGraph.stopAllServices();
-        serviceGraph.startAllServices();
+        serviceGraph.restartAllServices();
     }
 
     /**
