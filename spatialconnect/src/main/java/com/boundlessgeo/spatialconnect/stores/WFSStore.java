@@ -66,6 +66,7 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
         if (baseUrl == null) {
             throw new IllegalArgumentException("WFS store must have a uri property.");
         }
+        getLayers();
     }
 
     public List<String> layers() {
@@ -73,7 +74,7 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
     }
 
     public List<String> vectorLayers() {
-        return getLayers();
+        return vectorLayers;
     }
 
     public String getGetCapabilitiesUrl() {
@@ -280,19 +281,26 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
         }
     }
 
-    private List<String> getLayers() {
+    private void getLayers() {
         try {
-            Response response = HttpHandler.getInstance()
-                    .get(getGetCapabilitiesUrl())
-                    .toBlocking()
-                    .first();
-
-            vectorLayers = getLayerNames(response.body().byteStream());
-
+            HttpHandler.getInstance().get(getGetCapabilitiesUrl())
+                    .subscribe(new Action1<Response>() {
+                                   @Override
+                                   public void call(Response response) {
+                                       vectorLayers = getLayerNames(response.body().byteStream());
+                                       if (vectorLayers != null) {
+                                           setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                       }
+                                   }
+                               },
+                            new Action1<Throwable>() {
+                                @Override
+                                public void call(Throwable t) {
+                                    setStatus(SCDataStoreStatus.SC_DATA_STORE_START_FAILED);
+                                }
+                            });
         } catch (IOException e) {
-            Log.e(LOG_TAG, "Unable to get layers");
+            e.printStackTrace();
         }
-
-        return  vectorLayers;
     }
 }
