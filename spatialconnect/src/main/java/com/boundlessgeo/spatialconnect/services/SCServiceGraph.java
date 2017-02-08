@@ -126,39 +126,21 @@ public class SCServiceGraph {
 
             return node.getService().start(deps);
         }
-
-//        if (node.getDependencies().size() > 0) {
-//            //get staring svc deps
-//            Map<String, SCService> startingSvcDeps = new HashMap<>();
-//            SCService svc;
-//            for (SCServiceNode serviceNodeDep : node.getDependencies()) {
-//                svc = serviceNodeDep.getService();
-//                startingSvcDeps.put(serviceNodeDep.getService().getId(), serviceNodeDep.getService());
-//            }
-//
-//            //get deps and it's deps and start
-//            for (SCServiceNode dep : node.getDependencies()) {
-//                SCService service = dep.getService();
-//                //grap dep for dep services
-//                Map<String, SCService> deps = new HashMap<>();
-//                for (SCServiceNode serviceNodeDep : dep.getDependencies()) {
-//                    deps.put(serviceNodeDep.getService().getId(), serviceNodeDep.getService());
-//                }
-//                checkAndStartService(service, deps);
-//            }
-//
-//            //after deps started, start service
-//            checkAndStartService(node.getService(), startingSvcDeps);
-//        } else {
-//            //after all dependencies and or no dependencies, start the service
-//            checkAndStartService(node.getService(), null);
-//        }
-
-
     }
 
     public void stopAllServices() {
-
+        HashMap<String, SCServiceNode> sn  = new HashMap<>(servicesNodes);
+        for (Object value : sn.values()) {
+            String serviceId = ((SCServiceNode) value).getService().getId();
+            boolean stopped = stopService(serviceId);
+            if (stopped) {
+                serviceEventSubject.onNext(
+                        new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_STOPPED, serviceId));
+            } else {
+                serviceEventSubject.onNext(
+                        new SCServiceStatusEvent(SCServiceStatus.SC_SERVICE_ERROR, serviceId));
+            }
+        }
     }
 
     public boolean stopService(String serviceId) {
@@ -189,16 +171,6 @@ public class SCServiceGraph {
             } else {
                 return node.getService().stop();
             }
-        }
-    }
-
-    public void restartAllServices() {
-
-    }
-
-    private void checkAndStartService(SCService service, Map<String, SCService> deps) {
-        if (service.getStatus() != SCServiceStatus.SC_SERVICE_RUNNING) {
-            service.start(deps);
         }
     }
 }
