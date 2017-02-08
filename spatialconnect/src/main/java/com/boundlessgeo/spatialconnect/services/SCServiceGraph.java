@@ -91,7 +91,6 @@ public class SCServiceGraph {
     }
 
     public boolean startService(String serviceId) {
-        Log.e(LOG_TAG, "Starting ..." + serviceId);
         SCServiceNode node = getNodeById(serviceId);
 
         //check to see if running
@@ -146,7 +145,7 @@ public class SCServiceGraph {
     public boolean stopService(String serviceId) {
         SCServiceNode node = getNodeById(serviceId);
 
-        //check to see if running
+        //check to see if service is stopped
         if (node.getService().getStatus() == SCServiceStatus.SC_SERVICE_STOPPED) {
             return true;
         }

@@ -205,8 +205,6 @@ public class SpatialConnect {
             backendService.initialize(remoteConfig);
             addService(backendService);
             startService(backendService.getServiceId());
-        } else {
-            Log.d(LOG_TAG, "SCBackendService Already Connected");
         }
     }
 

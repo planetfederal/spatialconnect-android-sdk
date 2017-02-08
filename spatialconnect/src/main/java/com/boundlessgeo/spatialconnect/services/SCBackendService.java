@@ -62,7 +62,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private SCConfigService configService;
     private SCSensorService sensorService;
     private SCDataService dataService;
-    
+
     /**
      * Behavior Observable emitting True when the SpatialConnect SCConfig has been received
      */
