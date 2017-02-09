@@ -21,14 +21,17 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import rx.observables.ConnectableObservable;
 import rx.subjects.PublishSubject;
 
+/**
+ * SCServiceGraph represents services as {@link SCServiceNode} that includes the service,
+ * all of its dependencies, and what services (recipient) relies on it.
+ */
 public class SCServiceGraph {
     private static String LOG_TAG = SCServiceGraph.class.getSimpleName();
-    private Map<String, SCServiceNode> servicesNodes = new HashMap<>();
+    private HashMap<String, SCServiceNode> servicesNodes = new HashMap<>();
     public PublishSubject<SCServiceStatusEvent> serviceEventSubject;
     public ConnectableObservable<SCServiceStatusEvent> serviceEvents;
 
@@ -39,7 +42,7 @@ public class SCServiceGraph {
 
     public void addServivce(SCService service) {
         List<String> requires = service.getRequires();
-        List<SCServiceNode> deps = new ArrayList<>();
+        ArrayList<SCServiceNode> deps = new ArrayList<>();
         if (requires != null) {
             for (String svc: requires) {
                 deps.add(getNodeById(svc));
@@ -98,7 +101,7 @@ public class SCServiceGraph {
             return true;
         }
 
-        List<Boolean> depsStarts = new ArrayList<>();
+        ArrayList<Boolean> depsStarts = new ArrayList<>();
         SCService svc;
         for (SCServiceNode serviceNodeDep : node.getDependencies()) {
             svc = serviceNodeDep.getService();
@@ -118,7 +121,7 @@ public class SCServiceGraph {
                 return false;
             }
 
-            Map<String, SCService> deps = new HashMap<>();
+            HashMap<String, SCService> deps = new HashMap<>();
             for (SCServiceNode dep : node.getDependencies()) {
                 deps.put(dep.getService().getId(), dep.getService());
             }
@@ -150,7 +153,7 @@ public class SCServiceGraph {
             return true;
         }
 
-        List<Boolean> depsStops = new ArrayList<>();
+        ArrayList<Boolean> depsStops = new ArrayList<>();
         SCService svc;
         for (SCServiceNode serviceNodeDep : node.getDependencies()) {
             svc = serviceNodeDep.getService();

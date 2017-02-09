@@ -19,12 +19,19 @@ package com.boundlessgeo.spatialconnect.services;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Represents a service in the {@link SCServiceGraph}
+ *
+ * This class includes the service,
+ * all of its dependencies,
+ * and what services (recipient) relies on it.
+ */
 public class SCServiceNode {
 
     private SCService service;
     // Services this node depends on
     private List<SCServiceNode> dependencies;
-    // Services this node is a dependicy of
+    // Services this node is a dependency of
     private List<SCServiceNode> recipients;
 
     SCServiceNode(SCService service, List<SCServiceNode> dependencies) {
