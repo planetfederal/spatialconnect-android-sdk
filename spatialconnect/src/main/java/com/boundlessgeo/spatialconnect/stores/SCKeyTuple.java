@@ -77,4 +77,22 @@ public class SCKeyTuple {
         byte[] enc = Base64.decode(s,Base64.DEFAULT);
         return new String(enc,"UTF-8");
     }
+
+    @Override public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        SCKeyTuple that = (SCKeyTuple) o;
+
+        if (storeId != null ? !storeId.equals(that.storeId) : that.storeId != null) return false;
+        if (layerId != null ? !layerId.equals(that.layerId) : that.layerId != null) return false;
+        return featureId != null ? featureId.equals(that.featureId) : that.featureId == null;
+    }
+
+    @Override public int hashCode() {
+        int result = storeId != null ? storeId.hashCode() : 0;
+        result = 31 * result + (layerId != null ? layerId.hashCode() : 0);
+        result = 31 * result + (featureId != null ? featureId.hashCode() : 0);
+        return result;
+    }
 }
