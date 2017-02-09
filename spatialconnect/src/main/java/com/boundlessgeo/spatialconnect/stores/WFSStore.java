@@ -19,14 +19,12 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.util.Xml;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryCollection;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
-import com.boundlessgeo.spatialconnect.services.SCSensorService;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -76,7 +74,7 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
     }
 
     public List<String> vectorLayers() {
-        return this.vectorLayers;
+        return vectorLayers;
     }
 
     public String getGetCapabilitiesUrl() {
@@ -284,37 +282,25 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
     }
 
     private void getLayers() {
-        SCSensorService ss = SpatialConnect.getInstance().getSensorService();
-
-        // try to connect to WFS store to get the layers from the capabilities documents
-        ss.isConnected().subscribe(new Action1<Boolean>() {
-            @Override
-            public void call(Boolean connected) {
-                if (connected) {
-                    try {
-                        HttpHandler.getInstance().get(getGetCapabilitiesUrl())
-                                .subscribe(new Action1<Response>() {
-                                               @Override
-                                               public void call(Response response) {
-                                                   vectorLayers = getLayerNames(response.body().byteStream());
-                                                   if (vectorLayers != null) {
-                                                       setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
-                                                   }
-                                               }
-                                           },
-                                        new Action1<Throwable>() {
-                                            @Override
-                                            public void call(Throwable t) {
-                                                setStatus(SCDataStoreStatus.SC_DATA_STORE_START_FAILED);
-                                            }
-                                        });
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-            }
-        });
+        try {
+            HttpHandler.getInstance().get(getGetCapabilitiesUrl())
+                    .subscribe(new Action1<Response>() {
+                                   @Override
+                                   public void call(Response response) {
+                                       vectorLayers = getLayerNames(response.body().byteStream());
+                                       if (vectorLayers != null) {
+                                           setStatus(SCDataStoreStatus.SC_DATA_STORE_RUNNING);
+                                       }
+                                   }
+                               },
+                            new Action1<Throwable>() {
+                                @Override
+                                public void call(Throwable t) {
+                                    setStatus(SCDataStoreStatus.SC_DATA_STORE_START_FAILED);
+                                }
+                            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-
 }

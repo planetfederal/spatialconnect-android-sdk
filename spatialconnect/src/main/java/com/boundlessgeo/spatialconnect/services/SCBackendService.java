@@ -38,11 +38,15 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.google.protobuf.Timestamp;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.subjects.BehaviorSubject;
+
+import static java.util.Arrays.asList;
 
 /**
  * SCBackendService handles any communication with backend SpatialConnect services.
@@ -54,6 +58,11 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private Context context;
     private MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
+    private SCAuthService authService;
+    private SCConfigService configService;
+    private SCSensorService sensorService;
+    private SCDataService dataService;
+
     /**
      * Behavior Observable emitting True when the SpatialConnect SCConfig has been received
      */
@@ -241,35 +250,24 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    public Observable<SCServiceStatus> start() {
-        super.start();
+    public boolean start(Map<String, SCService> deps) {
+        authService = (SCAuthService)deps.get(SCAuthService.serviceId());
+        configService = (SCConfigService) deps.get(SCConfigService.serviceId());
+        sensorService = (SCSensorService) deps.get(SCSensorService.serviceId());
+        dataService = (SCDataService) deps.get(SCDataService.serviceId());
         listenForNetworkConnection();
-        return Observable.empty();
-    }
-
-    @Override
-    public void stop() {
-        super.stop();
-    }
-
-    @Override
-    public void resume() {
-        super.resume();
-    }
-
-    @Override
-    public void pause() {
-        super.pause();
-    }
-
-    @Override
-    public void startError() {
-        super.startError();
+        return super.start(deps);
     }
 
     @Override
     public String getId() {
         return SERVICE_NAME;
+    }
+
+    @Override
+    public List<String> getRequires() {
+        return asList(SCAuthService.serviceId(), SCConfigService.serviceId(),
+                SCSensorService.serviceId(), SCDataService.serviceId());
     }
 
     private void connect() {
@@ -291,8 +289,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void loadCachedConfig () {
-        SpatialConnect sc = SpatialConnect.getInstance();
-        SCConfigService configService = sc.getConfigService();
         SCConfig config = configService.getCachedConfig();
         if (config != null) {
             configService.loadConfig(config);
@@ -302,8 +298,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private void authListener() {
         Log.d(LOG_TAG, "waiting on auth to get remote from server");
-        SpatialConnect sc = SpatialConnect.getInstance();
-        SCAuthService authService = sc.getAuthService();
 
         Observable<Integer> authed = authService.getLoginStatus()
                 .filter(new Func1<Integer, Boolean>() {
@@ -416,7 +410,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         String.format("{\"identifier\": \"%s\", \"device_info\": \"%s\", \"mobile\": \"%s\"}",
                                 sc.getDeviceIdentifier(),
                                 getAndroidVersion(),
-                                sc.getAuthService().getUsername())
+                                authService.getUsername())
                 )
                 .build();
         publishExactlyOnce("/config/register", registerConfigMsg);
@@ -438,9 +432,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
             @Override
             public void call(SCMessageOuterClass.SCMessage scMessage) {
                 Log.d("FormStore","action: " + scMessage.getAction());
-                SpatialConnect sc = SpatialConnect.getInstance();
-                SCConfigService cs = sc.getConfigService();
-                SCConfig cachedConfig = cs.getCachedConfig();
+                SCConfig cachedConfig = configService.getCachedConfig();
                 JsonUtilities utilities = new JsonUtilities();
 
                 switch (SCCommand.fromActionNumber(scMessage.getAction())) {
@@ -449,7 +441,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                             SCStoreConfig config = SCObjectMapper.getMapper()
                                     .readValue(scMessage.getPayload(), SCStoreConfig.class);
                             cachedConfig.addStore(config);
-                            sc.getDataService().registerAndStartStoreByConfig(config);
+                            dataService.registerAndStartStoreByConfig(config);
 
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -460,7 +452,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                             SCStoreConfig config = SCObjectMapper.getMapper()
                                     .readValue(scMessage.getPayload(), SCStoreConfig.class);
                             cachedConfig.updateStore(config);
-                            sc.getDataService().updateStoresByConfig(config);
+                            dataService.updateStoresByConfig(config);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -468,16 +460,16 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     case CONFIG_REMOVE_STORE:
                         String storeId = utilities.getMapFromJson(scMessage.getPayload())
                                 .get("id").toString();
-                        SCDataStore store = sc.getDataService().getStoreByIdentifier(storeId);
+                        SCDataStore store = dataService.getStoreByIdentifier(storeId);
                         cachedConfig.removeStore(storeId);
-                        sc.getDataService().unregisterStore(store);
+                        dataService.unregisterStore(store);
                         break;
                     case CONFIG_ADD_FORM:
                         try {
                             SCFormConfig config = SCObjectMapper.getMapper()
                                     .readValue(scMessage.getPayload(), SCFormConfig.class);
                             cachedConfig.addForm(config);
-                            sc.getDataService().getFormStore().registerFormByConfig(config);
+                            dataService.getFormStore().registerFormByConfig(config);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -487,7 +479,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                             SCFormConfig config = SCObjectMapper.getMapper()
                                     .readValue(scMessage.getPayload(), SCFormConfig.class);
                             cachedConfig.updateForm(config);
-                            sc.getDataService().getFormStore().updateFormByConfig(config);
+                            dataService.getFormStore().updateFormByConfig(config);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -496,11 +488,11 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         String formKey = utilities.getMapFromJson(scMessage.getPayload())
                                 .get("form_key").toString();
                         cachedConfig.removeForm(formKey);
-                        sc.getDataService().getFormStore().unregisterFormByKey(formKey);
+                        dataService.getFormStore().unregisterFormByKey(formKey);
                         break;
                 }
 
-                cs.setCachedConfig(cachedConfig);
+                configService.setCachedConfig(cachedConfig);
             }
         });
     }

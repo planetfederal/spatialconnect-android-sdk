@@ -14,7 +14,9 @@
  */
 package com.boundlessgeo.spatialconnect.services;
 
-import rx.Observable;
+import java.util.List;
+import java.util.Map;
+
 //TODO add service key
 public abstract class SCService implements SCServiceLifecycle{
     private SCServiceStatus status;
@@ -24,21 +26,25 @@ public abstract class SCService implements SCServiceLifecycle{
         this.status = SCServiceStatus.SC_SERVICE_STOPPED;
     }
 
-    public Observable<SCServiceStatus> start() {
+    @Override
+    public boolean start(Map<String, SCService> deps) {
         this.status = SCServiceStatus.SC_SERVICE_RUNNING;
-        return Observable.empty();
+        return true;
     }
 
-    public void stop() {
+    public boolean stop() {
         this.status = SCServiceStatus.SC_SERVICE_STOPPED;
+        return true;
     }
 
-    public void resume() {
+    public boolean resume() {
         this.status = SCServiceStatus.SC_SERVICE_RUNNING;
+        return true;
     }
 
-    public void pause() {
+    public boolean pause() {
         this.status = SCServiceStatus.SC_SERVICE_PAUSED;
+        return true;
     }
 
     @Override
@@ -59,4 +65,6 @@ public abstract class SCService implements SCServiceLifecycle{
     }
 
     public abstract String getId();
+
+    public abstract List<String> getRequires();
 }

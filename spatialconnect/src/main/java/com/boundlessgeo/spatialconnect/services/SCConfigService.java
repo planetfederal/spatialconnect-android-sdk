@@ -32,8 +32,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-import rx.Observable;
+import static java.util.Arrays.asList;
 
 /**
  * The SCConfigService is responsible for managing the configuration for SpatialConnect.  This includes downloading
@@ -49,6 +50,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     private Context context;
     private List<String> configPaths = new ArrayList<>();
     private SpatialConnect sc;
+    private SCDataService dataService;
 
     public SCConfigService(Context context) {
         this.context = context;
@@ -112,7 +114,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
      * @param c {@link SCConfig} Config object to be loaded
      */
     public void addForm(SCFormConfig c) {
-        sc.getDataService().getFormStore().registerFormByConfig(c);
+        dataService.getFormStore().registerFormByConfig(c);
     }
 
     /**
@@ -120,7 +122,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
      * @param c {@link SCConfig} Config object to be loaded
      */
     public void removeForm(SCFormConfig c) {
-        sc.getDataService().getFormStore().unregisterFormByConfig(c);
+        dataService.getFormStore().unregisterFormByConfig(c);
     }
 
     /**
@@ -136,7 +138,6 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
      * @param c {@link SCConfig} Config object to be loaded
      */
     public void removeStore(SCStoreConfig c) {
-        SCDataService dataService = sc.getDataService();
         dataService.unregisterStore(dataService.getStoreByIdentifier(c.getUniqueID()));
     }
 
@@ -179,15 +180,20 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    public Observable<SCServiceStatus> start() {
-        super.start();
+    public boolean start(Map<String, SCService> deps) {
+        dataService = (SCDataService) deps.get(SCDataService.serviceId());
         loadConfigs();
-        return Observable.empty();
+        return super.start(deps);
     }
 
     @Override
     public String getId() {
         return SERVICE_NAME;
+    }
+
+    @Override
+    public List<String> getRequires() {
+        return asList(SCDataService.serviceId());
     }
 
     /* Registers all the forms specified in each config file */
@@ -211,7 +217,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
             for (SCStoreConfig storeConfig : storeConfigs) {
                 Log.d(LOG_TAG, "Adding store " + storeConfig.getName() + " to data service.");
                 try {
-                    sc.getDataService().registerAndStartStoreByConfig(storeConfig);
+                    dataService.registerAndStartStoreByConfig(storeConfig);
                 } catch (Exception ex) {
                     Log.w(LOG_TAG, "Exception adding store to data service ", ex);
                 }

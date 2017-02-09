@@ -17,7 +17,6 @@ package com.boundlessgeo.spatialconnect.services;
 import android.content.Context;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
@@ -52,6 +51,8 @@ import rx.functions.Func1;
 import rx.observables.ConnectableObservable;
 import rx.subjects.BehaviorSubject;
 
+import static java.util.Arrays.asList;
+
 /**
  * The SCDataService is responsible for starting, stopping, and managing access to {@link SCDataStore} instances.  This
  * includes exposing methods to query across multiple SCDataStore instances.
@@ -64,6 +65,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     private Map<String, SCDataStore> stores;
     private Map<String, Class> supportedStoreImpls;
     private Context context;
+    private SCSensorService sensorService;
 
     /**
      * The storeEventSubject is like an internal event bus, its job is to receive {@link SCStoreStatusEvent}s
@@ -408,40 +410,31 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     /**
      * Calling start on the {@link SCDataService} will start all registered {@link SCDataStore}s.
      */
-    public Observable<SCServiceStatus> start() {
+    @Override
+    public boolean start(Map<String, SCService> deps) {
         Log.d(LOG_TAG, "Starting SCDataService. Starting all registered data stores.");
-        super.start();
+        sensorService = (SCSensorService)deps.get(SCSensorService.serviceId());
         startAllStores();
         setupSubscriptions();
-        return Observable.empty();
+        return super.start(deps);
     }
 
     @Override
-    public void stop() {
-        super.stop();
+    public boolean stop() {
         stopAllStores();
         stores.clear();
         hasStores.onNext(false);
-    }
-
-    @Override
-    public void resume() {
-        super.resume();
-    }
-
-    @Override
-    public void pause() {
-        super.pause();
-    }
-
-    @Override
-    public void startError() {
-        super.startError();
+        return super.stop();
     }
 
     @Override
     public String getId() {
         return SERVICE_NAME;
+    }
+
+    @Override
+    public List<String> getRequires() {
+        return asList(SCSensorService.serviceId());
     }
 
     private void startAllStores() {
@@ -535,8 +528,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     }
 
     private void setupSubscriptions() {
-        SCSensorService ss = SpatialConnect.getInstance().getSensorService();
-        ss.isConnected().subscribe(new Action1<Boolean>() {
+        sensorService.isConnected().subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {

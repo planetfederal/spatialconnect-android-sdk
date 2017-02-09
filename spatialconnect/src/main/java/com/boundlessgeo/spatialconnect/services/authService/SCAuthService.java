@@ -18,10 +18,10 @@ import android.content.Context;
 
 import com.boundlessgeo.spatialconnect.services.SCService;
 import com.boundlessgeo.spatialconnect.services.SCServiceLifecycle;
-import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
 
-import rx.Observable;
-import rx.Subscriber;
+import java.util.List;
+import java.util.Map;
+
 import rx.subjects.BehaviorSubject;
 
 public class SCAuthService extends SCService implements SCServiceLifecycle {
@@ -110,49 +110,24 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    public Observable<SCServiceStatus> start() {
-
-        return Observable.create(new Observable.OnSubscribe<SCServiceStatus>() {
-            @Override
-            public void call(Subscriber<? super SCServiceStatus> subscriber) {
-                setStatus(SCServiceStatus.SC_SERVICE_STARTED);
-                subscriber.onNext(getStatus());
-                boolean authed = authMethod.authFromCache();
-                if (authed) {
-                    loginStatus.onNext(SCAuthStatus.AUTHENTICATED.value());
-                } else {
-                    loginStatus.onNext(SCAuthStatus.NOT_AUTHENTICATED.value());
-                }
-                setStatus(SCServiceStatus.SC_SERVICE_RUNNING);
-                subscriber.onNext(getStatus());
-                subscriber.onCompleted();
-            }
-        });
-    }
-
-    @Override
-    public void stop() {
-        super.stop();
-    }
-
-    @Override
-    public void resume() {
-        super.resume();
-    }
-
-    @Override
-    public void pause() {
-        super.pause();
-    }
-
-    @Override
-    public void startError() {
-        super.startError();
+    public boolean start(Map<String, SCService> deps) {
+        boolean authed = authMethod.authFromCache();
+        if (authed) {
+            loginStatus.onNext(SCAuthStatus.AUTHENTICATED.value());
+        } else {
+            loginStatus.onNext(SCAuthStatus.NOT_AUTHENTICATED.value());
+        }
+        return super.start(deps);
     }
 
     @Override
     public String getId() {
         return SERVICE_NAME;
+    }
+
+    @Override
+    public List<String> getRequires() {
+        return null;
     }
 
     public static String serviceId() {
