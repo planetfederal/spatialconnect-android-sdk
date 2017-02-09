@@ -1,0 +1,9 @@
+
+{
+  "build":"./gradlew build.gradle",
+  "install":"./gradlew uploadArchives",
+  "unit_test":"./gradlew connectedCheck",
+  "integration_test":"",
+  "run":"",
+  "release":""
+}
