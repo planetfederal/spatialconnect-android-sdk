@@ -54,8 +54,31 @@ public class HttpHandler {
         this.client = new OkHttpClient.Builder()
                 .readTimeout(2, TimeUnit.MINUTES)
                 .addNetworkInterceptor(new LoggingInterceptor())
-                .addNetworkInterceptor(new AuthHeaderInterceptor())
                 .build();
+    }
+
+    public Observable<Response> get(final String url, final String authToken) throws IOException {
+        return Observable.create(new Observable.OnSubscribe<Response>() {
+            @Override
+            public void call(Subscriber<? super Response> subscriber) {
+                try {
+                    Request request = new Request.Builder()
+                        .url(url)
+                        .header("Authorization", "Token " + authToken)
+                        .build();
+                    Response response = client.newCall(request).execute();
+                    if (!response.isSuccessful()) {
+                        subscriber.onError(new Exception("error"));
+                    } else {
+                        subscriber.onNext(response);
+                        subscriber.onCompleted();
+                    }
+                } catch (IOException e) {
+                    subscriber.onError(e);
+                }
+            }
+        })
+            .subscribeOn(Schedulers.io());
     }
 
     public Observable<Response> get(final String url) throws IOException {
@@ -165,32 +188,4 @@ public class HttpHandler {
         }
     }
 
-    /**
-     * Interceptor to attach the auth token to every request if it isn't present.
-     */
-    public static class AuthHeaderInterceptor implements Interceptor {
-        @Override
-        public Response intercept(Interceptor.Chain chain) throws IOException {
-            Request originalRequest = chain.request();
-
-            // skip if the request already has the auth header or if this request is to authenticate
-            if (originalRequest.header("Authorization") != null ||
-                originalRequest.toString().contains("authenticate")) {
-                return chain.proceed(originalRequest);
-            }
-
-
-            if (SpatialConnect.getInstance().getAuthService().getAccessToken() == null) {
-                // don't have an auth token so proceed with request anyway
-                return chain.proceed(originalRequest);
-            }
-            else {
-                // add the Authorization header to the request
-                Request updatedRequest = originalRequest.newBuilder()
-                    .header("Authorization", "Token " + SpatialConnect.getInstance().getAuthService().getAccessToken())
-                    .build();
-                return chain.proceed(updatedRequest);
-            }
-        }
-    }
 }

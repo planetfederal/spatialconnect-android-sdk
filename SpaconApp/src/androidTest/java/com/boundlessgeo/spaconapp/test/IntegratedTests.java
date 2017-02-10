@@ -26,7 +26,6 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.WFSStore;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.util.Iterator;
 import okhttp3.Response;
 import org.junit.After;
@@ -65,6 +64,7 @@ public class IntegratedTests {
     protected static File remoteConfigFile;
 
     private static SpatialConnect sc;
+    private static String TOKEN;
 
     @ClassRule
     public static ActivityTestRule<MainActivity> rule = new ActivityTestRule<>(MainActivity.class);
@@ -95,7 +95,13 @@ public class IntegratedTests {
             sc.getConfigService().addConfigFilePath(remoteConfigFile.getAbsolutePath());
             sc.startAllServices();
             sc.getAuthService().authenticate("admin@something.com", "admin");
-
+            sc.getAuthService().getLoginStatus().subscribe(new Action1<Integer>() {
+                @Override public void call(Integer integer) {
+                    if (integer == 1) {
+                        TOKEN = sc.getAuthService().getAccessToken();
+                    }
+                }
+            });
         } catch (IOException ex) {
             System.exit(0);
         }
@@ -244,7 +250,7 @@ public class IntegratedTests {
         throws IOException {
         TestSubscriber testSubscriber = new TestSubscriber();
         String formResultsUrl = getApiUrl() + "/api/form/" + formId + "/results";
-        HttpHandler.getInstance().get(formResultsUrl).subscribe(testSubscriber);
+        HttpHandler.getInstance().get(formResultsUrl, TOKEN).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         Response response = (Response) testSubscriber.getOnNextEvents().get(0);
@@ -270,7 +276,7 @@ public class IntegratedTests {
     private String getSampleFormSubmission(String formId) throws IOException {
         TestSubscriber testSubscriber = new TestSubscriber();
         String formSampleUrl = getApiUrl() + "/api/form/" + formId + "/sample"; //todo: s/form/forms
-        HttpHandler.getInstance().get(formSampleUrl).subscribe(testSubscriber);
+        HttpHandler.getInstance().get(formSampleUrl, TOKEN).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         testSubscriber.assertNoErrors();
         Response response = (Response) testSubscriber.getOnNextEvents().get(0);
@@ -280,7 +286,7 @@ public class IntegratedTests {
     private String getValidFormId() throws IOException {
         String formsUrl = getApiUrl() + "/api/forms";
         TestSubscriber testSubscriber = new TestSubscriber();
-        HttpHandler.getInstance().get(formsUrl).subscribe(testSubscriber);
+        HttpHandler.getInstance().get(formsUrl, TOKEN).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent();
         Response response = (Response) testSubscriber.getOnNextEvents().get(0);
         JsonNode root = SCObjectMapper.getMapper().readTree(response.body().string());
