@@ -25,6 +25,7 @@ import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.services.SCService;
 import com.boundlessgeo.spatialconnect.services.SCServiceGraph;
+import com.boundlessgeo.spatialconnect.services.SCServiceNode;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
 import com.boundlessgeo.spatialconnect.services.authService.ISCAuth;
@@ -163,7 +164,12 @@ public class SpatialConnect {
      * @return instance of service found by id
      */
     public SCService getServiceById(String serviceId) {
-        return serviceGraph.getNodeById(serviceId).getService();
+        SCServiceNode serviceNode = serviceGraph.getNodeById(serviceId);
+        if (serviceNode != null) {
+            return serviceNode.getService();
+        } else {
+            return null;
+        }
     }
 
     /**
