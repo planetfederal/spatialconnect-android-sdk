@@ -75,7 +75,6 @@ dependencies {
     compile 'io.reactivex:rxjava:1.1.0'
     compile 'commons-io:commons-io:2.4'
     compile 'com.squareup.okhttp3:okhttp:3.3.1'
-    compile 'com.facebook.react:react-native:0.34.0'
     compile 'com.google.protobuf:protobuf-java:3.0.0'
     compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.0'
     compile ('org.eclipse.paho:org.eclipse.paho.android.service:1.1.0') {
