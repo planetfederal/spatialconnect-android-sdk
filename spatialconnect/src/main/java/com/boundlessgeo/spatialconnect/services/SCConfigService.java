@@ -55,7 +55,6 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     public SCConfigService(Context context) {
         this.context = context;
         sc = SpatialConnect.getInstance();
-        sweepDataDirectory();
     }
 
     /**
@@ -181,6 +180,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
 
     @Override
     public boolean start(Map<String, SCService> deps) {
+        sweepDataDirectory();
         dataService = (SCDataService) deps.get(SCDataService.serviceId());
         loadConfigs();
         return super.start(deps);
