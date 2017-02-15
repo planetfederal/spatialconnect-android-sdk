@@ -16,6 +16,8 @@ package com.boundlessgeo.spatialconnect.scutilities;
 
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
+import io.jeo.filter.Spatial;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -53,6 +55,30 @@ public class HttpHandler {
                 .readTimeout(2, TimeUnit.MINUTES)
                 .addNetworkInterceptor(new LoggingInterceptor())
                 .build();
+    }
+
+    public Observable<Response> get(final String url, final String authToken) throws IOException {
+        return Observable.create(new Observable.OnSubscribe<Response>() {
+            @Override
+            public void call(Subscriber<? super Response> subscriber) {
+                try {
+                    Request request = new Request.Builder()
+                        .url(url)
+                        .header("Authorization", "Token " + authToken)
+                        .build();
+                    Response response = client.newCall(request).execute();
+                    if (!response.isSuccessful()) {
+                        subscriber.onError(new Exception("error"));
+                    } else {
+                        subscriber.onNext(response);
+                        subscriber.onCompleted();
+                    }
+                } catch (IOException e) {
+                    subscriber.onError(e);
+                }
+            }
+        })
+            .subscribeOn(Schedulers.io());
     }
 
     public Observable<Response> get(final String url) throws IOException {
@@ -161,4 +187,5 @@ public class HttpHandler {
             return response;
         }
     }
+
 }
