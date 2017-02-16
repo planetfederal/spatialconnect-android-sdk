@@ -272,11 +272,21 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                                 props.put(col, null);
                             }
                         }
+                        String columnNames = featureSource.getColumnNamesForInsert(scSpatialFeature);
+                        String columnValues = featureSource.getColumnValuesForInsert(scSpatialFeature);
+
+                        String[] properties = columnNames.split(",");
+                        //only has geom property
+                        if (properties.length == 1) {
+                            subscriber.onError(new Throwable("Invalid column names or values"));
+                            subscriber.onCompleted();
+                        }
+
                         gpkg.executeAndTrigger(tableName,
                                 String.format("INSERT OR REPLACE INTO %s (%s) VALUES (%s)",
                                         tableName,
-                                        featureSource.getColumnNamesForInsert(scSpatialFeature),
-                                        featureSource.getColumnValuesForInsert(scSpatialFeature)
+                                        columnNames,
+                                        columnValues
                                 )
                         );
                         // get the id of the last inserted row: https://www.sqlite.org/lang_corefunc.html#last_insert_rowid
