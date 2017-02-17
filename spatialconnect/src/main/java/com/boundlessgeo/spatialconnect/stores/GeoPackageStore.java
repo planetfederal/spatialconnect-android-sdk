@@ -276,8 +276,8 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                         String columnValues = featureSource.getColumnValuesForInsert(scSpatialFeature);
 
                         String[] properties = columnNames.split(",");
-                        //only has geom property
-                        if (properties.length == 1) {
+                        //ensure feature columns + geom column equal the column names otherwise something is wrong
+                        if ((props.size() + 1 )!= properties.length) {
                             subscriber.onError(new Throwable("Invalid column names or values"));
                             subscriber.onCompleted();
                         }
