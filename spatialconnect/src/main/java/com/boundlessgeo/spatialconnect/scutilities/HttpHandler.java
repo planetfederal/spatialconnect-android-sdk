@@ -55,6 +55,30 @@ public class HttpHandler {
                 .build();
     }
 
+    public Observable<Response> get(final String url, final String authToken) throws IOException {
+        return Observable.create(new Observable.OnSubscribe<Response>() {
+            @Override
+            public void call(Subscriber<? super Response> subscriber) {
+                try {
+                    Request request = new Request.Builder()
+                            .url(url)
+                            .header("Authorization", "Token " + authToken)
+                            .build();
+                    Response response = client.newCall(request).execute();
+                    if (!response.isSuccessful()) {
+                        subscriber.onError(new Exception("error"));
+                    } else {
+                        subscriber.onNext(response);
+                        subscriber.onCompleted();
+                    }
+                } catch (IOException e) {
+                    subscriber.onError(e);
+                }
+            }
+        })
+                .subscribeOn(Schedulers.io());
+    }
+
     public Observable<Response> get(final String url) throws IOException {
         return Observable.create(new Observable.OnSubscribe<Response>() {
             @Override

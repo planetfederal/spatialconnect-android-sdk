@@ -272,11 +272,20 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                                 props.put(col, null);
                             }
                         }
+                        String columnNames = featureSource.getColumnNamesForInsert(scSpatialFeature);
+                        String columnValues = featureSource.getColumnValuesForInsert(scSpatialFeature);
+
+                        String[] properties = columnNames.split(",");
+                        //ensure feature columns + geom column equal the column names otherwise something is wrong
+                        if ((props.size() + 1 )!= properties.length) {
+                            subscriber.onError(new Throwable("Invalid column names or values"));
+                        }
+
                         gpkg.executeAndTrigger(tableName,
                                 String.format("INSERT OR REPLACE INTO %s (%s) VALUES (%s)",
                                         tableName,
-                                        featureSource.getColumnNamesForInsert(scSpatialFeature),
-                                        featureSource.getColumnValuesForInsert(scSpatialFeature)
+                                        columnNames,
+                                        columnValues
                                 )
                         );
                         // get the id of the last inserted row: https://www.sqlite.org/lang_corefunc.html#last_insert_rowid
@@ -581,7 +590,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                         // deserialize byte[] to Geometry object
                         byte[] wkb = SCSqliteHelper.getBlob(cursor, source.getGeomColumnName());
                         try {
-                            if (wkb != null || wkb.length > 0) {
+                            if (wkb != null && wkb.length > 0) {
                                 feature = new SCGeometry(
                                         new WKBReader(GEOMETRY_FACTORY).read(wkb)
                                 );
