@@ -30,7 +30,6 @@ import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.FixMethodOrder;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.MethodSorters;
@@ -99,6 +98,7 @@ public class IntegratedTests {
             sc.getConfigService().addConfigFilePath(remoteConfigFile.getAbsolutePath());
             sc.startAllServices();
             sc.getAuthService().authenticate("admin@something.com", "admin");
+            waitForStoreToStart(WFS_STORE_ID);
 
         } catch (IOException ex) {
             System.exit(0);
@@ -171,7 +171,7 @@ public class IntegratedTests {
                 });
     }
 
-    @Ignore
+    @Test
     public void testWFS_1_StoreCorrectly() {
         boolean containsWFSStore = false;
         for (SCDataStore store : sc.getDataService().getActiveStores()) {
@@ -182,16 +182,16 @@ public class IntegratedTests {
         assertEquals("The wfs store should be running", SCDataStoreStatus.SC_DATA_STORE_RUNNING, wfsStore.getStatus());
     }
 
-    @Ignore
+    @Test
     public void testWFS_2_GetCapabilitesUrlIsBuiltCorrectly() {
         WFSStore store = (WFSStore) sc.getDataService().getStoreByIdentifier(WFS_STORE_ID);
         assertEquals("The WFS store url was not built correctly.",
-                "http://demo.boundlessgeo.com/geoserver/osm/ows?service=WFS&version=1.1.0&request=GetCapabilities",
+                "http://spatialconnect.boundlessgeo.com:8080/geoserver/ows?service=WFS&version=1.1.0&request=GetCapabilities",
                 store.getGetCapabilitiesUrl()
         );
     }
 
-    @Ignore
+    @Test
     public void testWFS_3_LayerNamesAreParsedFromCapabilities() {
         WFSStore store = (WFSStore) sc.getDataService().getStoreByIdentifier(WFS_STORE_ID);
         assertTrue("There should be multiple layers.",
@@ -199,14 +199,14 @@ public class IntegratedTests {
         );
     }
 
-    @Ignore
+    @Test
     public void testWFS_4_QueryWithBbox() {
-        SCBoundingBox bbox = new SCBoundingBox(-127.056432967933, 42.03578985948257, -52.696780484684545, 62.464526783166164);
+        SCBoundingBox bbox = new SCBoundingBox(-74.02722, 40.684221, -73.907005, 40.878178);
         SCQueryFilter filter = new SCQueryFilter(
                 new SCPredicate(bbox, SCGeometryPredicateComparison.SCPREDICATE_OPERATOR_WITHIN)
         );
         WFSStore store = (WFSStore) sc.getDataService().getStoreByIdentifier(WFS_STORE_ID);
-        filter.addLayerId("buildings");
+        filter.addLayerId("tiger_roads");
         TestSubscriber testSubscriber = new TestSubscriber();
         store.query(filter).timeout(3, TimeUnit.MINUTES).subscribe(testSubscriber);
         testSubscriber.awaitTerminalEvent(); // it never completes, only times out

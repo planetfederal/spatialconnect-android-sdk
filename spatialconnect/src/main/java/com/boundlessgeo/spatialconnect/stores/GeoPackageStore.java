@@ -279,7 +279,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                         //ensure feature columns + geom column equal the column names otherwise something is wrong
                         if ((props.size() + 1 )!= properties.length) {
                             subscriber.onError(new Throwable("Invalid column names or values"));
-                            subscriber.onCompleted();
+//                            subscriber.onCompleted();
                         }
 
                         gpkg.executeAndTrigger(tableName,
