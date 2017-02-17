@@ -591,7 +591,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                         // deserialize byte[] to Geometry object
                         byte[] wkb = SCSqliteHelper.getBlob(cursor, source.getGeomColumnName());
                         try {
-                            if (wkb != null || wkb.length > 0) {
+                            if (wkb != null && wkb.length > 0) {
                                 feature = new SCGeometry(
                                         new WKBReader(GEOMETRY_FACTORY).read(wkb)
                                 );
