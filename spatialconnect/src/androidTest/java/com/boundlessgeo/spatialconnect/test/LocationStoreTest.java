@@ -61,11 +61,10 @@ public class LocationStoreTest extends BaseTestCase {
         TestSubscriber testSubscriber = new TestSubscriber();
         LocationStore locationStore =  sc.getDataService().getLocationStore();
         locationStore.create(point).subscribe(testSubscriber);
-
-
-        Map<String, Object> row =  ((SCSpatialFeature)testSubscriber.getOnNextEvents().get(0)).getProperties();
-        assertEquals("location store should have correct properties",
-                "GPS", row.get("accuracy"));
+        testSubscriber.awaitTerminalEvent();
+        testSubscriber.assertNoErrors();
+        Map<String, Object> row = ((SCSpatialFeature)testSubscriber.getOnNextEvents().get(0)).getProperties();
+        assertEquals("location store should have correct properties", "GPS", row.get("accuracy"));
     }
 
     private static void waitForStoreToStart(final String storeId) {
