@@ -20,7 +20,6 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.stores.DefaultStore;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
@@ -94,7 +93,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         this.storeEvents = storeEventSubject.publish();
         addDefaultStoreImpls();
         this.context = context;
-        initializeDefaultStore();
         initializeFormStore();
         initializeLocationStore();
     }
@@ -373,16 +371,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         return ((ISCSpatialStore) store).query(filter);
     }
 
-    public DefaultStore getDefaultStore() {
-        for (SCDataStore store : stores.values()) {
-            if (store.getName().equals(DefaultStore.NAME)) {
-                return (DefaultStore) store;
-            }
-        }
-        Log.w(LOG_TAG, "Default store was not found!");
-        return null;
-    }
-
     public FormStore getFormStore() {
         for (SCDataStore store : stores.values()) {
             if (store.getName().equals(FormStore.NAME)) {
@@ -536,36 +524,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
                 } else {
                     pauseRemoteStores();
                 }
-            }
-        });
-    }
-
-    private void initializeDefaultStore() {
-        Log.d(LOG_TAG, "Creating default store");
-        SCStoreConfig defaultStoreConfig = new SCStoreConfig();
-        defaultStoreConfig.setName(DefaultStore.NAME);
-        defaultStoreConfig.setUniqueID(DefaultStore.NAME);
-        defaultStoreConfig.setUri("file://" + DefaultStore.NAME);
-        defaultStoreConfig.setType("gpkg");
-        defaultStoreConfig.setVersion("1");
-        DefaultStore defaultStore = new DefaultStore(context, defaultStoreConfig);
-        this.stores.put(defaultStore.getStoreId(), defaultStore);
-        // block until store is started
-        defaultStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
-            @Override
-            public void onCompleted() {
-                Log.d(LOG_TAG, "Registered default store with SCDataService.");
-            }
-
-            @Override
-            public void onError(Throwable e) {
-                Log.e(LOG_TAG, "Couldn't start default store", e);
-                System.exit(0);
-            }
-
-            @Override
-            public void onNext(SCStoreStatusEvent event) {
-                Log.w(LOG_TAG, "Shouldn't return onNext");
             }
         });
     }
