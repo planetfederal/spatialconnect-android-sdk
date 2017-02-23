@@ -4,7 +4,7 @@ apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'maven'
 
 group 'com.boundlessgeo.spatialconnect'
-version '0.8'
+version '0.8.1'
 
 ext {
     bintrayRepo = 'mobile'
@@ -41,7 +41,7 @@ android {
         minSdkVersion 16
         targetSdkVersion 25
         versionCode 1
-        versionName "0.8"
+        versionName "0.8.1"
         multiDexEnabled = true
         // http://developer.android.com/tools/building/multidex.html#testing
         testInstrumentationRunner "com.boundlessgeo.spatialconnect.test.MultiDexAndroidJUnitRunner"
@@ -83,13 +83,6 @@ android {
     dexOptions {
         // Skip pre-dexing when running on Travis CI or when disabled via -Dpre-dex=false.
         preDexLibraries = preDexEnabled && !isCi
-    }
-}
-
-repositories {
-    mavenCentral()
-    maven {
-        url "https://repo.eclipse.org/content/repositories/paho-releases/"
     }
 }
 
