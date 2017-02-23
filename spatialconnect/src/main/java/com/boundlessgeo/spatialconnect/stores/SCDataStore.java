@@ -22,6 +22,7 @@ import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
+import com.boundlessgeo.spatialconnect.style.SCStyle;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -54,6 +55,7 @@ public abstract class SCDataStore {
     private Context context;
     private SCDataStoreStatus status = SCDataStoreStatus.SC_DATA_STORE_STOPPED;
     private float downloadProgress;
+    protected SCStyle style;
 
 
     public SCDataStore(Context context, SCStoreConfig scStoreConfig) {
@@ -124,6 +126,14 @@ public abstract class SCDataStore {
 
     public void setDownloadProgress(float downloadProgress) {
         this.downloadProgress = downloadProgress;
+    }
+
+    public SCStyle getStyle() {
+        return  this.style;
+    }
+
+    public void setStyle(SCStyle style) {
+        this.style = style;
     }
 
     public List<String> layers() {

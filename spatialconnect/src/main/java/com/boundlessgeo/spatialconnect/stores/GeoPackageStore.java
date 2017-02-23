@@ -28,6 +28,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCPolygon;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.style.SCStyle;
 import com.boundlessgeo.spatialconnect.tiles.GpkgTileProvider;
 import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.google.android.gms.maps.GoogleMap;
@@ -85,6 +86,16 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
         this.setType(TYPE);
         this.setVersion(scStoreConfig.getVersion());
         this.getKey();
+    }
+
+    public GeoPackageStore(Context context, SCStoreConfig scStoreConfig, SCStyle style) {
+        super(context, scStoreConfig);
+        this.scStoreConfig = scStoreConfig;
+        this.setName(scStoreConfig.getName());
+        this.setType(TYPE);
+        this.setVersion(scStoreConfig.getVersion());
+        this.getKey();
+        this.style = style;
     }
 
     public List<String> layers() {

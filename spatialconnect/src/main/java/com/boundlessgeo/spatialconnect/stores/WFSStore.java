@@ -25,6 +25,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
+import com.boundlessgeo.spatialconnect.style.SCStyle;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -67,6 +68,20 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
             throw new IllegalArgumentException("WFS store must have a uri property.");
         }
         getLayers();
+    }
+
+    public WFSStore(Context context, SCStoreConfig scStoreConfig, SCStyle style) {
+        super(context, scStoreConfig);
+        this.setName(scStoreConfig.getName());
+        this.setType(TYPE);
+        this.setVersion(scStoreConfig.getVersion());
+        this.defaultLayers = scStoreConfig.getDefaultLayers();
+        baseUrl = scStoreConfig.getUri();
+        if (baseUrl == null) {
+            throw new IllegalArgumentException("WFS store must have a uri property.");
+        }
+        getLayers();
+        this.style = style;
     }
 
     public List<String> layers() {

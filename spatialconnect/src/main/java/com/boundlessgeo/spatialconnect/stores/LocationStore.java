@@ -32,6 +32,7 @@ import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
+import com.boundlessgeo.spatialconnect.style.SCStyle;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -55,6 +56,10 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
 
     public LocationStore(Context context, SCStoreConfig scStoreConfig) {
         super(context, scStoreConfig);
+    }
+
+    public LocationStore(Context context, SCStoreConfig scStoreConfig, SCStyle style) {
+        super(context, scStoreConfig, style);
     }
 
     public Observable<SCSpatialFeature> create(final SCPoint point) {

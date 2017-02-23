@@ -25,6 +25,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCGeometryCollection;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
+import com.boundlessgeo.spatialconnect.style.SCStyle;
 
 import org.apache.commons.io.FileUtils;
 
@@ -60,6 +61,16 @@ public class GeoJsonStore extends SCDataStore implements ISCSpatialStore, SCData
         this.setType(TYPE);
         this.setVersion(scStoreConfig.getVersion());
         this.scStoreConfig = scStoreConfig;
+    }
+
+    public GeoJsonStore(Context context, SCStoreConfig scStoreConfig, SCStyle style) {
+        super(context, scStoreConfig);
+        this.context = context;
+        this.setName(scStoreConfig.getName());
+        this.setType(TYPE);
+        this.setVersion(scStoreConfig.getVersion());
+        this.scStoreConfig = scStoreConfig;
+        this.style = style;
     }
 
     public List<String> layers() {
