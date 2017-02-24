@@ -58,7 +58,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         super(context, scStoreConfig);
     }
 
-    public FormStore(Context context, SCStoreConfig scStoreConfig, List<SCStyle> style) {
+    public FormStore(Context context, SCStoreConfig scStoreConfig, SCStyle style) {
         super(context, scStoreConfig, style);
     }
 

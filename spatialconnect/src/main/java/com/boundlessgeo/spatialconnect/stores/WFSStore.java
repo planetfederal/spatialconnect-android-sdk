@@ -70,7 +70,7 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
         getLayers();
     }
 
-    public WFSStore(Context context, SCStoreConfig scStoreConfig, List<SCStyle> style) {
+    public WFSStore(Context context, SCStoreConfig scStoreConfig, SCStyle style) {
         super(context, scStoreConfig);
         this.setName(scStoreConfig.getName());
         this.setType(TYPE);

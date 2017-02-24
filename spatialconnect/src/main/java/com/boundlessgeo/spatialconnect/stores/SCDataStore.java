@@ -55,7 +55,7 @@ public abstract class SCDataStore {
     private Context context;
     private SCDataStoreStatus status = SCDataStoreStatus.SC_DATA_STORE_STOPPED;
     private float downloadProgress;
-    protected List<SCStyle> style;
+    protected SCStyle style;
 
 
     public SCDataStore(Context context, SCStoreConfig scStoreConfig) {
@@ -128,11 +128,11 @@ public abstract class SCDataStore {
         this.downloadProgress = downloadProgress;
     }
 
-    public List<SCStyle> getStyle() {
+    public SCStyle getStyle() {
         return  this.style;
     }
 
-    public void setStyle(List<SCStyle> style) {
+    public void setStyle(SCStyle style) {
         this.style = style;
     }
 

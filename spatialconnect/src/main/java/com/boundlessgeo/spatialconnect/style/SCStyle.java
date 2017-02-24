@@ -15,127 +15,101 @@
 
 package com.boundlessgeo.spatialconnect.style;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import android.util.Log;
 
-/**
- * Represents a JSON object describing a SCStyle.
- */
-@JsonInclude(JsonInclude.Include.NON_NULL)
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+
 public class SCStyle {
 
-    @JsonProperty("id")
-    private String styleId;
+    private String LOG_TAG = SCStyle.class.getSimpleName();
+    private String fillColor = null;
+    private float fillOpacity = 0;
+    private String strokeColor = null;
+    private float strokeOpacity = 0;
+    private String iconColor = null;
 
-    private Paint paint;
-
-    public String getStyleId() {
-        return styleId;
+    public SCStyle(ArrayNode mapBoxStyle) {
+        try {
+            for (int i = 0; i < mapBoxStyle.size(); i++) {
+                JsonNode style = mapBoxStyle.get(i);
+                JsonNode paint = style.get("paint");
+                fillColor = paint.get("fill-color").textValue();
+                fillOpacity = paint.get("fill-opacity").floatValue();
+                strokeColor = paint.get("line-color").textValue();
+                strokeOpacity = paint.get("line-opacity").floatValue();
+                iconColor = paint.get("icon-color").textValue();
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error parsing mapbox style" + e.getLocalizedMessage());
+        }
     }
 
-    public void setStyleId(String styleId) {
-        this.styleId = styleId;
+    public String getFillColor() {
+        if (fillColor == null) {
+            return "#000000";
+        }
+        return fillColor;
     }
 
-    public Paint getPaint() {
-        return paint;
+    public float getFillOpacity() {
+        if (fillOpacity == 0) {
+            return 0.5f;
+        }
+        return fillOpacity;
     }
 
-    public void setPaint(Paint paint) {
-        this.paint = paint;
+    public String getStrokeColor() {
+        if (strokeColor == null) {
+            return "#000000";
+        }
+        return strokeColor;
+    }
+
+    public float getStrokeOpacity() {
+        if (strokeOpacity == 0) {
+            return 0.5f;
+        }
+        return strokeOpacity;
+    }
+
+    public String getIconColor() {
+        return iconColor;
     }
 
     public void addMissing(SCStyle style) {
-        if (this.paint != null && this.paint.getFillColor() != null) {
-            this.paint.fillColor = style.getPaint().getFillColor();
+        if (this.fillColor != null) {
+            this.fillColor = style.getFillColor();
         }
-        if (this.paint != null && this.paint.getFillOpacity() != 0) {
-            this.paint.fillOpacity = style.getPaint().getFillOpacity();
+        if (this.fillOpacity != 0) {
+            this.fillOpacity = style.getFillOpacity();
         }
-        if (this.paint != null && this.paint.getStrokeColor() != null) {
-            this.paint.strokeColor = style.getPaint().getStrokeColor();
+        if (this.strokeColor != null) {
+            this.strokeColor = style.getStrokeColor();
         }
-        if (this.paint != null && this.paint.getStrokeOpacity() != 0) {
-            this.paint.strokeOpacity = style.getPaint().getStrokeOpacity();
+        if (this.strokeOpacity != 0) {
+            this.strokeOpacity = style.getStrokeOpacity();
         }
-        if (this.paint != null && this.paint.getStrokeColor() != null) {
-            this.paint.strokeColor = style.getPaint().getStrokeColor();
+        if (this.iconColor != null) {
+            this.iconColor = style.getIconColor();
         }
-//        if (this.strokeColor != null) {
-//            this.strokeColor = style.getStrokeColor();
-//        }
-//        if (this.strokeOpacity != 0) {
-//            this.strokeOpacity = style.getStrokeOpacity();
-//        }
-//        if (this.iconColor != null) {
-//            this.iconColor = style.getIconColor();
-//        }
     }
-//
-//    public void overwriteWith(SCStyle style) {
-//        if (style.getFillColor() != null) {
-//            this.fillColor = style.getFillColor();
-//        }
-//        if (style.getFillOpacity() != 0) {
-//            this.fillOpacity = style.getFillOpacity();
-//        }
-//        if (style.getStrokeColor() != null) {
-//            this.strokeColor = style.getStrokeColor();
-//        }
-//        if (style.getStrokeOpacity() != 0) {
-//            this.strokeOpacity = style.getStrokeOpacity();
-//        }
-//        if (style.getIconColor() != null) {
-//            this.iconColor = style.getIconColor();
-//        }
-//    }
 
-    public static class Paint {
-        @JsonProperty("fill_color")
-        private String fillColor = null;
-
-        @JsonProperty("fill_opacity")
-        private float fillOpacity = 0;
-
-        @JsonProperty("line_color")
-        private String strokeColor = null;
-
-        @JsonProperty("line_opacity")
-        private float strokeOpacity = 0;
-
-        @JsonProperty("icon_color")
-        private String iconColor = null;
-
-        public String getFillColor() {
-            if (fillColor == null) {
-                return "#000000";
-            }
-            return fillColor;
+    public void overwriteWith(SCStyle style) {
+        if (style.getFillColor() != null) {
+            this.fillColor = style.getFillColor();
         }
-
-        public float getFillOpacity() {
-            if (fillOpacity == 0) {
-                return 0.5f;
-            }
-            return fillOpacity;
+        if (style.getFillOpacity() != 0) {
+            this.fillOpacity = style.getFillOpacity();
         }
-
-        public String getStrokeColor() {
-            if (strokeColor == null) {
-                return "#000000";
-            }
-            return strokeColor;
+        if (style.getStrokeColor() != null) {
+            this.strokeColor = style.getStrokeColor();
         }
-
-        public float getStrokeOpacity() {
-            if (strokeOpacity == 0) {
-                return 0.5f;
-            }
-            return strokeOpacity;
+        if (style.getStrokeOpacity() != 0) {
+            this.strokeOpacity = style.getStrokeOpacity();
         }
-
-        public String getIconColor() {
-            return iconColor;
+        if (style.getIconColor() != null) {
+            this.iconColor = style.getIconColor();
         }
     }
 }

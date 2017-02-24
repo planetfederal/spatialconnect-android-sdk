@@ -15,11 +15,11 @@
 package com.boundlessgeo.spatialconnect.config;
 
 
-import com.boundlessgeo.spatialconnect.style.SCStyle;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.util.List;
 
 /**
@@ -71,7 +71,7 @@ public class SCStoreConfig
      * Represents the map styles for store
      */
     @JsonProperty("style")
-    private List<SCStyle> style;
+    private ArrayNode style;
 
     /**
      * A map of options for this store.
@@ -156,11 +156,11 @@ public class SCStoreConfig
         this.options = options;
     }
 
-    public List<SCStyle> getStyle() {
+    public ArrayNode getStyle() {
         return style;
     }
 
-    public void setStyle(List<SCStyle> style) {
+    public void setStyle(ArrayNode style) {
         this.style = style;
     }
 }
