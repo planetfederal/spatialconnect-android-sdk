@@ -161,15 +161,27 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         if (store != null) {
             if (key.startsWith(GeoJsonStore.TYPE)) {
                 Log.d(LOG_TAG, "Registering geojson store " + scStoreConfig.getName() + " with SCDataService.");
-                registerStore(new GeoJsonStore(context, scStoreConfig));
+                if (scStoreConfig.getStyle() != null && scStoreConfig.getStyle().size() > 0) {
+                    registerStore(new GeoJsonStore(context, scStoreConfig, scStoreConfig.getStyle()));
+                } else {
+                    registerStore(new GeoJsonStore(context, scStoreConfig));
+                }
             }
             else if (key.startsWith(GeoPackageStore.TYPE)) {
                 Log.d(LOG_TAG, "Registering gpkg store " + scStoreConfig.getName() + " with SCDataService.");
-                registerStore(new GeoPackageStore(context, scStoreConfig));
+                if (scStoreConfig.getStyle() != null && scStoreConfig.getStyle().size() > 0) {
+                    registerStore(new GeoPackageStore(context, scStoreConfig, scStoreConfig.getStyle()));
+                } else {
+                    registerStore(new GeoPackageStore(context, scStoreConfig));
+                }
             }
             else if (key.startsWith(WFSStore.TYPE)) {
                 Log.d(LOG_TAG, "Registering wfs store " + scStoreConfig.getName() + " with SCDataService.");
-                registerStore(new WFSStore(context, scStoreConfig));
+                if (scStoreConfig.getStyle() != null && scStoreConfig.getStyle().size() > 0) {
+                    registerStore(new WFSStore(context, scStoreConfig, scStoreConfig.getStyle()));
+                } else {
+                    registerStore(new WFSStore(context, scStoreConfig));
+                }
             }
 
             Log.d(LOG_TAG,"returning true from register store by config");

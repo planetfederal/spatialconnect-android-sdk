@@ -39,6 +39,7 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.PrecisionModel;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import rx.Observable;
@@ -58,7 +59,7 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
         super(context, scStoreConfig);
     }
 
-    public LocationStore(Context context, SCStoreConfig scStoreConfig, SCStyle style) {
+    public LocationStore(Context context, SCStoreConfig scStoreConfig, List<SCStyle> style) {
         super(context, scStoreConfig, style);
     }
 

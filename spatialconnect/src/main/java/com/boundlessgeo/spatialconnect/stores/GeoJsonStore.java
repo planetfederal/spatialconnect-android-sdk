@@ -63,7 +63,7 @@ public class GeoJsonStore extends SCDataStore implements ISCSpatialStore, SCData
         this.scStoreConfig = scStoreConfig;
     }
 
-    public GeoJsonStore(Context context, SCStoreConfig scStoreConfig, SCStyle style) {
+    public GeoJsonStore(Context context, SCStoreConfig scStoreConfig, List<SCStyle> style) {
         super(context, scStoreConfig);
         this.context = context;
         this.setName(scStoreConfig.getName());

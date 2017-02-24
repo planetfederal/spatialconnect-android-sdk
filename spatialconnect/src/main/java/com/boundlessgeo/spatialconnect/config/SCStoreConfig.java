@@ -15,6 +15,7 @@
 package com.boundlessgeo.spatialconnect.config;
 
 
+import com.boundlessgeo.spatialconnect.style.SCStyle;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -65,6 +66,12 @@ public class SCStoreConfig
      */
     @JsonProperty("team_id")
     private String teamId;
+
+    /**
+     * Represents the map styles for store
+     */
+    @JsonProperty("style")
+    private List<SCStyle> style;
 
     /**
      * A map of options for this store.
@@ -147,5 +154,13 @@ public class SCStoreConfig
 
     public void setOptions(ObjectNode options) {
         this.options = options;
+    }
+
+    public List<SCStyle> getStyle() {
+        return style;
+    }
+
+    public void setStyle(List<SCStyle> style) {
+        this.style = style;
     }
 }
