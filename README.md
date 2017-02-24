@@ -2,7 +2,7 @@
 SpatialConnect library for Android
 
 # Current Version
-0.8.0
+0.8.1
 
 # Overview
 
@@ -166,12 +166,25 @@ This library supports background cloud messaging using Firebase Cloud Messaging.
 
 See [https://github.com/boundlessgeo/spatialconnect-examples/](https://github.com/boundlessgeo/spatialconnect-examples/) for an example application using this SDK.
 
-### Building
+### Installation
 
-To build and install the apk in your local maven repo
+To install the library into your project add the following to the top level `build.gradle` to specifiy the remote maven repository for the Eclipse Paho client service dependency.
 
 ```
-./gradlew uploadArchives
+allprojects {
+    repositories {
+		...
+        maven {
+            url 'https://repo.eclipse.org/content/repositories/paho-releases/'
+        }
+    }
+}
+```
+
+Finally in your module's `build.gradle` file add the dependency for the latest version
+
+```
+compile 'com.boundlessgeo.spatialconnect:spatialconnect:0.8.1'
 ```
 ### Testing
 

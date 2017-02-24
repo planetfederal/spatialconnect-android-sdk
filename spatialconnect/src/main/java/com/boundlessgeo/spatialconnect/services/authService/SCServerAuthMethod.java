@@ -17,6 +17,7 @@
 package com.boundlessgeo.spatialconnect.services.authService;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.github.rtoshiro.secure.SecureSharedPreferences;
@@ -24,7 +25,6 @@ import com.github.rtoshiro.secure.SecureSharedPreferences;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
 import java.util.Locale;
 
 import okhttp3.Response;
@@ -81,14 +81,12 @@ public class SCServerAuthMethod implements ISCAuth {
 
     private boolean auth(final String username, final String pwd) {
         boolean authed = false;
-        final String theUrl = String.format(Locale.US, "%s/api/authenticate", serverUrl);
-        Response response = HttpHandler.getInstance()
-                .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", username, pwd))
-                .toBlocking()
-                .first();
+        try {
+            final String theUrl = String.format(Locale.US, "%s/api/authenticate", serverUrl);
+            Response response = HttpHandler.getInstance()
+                    .postBlocking(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", username, pwd));
 
-        if (response.isSuccessful()) {
-            try {
+            if (response.isSuccessful()) {
                 jsonWebToken = new JSONObject(response.body().string())
                         .getJSONObject("result").getString("token");
                 if (jsonWebToken != null) {
@@ -96,13 +94,13 @@ public class SCServerAuthMethod implements ISCAuth {
                     saveCredentials(username, pwd);
                     authed = true;
                 }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+            } else {
+                logout();
             }
-        } else {
-            logout();
+        } catch (JSONException e) {
+            Log.e(LOG_TAG,"JSON error trying to auth: " + e.getMessage());
+        } catch (Exception e) {
+            Log.e(LOG_TAG,"Error trying to auth: " + e.getMessage());
         }
         return authed;
     }
