@@ -163,6 +163,17 @@ public class HttpHandler {
         .subscribeOn(Schedulers.io());
     }
 
+    public Response postBlocking(final String url, final String json) throws Exception {
+        RequestBody body = RequestBody.create(JSON, json);
+        Request request = new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+        Response response = client.newCall(request).execute();
+
+        return response;
+    }
+
     public void cancelAllRequests() {
         client.dispatcher().cancelAll();
     }

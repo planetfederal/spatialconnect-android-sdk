@@ -84,9 +84,7 @@ public class SCServerAuthMethod implements ISCAuth {
         try {
             final String theUrl = String.format(Locale.US, "%s/api/authenticate", serverUrl);
             Response response = HttpHandler.getInstance()
-                    .post(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", username, pwd))
-                    .toBlocking()
-                    .first();
+                    .postBlocking(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", username, pwd));
 
             if (response.isSuccessful()) {
                 jsonWebToken = new JSONObject(response.body().string())
