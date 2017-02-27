@@ -29,6 +29,8 @@ public class SCStyle {
     private float strokeOpacity = 0;
     private String iconColor = null;
 
+    public SCStyle() {}
+
     public SCStyle(ArrayNode mapBoxStyle) {
         try {
             for (int i = 0; i < mapBoxStyle.size(); i++) {
