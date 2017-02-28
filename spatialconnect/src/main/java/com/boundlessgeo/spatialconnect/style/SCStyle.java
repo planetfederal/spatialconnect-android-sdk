@@ -27,6 +27,7 @@ public class SCStyle {
     private float fillOpacity = 0;
     private String strokeColor = null;
     private float strokeOpacity = 0;
+    private int strokeWidth = 0;
     private String iconColor = null;
 
     public SCStyle() {}
@@ -49,7 +50,7 @@ public class SCStyle {
 
     public String getFillColor() {
         if (fillColor == null) {
-            return "#000000";
+            return "#FF0000";
         }
         return fillColor;
     }
@@ -63,19 +64,29 @@ public class SCStyle {
 
     public String getStrokeColor() {
         if (strokeColor == null) {
-            return "#000000";
+            return "#FF0000";
         }
         return strokeColor;
     }
 
     public float getStrokeOpacity() {
         if (strokeOpacity == 0) {
-            return 0.5f;
+            return 1f;
         }
         return strokeOpacity;
     }
 
+    public int getStrokeWidth() {
+        if (strokeWidth == 0) {
+            return 2;
+        }
+        return strokeWidth;
+    }
+
     public String getIconColor() {
+        if (iconColor == null) {
+            return "#FF0000";
+        }
         return iconColor;
     }
 
@@ -91,6 +102,9 @@ public class SCStyle {
         }
         if (this.strokeOpacity != 0) {
             this.strokeOpacity = style.getStrokeOpacity();
+        }
+        if (this.strokeWidth != 0) {
+            this.strokeWidth = style.getStrokeWidth();
         }
         if (this.iconColor != null) {
             this.iconColor = style.getIconColor();
@@ -109,6 +123,9 @@ public class SCStyle {
         }
         if (style.getStrokeOpacity() != 0) {
             this.strokeOpacity = style.getStrokeOpacity();
+        }
+        if (style.getStrokeWidth() != 0) {
+            this.strokeWidth = style.getStrokeWidth();
         }
         if (style.getIconColor() != null) {
             this.iconColor = style.getIconColor();

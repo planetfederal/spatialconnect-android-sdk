@@ -55,7 +55,7 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
     public static final String NAME = "LOCATION_STORE";
 
     public LocationStore(Context context, SCStoreConfig scStoreConfig) {
-        super(context, scStoreConfig);
+        this(context, scStoreConfig, null);
     }
 
     public LocationStore(Context context, SCStoreConfig scStoreConfig, SCStyle style) {

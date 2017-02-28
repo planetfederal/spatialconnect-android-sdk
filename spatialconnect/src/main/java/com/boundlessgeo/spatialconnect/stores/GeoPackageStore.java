@@ -80,12 +80,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
      * @param scStoreConfig instance of the configuration needed to configure the store
      */
     public GeoPackageStore(Context context, SCStoreConfig scStoreConfig) {
-        super(context, scStoreConfig);
-        this.scStoreConfig = scStoreConfig;
-        this.setName(scStoreConfig.getName());
-        this.setType(TYPE);
-        this.setVersion(scStoreConfig.getVersion());
-        this.getKey();
+        this(context, scStoreConfig, null);
     }
 
     public GeoPackageStore(Context context, SCStoreConfig scStoreConfig, SCStyle style) {

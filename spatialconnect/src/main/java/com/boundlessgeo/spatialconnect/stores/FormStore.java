@@ -55,7 +55,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
      * @param scStoreConfig instance of the configuration needed to configure the store
      */
     public FormStore(Context context, SCStoreConfig scStoreConfig) {
-        super(context, scStoreConfig);
+        this(context, scStoreConfig, null);
     }
 
     public FormStore(Context context, SCStoreConfig scStoreConfig, SCStyle style) {
