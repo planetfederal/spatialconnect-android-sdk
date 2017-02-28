@@ -6,7 +6,19 @@
       "uri": "https://s3.amazonaws.com/test.spacon/bars.geojson",
       "id":"3dc5afc9-393b-444c-8581-582e2c2d98a3",
       "name":"bars",
-      "default_layers": [ ]
+      "default_layers": [ ],
+      "style": [
+        {
+            "id":"default",
+            "paint":
+                {
+                    "fill-color":"#34fb71",
+                    "fill-opacity":0.3,
+                    "line-color":"#4357fb",
+                    "line-opacity":1,
+                    "icon-color":"#3371fb"
+                }
+        }]
     },
     {
       "id": "c96c0155-31b3-434a-8171-beb36fb24512",

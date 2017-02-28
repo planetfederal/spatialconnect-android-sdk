@@ -17,8 +17,9 @@ package com.boundlessgeo.spatialconnect.config;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import java.util.List;
 
 /**
@@ -65,6 +66,12 @@ public class SCStoreConfig
      */
     @JsonProperty("team_id")
     private String teamId;
+
+    /**
+     * Represents the map styles for store
+     */
+    @JsonProperty("style")
+    private ArrayNode style;
 
     /**
      * A map of options for this store.
@@ -147,5 +154,13 @@ public class SCStoreConfig
 
     public void setOptions(ObjectNode options) {
         this.options = options;
+    }
+
+    public ArrayNode getStyle() {
+        return style;
+    }
+
+    public void setStyle(ArrayNode style) {
+        this.style = style;
     }
 }

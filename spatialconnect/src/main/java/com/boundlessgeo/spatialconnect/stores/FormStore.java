@@ -27,6 +27,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
+import com.boundlessgeo.spatialconnect.style.SCStyle;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.util.ArrayList;
@@ -54,7 +55,11 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
      * @param scStoreConfig instance of the configuration needed to configure the store
      */
     public FormStore(Context context, SCStoreConfig scStoreConfig) {
-        super(context, scStoreConfig);
+        this(context, scStoreConfig, null);
+    }
+
+    public FormStore(Context context, SCStoreConfig scStoreConfig, SCStyle style) {
+        super(context, scStoreConfig, style);
     }
 
     public void registerFormByConfig(SCFormConfig formConfig) {
