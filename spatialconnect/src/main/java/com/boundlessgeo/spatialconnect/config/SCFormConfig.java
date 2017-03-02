@@ -124,7 +124,7 @@ public class SCFormConfig {
 
         private Integer count;
 
-        @JsonProperty("last_activity")
+        @JsonProperty("lastActivity")
         private String lastActivity;
 
         public Integer getCount() {
