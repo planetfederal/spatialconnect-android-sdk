@@ -198,7 +198,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
                                                     .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
                                                         @Override
                                                         public void call(SCMessageOuterClass.SCMessage scMessage) {
-                                                            Log.e(LOG_TAG, "Got confirmation from server, mark as synced");
+                                                            //TODO mark as synced
                                                         }
                                                     });
                                         } catch (JsonProcessingException e) {

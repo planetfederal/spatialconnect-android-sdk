@@ -108,7 +108,14 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
         return Observable.empty();
     }
 
-    private void publishLocation(final SCPoint point) {
+    @Override
+    public Observable<SCSpatialFeature> unSynced() {
+        //TODO get all unsynced features based on upload flag
+        return null;
+    }
+
+    @Override
+    public void upload(final SCSpatialFeature scSpatialFeature) {
         final SpatialConnect sc = SpatialConnect.getInstance();
         SCSensorService sensorService = sc.getSensorService();
         sensorService.isConnected().subscribe(new Action1<Boolean>() {
@@ -127,19 +134,30 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
                             .subscribe(new Action1<SCServiceStatusEvent>() {
                                 @Override
                                 public void call(SCServiceStatusEvent scServiceStatusEvent) {
-                                    Log.d(LOG_TAG, "posting new location to tracking topic " + point.toJson());
-                                    SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
-                                            .setAction(SCCommand.NO_ACTION.value())
-                                            .setPayload(point.toJson())
-                                            .build();
-                                    SpatialConnect.getInstance()
-                                            .getBackendService()
-                                            .publishAtMostOnce("/store/tracking", message);
+                                    publishLocation((SCPoint) scSpatialFeature);
                                 }
                             });
                 }
             }
         });
+    }
+
+    private void publishLocation(final SCPoint point) {
+        final SpatialConnect sc = SpatialConnect.getInstance();
+        SCBackendService backendService = sc.getBackendService();
+        Log.d(LOG_TAG, "posting new location to tracking topic " + point.toJson());
+        SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
+                .setAction(SCCommand.NO_ACTION.value())
+                .setPayload(point.toJson())
+                .build();
+
+        backendService.publishReplyTo("/store/tracking", message)
+                .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
+                    @Override
+                    public void call(SCMessageOuterClass.SCMessage scMessage) {
+                        //TODO mark as synced
+                    }
+                });
     }
 
     private void listenForLocationUpdate() {
@@ -170,10 +188,10 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
                                         scFeatureLocationUpdate.getProperties().put(TIMESTAMP_COLUMN, System.currentTimeMillis());
                                         scFeatureLocationUpdate.getProperties().put(ACCURACY_COLUMN, "GPS");
 
-                                        publishLocation(new SCPoint(point));
-
                                         LocationStore locationStore = SpatialConnect.getInstance().getDataService().getLocationStore();
                                         locationStore.create(scFeatureLocationUpdate).subscribe();
+
+                                        upload(new SCPoint((point)));
                                     }
                                 });
                     }
