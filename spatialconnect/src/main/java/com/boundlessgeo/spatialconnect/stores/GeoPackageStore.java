@@ -63,7 +63,7 @@ import rx.functions.Func1;
 /**
  * Provides capabilities for interacting with a single GeoPackage.
  */
-public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCDataStoreLifeCycle, SCRasterStore {
+public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCDataStoreLifeCycle, SCRasterStore, ISyncableStore {
 
     private static final String LOG_TAG = GeoPackageStore.class.getSimpleName();
     public static final String TYPE = "gpkg";
@@ -651,5 +651,15 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
 
     public static String getVersionKey() {
         return String.format("%s.%s",TYPE, VERSION);
+    }
+
+    @Override
+    public Observable unSynced() {
+        return null;
+    }
+
+    @Override
+    public void upload(SCSpatialFeature scSpatialFeature) {
+
     }
 }
