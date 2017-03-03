@@ -51,6 +51,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -509,6 +510,26 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
         return null;
     }
 
+    @Override
+    public void upload(SCSpatialFeature scSpatialFeature) {
+
+    }
+
+    @Override
+    public Observable unSynced() {
+        return null;
+    }
+
+    @Override
+    public void updateAuditTable(SCSpatialFeature scSpatialFeature) {
+
+    }
+
+    @Override
+    public String syncChannel() {
+        return String.format(Locale.US, "/store/%s", this.storeId);
+    }
+
     private boolean layerExists(String layer) {
         boolean layerExists = false;
         String table = layer;
@@ -584,7 +605,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
         return sb.toString();
     }
 
-    public Func1<SqlBrite.Query, Observable<SCSpatialFeature>> getFeatureMapper(final SCGpkgFeatureSource source) {
+    private Func1<SqlBrite.Query, Observable<SCSpatialFeature>> getFeatureMapper(final SCGpkgFeatureSource source) {
         return new Func1<SqlBrite.Query, Observable<SCSpatialFeature>>() {
 
             @Override
@@ -653,13 +674,4 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
         return String.format("%s.%s",TYPE, VERSION);
     }
 
-    @Override
-    public Observable unSynced() {
-        return null;
-    }
-
-    @Override
-    public void upload(SCSpatialFeature scSpatialFeature) {
-
-    }
 }

@@ -109,37 +109,53 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
     }
 
     @Override
+    public void upload(final SCSpatialFeature scSpatialFeature) {
+        final SpatialConnect sc = SpatialConnect.getInstance();
+        SCSensorService sensorService = sc.getSensorService();
+        sensorService.isConnected()
+            .filter(new Func1<Boolean, Boolean>() {
+                @Override
+                public Boolean call(Boolean connected) {
+                    return connected;
+                }
+            })
+            .subscribe(new Action1<Boolean>() {
+            @Override
+            public void call(Boolean connected) {
+                //make sure backendService is running
+                sc.serviceRunning(SCBackendService.serviceId())
+                        .filter(new Func1<SCServiceStatusEvent, Boolean>() {
+                            @Override
+                            public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
+                                return scServiceStatusEvent.getStatus()
+                                        .equals(SCServiceStatus.SC_SERVICE_RUNNING);
+                            }
+                        })
+                        .subscribe(new Action1<SCServiceStatusEvent>() {
+                            @Override
+                            public void call(SCServiceStatusEvent scServiceStatusEvent) {
+                                publishLocation((SCPoint) scSpatialFeature);
+                            }
+                        });
+
+            }
+        });
+    }
+
+    @Override
     public Observable<SCSpatialFeature> unSynced() {
         //TODO get all unsynced features based on upload flag
         return null;
     }
 
     @Override
-    public void upload(final SCSpatialFeature scSpatialFeature) {
-        final SpatialConnect sc = SpatialConnect.getInstance();
-        SCSensorService sensorService = sc.getSensorService();
-        sensorService.isConnected().subscribe(new Action1<Boolean>() {
-            @Override
-            public void call(Boolean connected) {
-                if (connected) {
-                    //make sure backendService is running
-                    sc.serviceRunning(SCBackendService.serviceId())
-                            .filter(new Func1<SCServiceStatusEvent, Boolean>() {
-                                @Override
-                                public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
-                                    return scServiceStatusEvent.getStatus()
-                                            .equals(SCServiceStatus.SC_SERVICE_RUNNING);
-                                }
-                            })
-                            .subscribe(new Action1<SCServiceStatusEvent>() {
-                                @Override
-                                public void call(SCServiceStatusEvent scServiceStatusEvent) {
-                                    publishLocation((SCPoint) scSpatialFeature);
-                                }
-                            });
-                }
-            }
-        });
+    public void updateAuditTable(SCSpatialFeature scSpatialFeature) {
+
+    }
+
+    @Override
+    public String syncChannel() {
+        return "/store/tracking";
     }
 
     private void publishLocation(final SCPoint point) {
@@ -151,7 +167,7 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
                 .setPayload(point.toJson())
                 .build();
 
-        backendService.publishReplyTo("/store/tracking", message)
+        backendService.publishReplyTo(syncChannel(), message)
                 .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
                     @Override
                     public void call(SCMessageOuterClass.SCMessage scMessage) {

@@ -131,6 +131,84 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         return Observable.empty();
     }
 
+    @Override
+    public void upload(final SCSpatialFeature scSpatialFeature) {
+
+        final SpatialConnect sc = SpatialConnect.getInstance();
+        SCSensorService sensorService = sc.getSensorService();
+        sensorService.isConnected()
+            .filter(new Func1<Boolean, Boolean>() {
+                @Override
+                public Boolean call(Boolean connected) {
+                    return connected;
+                }
+            })
+            .subscribe(new Action1<Boolean>() {
+            @Override
+            public void call(Boolean connected) {
+                //make sure backendService is running
+                sc.serviceRunning(SCBackendService.serviceId())
+                        .filter(new Func1<SCServiceStatusEvent, Boolean>() {
+                            @Override
+                            public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
+                                return scServiceStatusEvent.getStatus()
+                                        .equals(SCServiceStatus.SC_SERVICE_RUNNING);
+                            }
+                        })
+                        .subscribe(new Action1<SCServiceStatusEvent>() {
+                            @Override
+                            public void call(SCServiceStatusEvent scServiceStatusEvent) {
+                                SCBackendService backendService = sc.getBackendService();
+                                Integer formId;
+                                SCFormConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
+                                formId = Integer.parseInt(c.getId());
+                                if (formId != null) {
+                                    HashMap<String, Object> formSubmissionPayload = new HashMap<>();
+                                    formSubmissionPayload.put("form_id", formId);
+                                    formSubmissionPayload.put("feature", scSpatialFeature);
+                                    try {
+                                        String payload = SCObjectMapper.getMapper().writeValueAsString(formSubmissionPayload);
+                                        SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
+                                                .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
+                                                .setPayload(payload)
+                                                .build();
+
+                                        backendService.publishReplyTo(syncChannel(), message)
+                                                .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
+                                                    @Override
+                                                    public void call(SCMessageOuterClass.SCMessage scMessage) {
+                                                        //TODO mark as synced
+                                                    }
+                                                });
+                                    } catch (JsonProcessingException e) {
+                                        Log.e(LOG_TAG, "Could not parse form submission payload");
+                                    }
+                                }
+                                else {
+                                    Log.w(LOG_TAG, "Did not send feature b/c form id was null");
+                                }
+                            }
+                        });
+            }
+        });
+    }
+
+    @Override
+    public Observable<SCSpatialFeature> unSynced() {
+        //TODO get all unsynced features based on upload flag
+        return null;
+    }
+
+    @Override
+    public void updateAuditTable(SCSpatialFeature scSpatialFeature) {
+
+    }
+
+    @Override
+    public String syncChannel() {
+        return "/store/form";
+    }
+
     private void addLayerByConfig(SCFormConfig config) {
         boolean fieldsValid = true;
         Map<String, String> typeDefs = new HashMap<>();
@@ -150,68 +228,5 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
             super.addLayer(tableName, typeDefs);
             hasForms.onNext(storeForms.size() > 0);
         }
-    }
-
-    @Override
-    public Observable<SCSpatialFeature> unSynced() {
-        //TODO get all unsynced features based on upload flag
-        return null;
-    }
-
-    @Override
-    public void upload(final SCSpatialFeature scSpatialFeature) {
-
-        final SpatialConnect sc = SpatialConnect.getInstance();
-        SCSensorService sensorService = sc.getSensorService();
-        sensorService.isConnected().subscribe(new Action1<Boolean>() {
-            @Override
-            public void call(Boolean connected) {
-                if (connected) {
-                    //make sure backendService is running
-                    sc.serviceRunning(SCBackendService.serviceId())
-                            .filter(new Func1<SCServiceStatusEvent, Boolean>() {
-                                @Override
-                                public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
-                                    return scServiceStatusEvent.getStatus()
-                                            .equals(SCServiceStatus.SC_SERVICE_RUNNING);
-                                }
-                            })
-                            .subscribe(new Action1<SCServiceStatusEvent>() {
-                                @Override
-                                public void call(SCServiceStatusEvent scServiceStatusEvent) {
-                                    SCBackendService backendService = sc.getBackendService();
-                                    Integer formId;
-                                    SCFormConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
-                                    formId = Integer.parseInt(c.getId());
-                                    if (formId != null) {
-                                        HashMap<String, Object> formSubmissionPayload = new HashMap<>();
-                                        formSubmissionPayload.put("form_id", formId);
-                                        formSubmissionPayload.put("feature", scSpatialFeature);
-                                        try {
-                                            String payload = SCObjectMapper.getMapper().writeValueAsString(formSubmissionPayload);
-                                            SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
-                                                    .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
-                                                    .setPayload(payload)
-                                                    .build();
-
-                                            backendService.publishReplyTo("/store/form", message)
-                                                    .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
-                                                        @Override
-                                                        public void call(SCMessageOuterClass.SCMessage scMessage) {
-                                                            //TODO mark as synced
-                                                        }
-                                                    });
-                                        } catch (JsonProcessingException e) {
-                                            Log.e(LOG_TAG, "Could not parse form submission payload");
-                                        }
-                                    }
-                                    else {
-                                        Log.w(LOG_TAG, "Did not send feature b/c form id was null");
-                                    }
-                                }
-                            });
-                }
-            }
-        });
     }
 }

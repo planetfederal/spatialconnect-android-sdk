@@ -48,7 +48,7 @@ import rx.functions.Action1;
 public abstract class SCDataStore {
 
     private static final String LOG_TAG = SCDataStore.class.getSimpleName();
-    private String storeId;
+    protected String storeId;
     private String name;
     private String version;
     private String type;
