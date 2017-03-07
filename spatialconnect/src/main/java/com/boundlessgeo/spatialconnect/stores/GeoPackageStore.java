@@ -18,6 +18,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.db.GeoPackageContents;
@@ -304,6 +305,9 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                             subscriber.onNext(scSpatialFeature);
                             subscriber.onCompleted();
                         }
+
+                        final SpatialConnect sc = SpatialConnect.getInstance();
+                        sc.getBackendService().storeEdited.onNext(true);
                     }
                     catch (SQLException ex) {
                         subscriber.onError(new Throwable("Could not create the the feature.", ex));
@@ -512,17 +516,73 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
 
     @Override
     public void upload(SCSpatialFeature scSpatialFeature) {
-
+        //TODO after publishReplyTo response
+        //updateAuditTable(scSpatialFeature)
     }
 
     @Override
-    public Observable unSynced() {
-        return null;
+    public Observable<SCSpatialFeature> unSynced() {
+
+        return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
+            @Override
+            public void call(final Subscriber subscriber) {
+                //find layers and look through its audit tables
+                String layerQuery = "SELECT table_name FROM gpkg_contents";
+                Cursor layerCursor = gpkg.query(layerQuery);
+                try {
+                    String layerName;
+                    while (layerCursor.moveToNext()) {
+                        layerName = layerCursor.getString(0);
+                        String query = String.format(Locale.US, "SELECT fid FROM %s_audit WHERE synced = 0", layerName);
+                        Cursor auditCursor = gpkg.query(query);
+
+                        try {
+                            String featureId;
+                            while (auditCursor.moveToNext()) {
+                                featureId = auditCursor.getString(0);
+                                SCKeyTuple keys = new SCKeyTuple(getStoreId(), layerName, featureId);
+                                queryById(keys).subscribe(new Action1<SCSpatialFeature>() {
+                                    @Override
+                                    public void call(SCSpatialFeature scSpatialFeature) {
+                                        subscriber.onNext(scSpatialFeature);
+                                    }
+                                });
+
+                            }
+                        } catch (Exception e) {
+                            subscriber.onError(e);
+                        } finally {
+                            auditCursor.close();
+                        }
+                    }
+                } catch (Exception e) {
+                    Log.e(LOG_TAG, "Something went wrong trying to get unsynced features: " + e.getMessage());
+                } finally {
+                    layerCursor.close();
+                }
+
+                subscriber.onCompleted();
+            }
+        });
     }
 
     @Override
     public void updateAuditTable(SCSpatialFeature scSpatialFeature) {
-
+        Cursor cursor = null;
+        try {
+            String query =
+                    String.format(Locale.US, "UPDATE %s_audit SET synced = 1 WHERE fid = %s",
+                            scSpatialFeature.getLayerId(), scSpatialFeature.getId());
+            cursor = gpkg.query(query);
+            cursor.moveToFirst();
+        } catch (Exception ex) {
+            Log.e(LOG_TAG, "Something went wrong updatign audit table: " + ex.getMessage());
+        }
+        finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
     }
 
     @Override

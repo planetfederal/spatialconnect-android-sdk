@@ -45,6 +45,7 @@ import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.subjects.BehaviorSubject;
+import rx.subjects.PublishSubject;
 
 import static java.util.Arrays.asList;
 
@@ -58,6 +59,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private Context context;
     private MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
+    private Observable<Boolean> syncStores;
     private SCAuthService authService;
     private SCConfigService configService;
     private SCSensorService sensorService;
@@ -76,6 +78,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
      * Endpoint running SpatialConnect Server
      */
     public String backendUri = null;
+
+    public PublishSubject<Boolean> storeEdited = PublishSubject.create();
 
     public SCBackendService(final Context context) {
         this.context = context;
@@ -99,6 +103,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         }
         mqttHandler.initialize(config);
         setupMqttConnectionListener();
+        setupSyncListener();
     }
 
     /**
@@ -530,6 +535,24 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         String release = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
         return "Android SDK: " + sdkVersion + " (" + release + ")";
+    }
+
+    private void setupSyncListener() {
+        syncStores = storeEdited.mergeWith(connectedToBroker);
+        syncStores
+                .filter(new Func1<Boolean, Boolean>() {
+                    @Override
+                    public Boolean call(Boolean sync) {
+                        return sync;
+                    }
+                })
+                .subscribe(new Action1<Boolean>() {
+                    @Override
+                    public void call(Boolean sync) {
+                        SCDataService dataService = SpatialConnect.getInstance().getDataService();
+                        dataService.syncAllStores();
+                    }
+                });
     }
 
     public static String serviceId() {

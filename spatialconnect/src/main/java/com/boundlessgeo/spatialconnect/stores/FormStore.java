@@ -112,7 +112,8 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         return super.create(scSpatialFeature).doOnCompleted(new Action0() {
             @Override
             public void call() {
-                upload(scSpatialFeature);
+                final SpatialConnect sc = SpatialConnect.getInstance();
+                sc.getBackendService().storeEdited.onNext(true);
             }
         });
     }
@@ -133,7 +134,6 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
 
     @Override
     public void upload(final SCSpatialFeature scSpatialFeature) {
-
         final SpatialConnect sc = SpatialConnect.getInstance();
         SCSensorService sensorService = sc.getSensorService();
         sensorService.isConnected()
@@ -177,7 +177,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
                                                 .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
                                                     @Override
                                                     public void call(SCMessageOuterClass.SCMessage scMessage) {
-                                                        //TODO mark as synced
+                                                        updateAuditTable(scSpatialFeature);
                                                     }
                                                 });
                                     } catch (JsonProcessingException e) {
@@ -191,17 +191,6 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
                         });
             }
         });
-    }
-
-    @Override
-    public Observable<SCSpatialFeature> unSynced() {
-        //TODO get all unsynced features based on upload flag
-        return null;
-    }
-
-    @Override
-    public void updateAuditTable(SCSpatialFeature scSpatialFeature) {
-
     }
 
     @Override

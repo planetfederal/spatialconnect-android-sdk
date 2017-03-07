@@ -21,7 +21,7 @@ import rx.Observable;
 
 public interface ISyncableStore {
     void upload(SCSpatialFeature scSpatialFeature);
-    Observable unSynced();
+    Observable<SCSpatialFeature> unSynced();
     void updateAuditTable(SCSpatialFeature scSpatialFeature);
     String syncChannel();
 }

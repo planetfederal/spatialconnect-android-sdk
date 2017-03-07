@@ -104,6 +104,10 @@ public class SCSpatialFeature
         this.layerId = layerId;
     }
 
+    public String getLayerId() {
+        return this.layerId;
+    }
+
     public SCKeyTuple getKey() {
         return new SCKeyTuple(this.storeId, this.layerId, this.id);
     }

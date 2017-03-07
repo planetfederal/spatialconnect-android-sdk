@@ -24,6 +24,7 @@ import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.ISCSpatialStore;
+import com.boundlessgeo.spatialconnect.stores.ISyncableStore;
 import com.boundlessgeo.spatialconnect.stores.LocationStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreLifeCycle;
@@ -405,6 +406,14 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         return storeEventSubject;
     }
 
+    public void syncAllStores() {
+        for (SCDataStore store : stores.values()) {
+            if (store instanceof ISyncableStore && store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
+                syncStore((ISyncableStore) store);
+            }
+        }
+    }
+
     /**
      * Calling start on the {@link SCDataService} will start all registered {@link SCDataStore}s.
      */
@@ -600,6 +609,15 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         supportedStoreImpls.put(GeoJsonStore.getVersionKey() ,GeoJsonStore.class);
         supportedStoreImpls.put(GeoPackageStore.getVersionKey() ,GeoPackageStore.class);
         supportedStoreImpls.put(WFSStore.getVersionKey() ,WFSStore.class);
+    }
+
+    private void syncStore(final ISyncableStore store) {
+        store.unSynced().subscribe(new Action1<SCSpatialFeature>() {
+            @Override
+            public void call(SCSpatialFeature scSpatialFeature) {
+                store.upload(scSpatialFeature);
+            }
+        });
     }
 
     public static String serviceId() {
