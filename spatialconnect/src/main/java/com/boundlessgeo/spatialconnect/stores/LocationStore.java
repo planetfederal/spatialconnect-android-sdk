@@ -143,17 +143,6 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
     }
 
     @Override
-    public Observable<SCSpatialFeature> unSynced() {
-        //TODO get all unsynced features based on upload flag
-        return null;
-    }
-
-    @Override
-    public void updateAuditTable(SCSpatialFeature scSpatialFeature) {
-
-    }
-
-    @Override
     public String syncChannel() {
         return "/store/tracking";
     }
@@ -171,7 +160,7 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
                 .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
                     @Override
                     public void call(SCMessageOuterClass.SCMessage scMessage) {
-                        //TODO mark as synced
+                        updateAuditTable(point);
                     }
                 });
     }
