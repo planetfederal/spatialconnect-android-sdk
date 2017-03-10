@@ -157,7 +157,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                 Map<String,String>  auditFields = new HashMap<>();
                 auditFields.putAll(fields);
                 auditFields.put("sent","DATETIME DEFAULT NULL");
-                auditFields.put("recvd","DATETIME");
+                auditFields.put("received","DATETIME");
                 cursor = gpkg.query(createTableSQL(layer + "_audit", auditFields));
                 cursor.moveToFirst();
 
@@ -331,7 +331,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                         }
 
                         final SpatialConnect sc = SpatialConnect.getInstance();
-                        storeEdited.onNext(true);
+                        storeEdited.onNext(scSpatialFeature);
                     }
                     catch (SQLException ex) {
                         subscriber.onError(new Throwable("Could not create the the feature.", ex));
@@ -539,12 +539,6 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
     }
 
     @Override
-    public void send(SCSpatialFeature scSpatialFeature) {
-        //TODO after publishReplyTo response
-        //updateAuditTable(scSpatialFeature)
-    }
-
-    @Override
     public Observable<SCSpatialFeature> unSent() {
 
         return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
@@ -612,6 +606,11 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
     @Override
     public String syncChannel() {
         return String.format(Locale.US, "/store/%s", this.storeId);
+    }
+
+    @Override
+    public Map<String, Object> generateSendPayload(SCSpatialFeature scSpatialFeature) {
+        return null;
     }
 
     private boolean layerExists(String layer) {

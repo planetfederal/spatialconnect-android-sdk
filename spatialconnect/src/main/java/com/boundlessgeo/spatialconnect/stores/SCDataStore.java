@@ -20,6 +20,7 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapter;
+import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
 import com.boundlessgeo.spatialconnect.style.SCStyle;
@@ -57,7 +58,7 @@ public abstract class SCDataStore {
     private SCDataStoreStatus status = SCDataStoreStatus.SC_DATA_STORE_STOPPED;
     private float downloadProgress;
     protected SCStyle style;
-    public PublishSubject<Boolean> storeEdited = PublishSubject.create();
+    public PublishSubject<SCSpatialFeature> storeEdited = PublishSubject.create();
 
 
     public SCDataStore(Context context, SCStoreConfig scStoreConfig) {

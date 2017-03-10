@@ -426,14 +426,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         return storeEventSubject;
     }
 
-    public void syncAllStores() {
-        for (SCDataStore store : stores.values()) {
-            if (store instanceof ISyncableStore && store.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING)) {
-                syncStore((ISyncableStore) store);
-            }
-        }
-    }
-
     /**
      * Calling start on the {@link SCDataService} will start all registered {@link SCDataStore}s.
      */
@@ -593,17 +585,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         supportedStoreImpls.put(GeoJsonStore.getVersionKey() ,GeoJsonStore.class);
         supportedStoreImpls.put(GeoPackageStore.getVersionKey() ,GeoPackageStore.class);
         supportedStoreImpls.put(WFSStore.getVersionKey() ,WFSStore.class);
-    }
-
-    private void syncStore(final ISyncableStore store) {
-        Log.e(LOG_TAG,"sync store....");
-        store.unSent().subscribe(new Action1<SCSpatialFeature>() {
-            @Override
-            public void call(SCSpatialFeature scSpatialFeature) {
-                Log.e(LOG_TAG,"got item to send up");
-                store.send(scSpatialFeature);
-            }
-        });
     }
 
     public static String serviceId() {

@@ -26,13 +26,10 @@ import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCPoint;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.schema.SCCommand;
-import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
+import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
-import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
-import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
 import com.boundlessgeo.spatialconnect.style.SCStyle;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -44,7 +41,6 @@ import java.util.Map;
 import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Action1;
-import rx.functions.Func1;
 
 public class LocationStore extends GeoPackageStore implements ISCSpatialStore, SCDataStoreLifeCycle {
 
@@ -108,60 +104,17 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
     }
 
     @Override
-    public void send(final SCSpatialFeature scSpatialFeature) {
-        final SpatialConnect sc = SpatialConnect.getInstance();
-        SCSensorService sensorService = sc.getSensorService();
-        sensorService.isConnected()
-            .filter(new Func1<Boolean, Boolean>() {
-                @Override
-                public Boolean call(Boolean connected) {
-                    return connected;
-                }
-            })
-            .subscribe(new Action1<Boolean>() {
-            @Override
-            public void call(Boolean connected) {
-                //make sure backendService is running
-                sc.serviceRunning(SCBackendService.serviceId())
-                        .filter(new Func1<SCServiceStatusEvent, Boolean>() {
-                            @Override
-                            public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
-                                return scServiceStatusEvent.getStatus()
-                                        .equals(SCServiceStatus.SC_SERVICE_RUNNING);
-                            }
-                        })
-                        .subscribe(new Action1<SCServiceStatusEvent>() {
-                            @Override
-                            public void call(SCServiceStatusEvent scServiceStatusEvent) {
-                                publishLocation((SCPoint) scSpatialFeature);
-                            }
-                        });
-
-            }
-        });
-    }
-
-    @Override
     public String syncChannel() {
         return "/store/tracking";
     }
 
-    private void publishLocation(final SCPoint point) {
-        final SpatialConnect sc = SpatialConnect.getInstance();
-        SCBackendService backendService = sc.getBackendService();
-        Log.d(LOG_TAG, "posting new location to tracking topic " + point.toJson());
-        SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
-                .setAction(SCCommand.NO_ACTION.value())
-                .setPayload(point.toJson())
-                .build();
+    @Override
+    public Map<String, Object> generateSendPayload(SCSpatialFeature scSpatialFeature) {
+        SCPoint point = (SCPoint) scSpatialFeature;
+        Map<String, Object> payload =
+                SCObjectMapper.getMapper().convertValue(point, new TypeReference<Object>() {});
 
-        backendService.publishReplyTo(syncChannel(), message)
-                .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
-                    @Override
-                    public void call(SCMessageOuterClass.SCMessage scMessage) {
-                        updateAuditTable(point);
-                    }
-                });
+        return payload;
     }
 
     private void listenForLocationUpdate() {
@@ -194,8 +147,6 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
 
                                         LocationStore locationStore = SpatialConnect.getInstance().getDataService().getLocationStore();
                                         locationStore.create(scFeatureLocationUpdate).subscribe();
-
-                                        send(new SCPoint((point)));
                                     }
                                 });
                     }

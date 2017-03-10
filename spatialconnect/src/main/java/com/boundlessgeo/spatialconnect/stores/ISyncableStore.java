@@ -17,11 +17,13 @@ package com.boundlessgeo.spatialconnect.stores;
 
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 
+import java.util.Map;
+
 import rx.Observable;
 
 public interface ISyncableStore {
-    void send(SCSpatialFeature scSpatialFeature);
-    Observable<SCSpatialFeature> unSent();
     void updateAuditTable(SCSpatialFeature scSpatialFeature);
+    Map<String, Object> generateSendPayload(SCSpatialFeature scSpatialFeature);
+    Observable<SCSpatialFeature> unSent();
     String syncChannel();
 }

@@ -100,6 +100,8 @@ public class SCSpatialFeature
         this.storeId = storeId;
     }
 
+    public String getStoreId() { return this.storeId; }
+
     public void setLayerId(String layerId) {
         this.layerId = layerId;
     }

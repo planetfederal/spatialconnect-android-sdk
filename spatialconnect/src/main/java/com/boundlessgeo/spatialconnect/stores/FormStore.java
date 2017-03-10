@@ -19,20 +19,11 @@ package com.boundlessgeo.spatialconnect.stores;
 import android.content.Context;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
-import com.boundlessgeo.spatialconnect.schema.SCCommand;
-import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
-import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
-import com.boundlessgeo.spatialconnect.services.SCSensorService;
-import com.boundlessgeo.spatialconnect.services.SCServiceStatus;
-import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
 import com.boundlessgeo.spatialconnect.style.SCStyle;
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,9 +31,6 @@ import java.util.List;
 import java.util.Map;
 
 import rx.Observable;
-import rx.functions.Action0;
-import rx.functions.Action1;
-import rx.functions.Func1;
 import rx.subjects.BehaviorSubject;
 
 public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDataStoreLifeCycle {
@@ -107,18 +95,6 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
     }
 
     @Override
-    public Observable<SCSpatialFeature> create(final SCSpatialFeature scSpatialFeature) {
-
-        return super.create(scSpatialFeature).doOnCompleted(new Action0() {
-            @Override
-            public void call() {
-                final SpatialConnect sc = SpatialConnect.getInstance();
-                storeEdited.onNext(true);
-            }
-        });
-    }
-
-    @Override
     public Observable<Void> delete(final SCKeyTuple keyTuple) {
         return Observable.empty();
     }
@@ -128,75 +104,25 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
     }
 
     @Override
-    public void send(final SCSpatialFeature scSpatialFeature) {
-        final SpatialConnect sc = SpatialConnect.getInstance();
-        SCSensorService sensorService = sc.getSensorService();
-        sensorService.isConnected()
-            .filter(new Func1<Boolean, Boolean>() {
-                @Override
-                public Boolean call(Boolean connected) {
-                    return connected;
-                }
-            })
-            .subscribe(new Action1<Boolean>() {
-            @Override
-            public void call(Boolean connected) {
-                //make sure backendService is running
-                sc.serviceRunning(SCBackendService.serviceId())
-                        .filter(new Func1<SCServiceStatusEvent, Boolean>() {
-                            @Override
-                            public Boolean call(SCServiceStatusEvent scServiceStatusEvent) {
-                                return scServiceStatusEvent.getStatus()
-                                        .equals(SCServiceStatus.SC_SERVICE_RUNNING);
-                            }
-                        })
-                        .subscribe(new Action1<SCServiceStatusEvent>() {
-                            @Override
-                            public void call(SCServiceStatusEvent scServiceStatusEvent) {
-                                Log.e(LOG_TAG,"FInal stages.." + scSpatialFeature.getKey().getLayerId());
-                                SCBackendService backendService = sc.getBackendService();
-                                Integer formId;
-                                SCFormConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
-                                formId = Integer.parseInt(c.getId());
-                                if (formId != null) {
-                                    Log.e(LOG_TAG,"FInal stages..1");
-                                    HashMap<String, Object> formSubmissionPayload = new HashMap<>();
-                                    formSubmissionPayload.put("form_id", formId);
-                                    formSubmissionPayload.put("feature", scSpatialFeature);
-                                    try {
-                                        Log.e(LOG_TAG,"FInal stages..2");
-                                        String payload = SCObjectMapper.getMapper().writeValueAsString(formSubmissionPayload);
-                                        SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
-                                                .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
-                                                .setPayload(payload)
-                                                .build();
-
-//                                        backendService.publishReplyTo(syncChannel(), message)
-//                                                .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
-//                                                    @Override
-//                                                    public void call(SCMessageOuterClass.SCMessage scMessage) {
-//                                                        updateAuditTable(scSpatialFeature);
-//                                                    }
-//                                                });
-                                        Log.e(LOG_TAG,"FInal stages..3");
-                                        updateAuditTable(scSpatialFeature);
-                                        Log.e(LOG_TAG,"send complete");
-                                    } catch (JsonProcessingException e) {
-                                        Log.e(LOG_TAG, "Could not parse form submission payload");
-                                    }
-                                }
-                                else {
-                                    Log.w(LOG_TAG, "Did not send feature b/c form id was null");
-                                }
-                            }
-                        });
-            }
-        });
+    public String syncChannel() {
+        return "/store/form";
     }
 
     @Override
-    public String syncChannel() {
-        return "/store/form";
+    public Map<String, Object> generateSendPayload(SCSpatialFeature scSpatialFeature) {
+        HashMap<String, Object> formSubmissionPayload = new HashMap<>();
+        Integer formId;
+        SCFormConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
+        formId = Integer.parseInt(c.getId());
+        if (formId != null) {
+            formSubmissionPayload.put("form_id", formId);
+            formSubmissionPayload.put("feature", scSpatialFeature);
+        }
+        else {
+            Log.w(LOG_TAG, "Did not send feature b/c form id was null");
+        }
+
+        return formSubmissionPayload;
     }
 
     private void addLayerByConfig(SCFormConfig config) {

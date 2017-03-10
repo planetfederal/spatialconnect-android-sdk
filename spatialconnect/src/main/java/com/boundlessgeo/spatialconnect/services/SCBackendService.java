@@ -25,6 +25,7 @@ import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
+import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
@@ -34,7 +35,9 @@ import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
 import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
+import com.boundlessgeo.spatialconnect.stores.ISyncableStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.Timestamp;
 
 import java.io.IOException;
@@ -44,6 +47,8 @@ import java.util.Map;
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
+import rx.functions.Func2;
+import rx.schedulers.Schedulers;
 import rx.subjects.BehaviorSubject;
 import rx.subjects.PublishSubject;
 
@@ -538,17 +543,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void setupSyncListener() {
-        //TODO change storeEdited to push feature instead of boolean
-        SCDataService dataService = SpatialConnect.getInstance().getDataService();
-        syncStores = dataService.getISyncableStores(true)
-                .flatMap(new Func1<SCDataStore, Observable<Boolean>>() {
-                    @Override
-                    public Observable<Boolean> call(SCDataStore scDataStore) {
-                        return scDataStore.storeEdited;
-                    }
-                }).mergeWith(connectedToBroker);
-
-        //sync all stores when
+        //sync all stores when connection to broker is true
         connectedToBroker
                 .filter(new Func1<Boolean, Boolean>() {
                     @Override
@@ -559,10 +554,88 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 .subscribe(new Action1<Boolean>() {
                     @Override
                     public void call(Boolean sync) {
-                        SCDataService dataService = SpatialConnect.getInstance().getDataService();
-                        dataService.syncAllStores();
+                        Log.d(LOG_TAG, "sync all stores");
+                        syncStores();
                     }
                 });
+
+        Observable<SCSpatialFeature>  syncableStores = dataService.getISyncableStores(true)
+                .flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
+                    @Override
+                    public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
+                        return scDataStore.storeEdited;
+                    }
+                });
+        //syncs a single store when edits are found
+        syncStores = Observable.combineLatest(syncableStores, connectedToBroker, new Func2<SCSpatialFeature, Boolean, Boolean>() {
+            @Override
+            public Boolean call(final SCSpatialFeature feature, Boolean connected) {
+                Log.d(LOG_TAG, "should sync single store");
+                final ISyncableStore store = (ISyncableStore)dataService.getStoreByIdentifier(feature.getStoreId());
+                syncStore(store);
+                return connected;
+            }
+        });
+
+        connectedToBroker.mergeWith(syncStores)
+                .subscribeOn(Schedulers.newThread())
+                .subscribe();
+    }
+
+    private void syncStores() {
+
+        dataService.getISyncableStores(true)
+                .subscribe(new Action1<SCDataStore>() {
+                    @Override
+                    public void call(SCDataStore scDataStore) {
+                        syncStore((ISyncableStore) scDataStore);
+                    }
+                });
+    }
+
+    private void syncStore(final ISyncableStore store) {
+        store.unSent().subscribe(new Action1<SCSpatialFeature>() {
+            @Override
+            public void call(final SCSpatialFeature scSpatialFeature) {
+                sensorService.isConnected()
+                        .filter(new Func1<Boolean, Boolean>() {
+                            @Override
+                            public Boolean call(Boolean connected) {
+                                return connected;
+                            }
+                        })
+                        .subscribe(new Action1<Boolean>() {
+                            @Override
+                            public void call(Boolean connected) {
+                                send(scSpatialFeature);
+                            }
+                        });
+            }
+        });
+    }
+
+    private void send(final SCSpatialFeature feature) {
+        final ISyncableStore store = (ISyncableStore)dataService.getStoreByIdentifier(feature.getStoreId());
+        Map<String, Object> featurePayload = store.generateSendPayload(feature);
+        String payload;
+        try {
+            payload = SCObjectMapper.getMapper().writeValueAsString(featurePayload);
+            SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
+                    .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
+                    .setPayload(payload)
+                    .build();
+
+//            publishReplyTo(store.syncChannel(), message)
+//                    .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
+//                        @Override
+//                        public void call(SCMessageOuterClass.SCMessage scMessage) {
+//                            store.updateAuditTable(feature);
+//                        }
+//                    });
+            store.updateAuditTable(feature);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
     }
 
     public static String serviceId() {

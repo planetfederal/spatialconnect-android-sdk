@@ -231,7 +231,7 @@ public class GeoPackage {
                     Map<String,String>  auditFields = new LinkedHashMap<>();
                     auditFields.putAll(featureFields);
                     auditFields.put("sent","DATETIME DEFAULT NULL");
-                    auditFields.put("recvd","DATETIME");
+                    auditFields.put("received","DATETIME");
                     cursor = db.query(createTableSQL(source.getTableName() + "_audit", auditFields));
                     cursor.moveToFirst();
 
