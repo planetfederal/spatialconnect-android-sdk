@@ -20,8 +20,8 @@ import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import rx.Observable;
 
 public interface ISyncableStore {
-    void upload(SCSpatialFeature scSpatialFeature);
-    Observable<SCSpatialFeature> unSynced();
+    void send(SCSpatialFeature scSpatialFeature);
+    Observable<SCSpatialFeature> unSent();
     void updateAuditTable(SCSpatialFeature scSpatialFeature);
     String syncChannel();
 }

@@ -332,6 +332,26 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
                 });
     }
 
+    public Observable<SCDataStore> getISyncableStores(final Boolean onlyRunning) {
+        return Observable.from(stores.values())
+                .filter(new Func1<SCDataStore, Boolean>() {
+                    @Override
+                    public Boolean call(final SCDataStore store) {
+                        return (store instanceof ISyncableStore);
+                    }
+                })
+                .filter(new Func1<SCDataStore, Boolean>() {
+                    @Override
+                    public Boolean call(final SCDataStore store) {
+                        if (!onlyRunning) {
+                            return true;
+                        } else {
+                            return store.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING;
+                        }
+                    }
+                });
+    }
+
     public List<SCDataStore> getISCSpatialStoresArray(final Boolean onlyRunning) {
         return getISCSpatialStores(onlyRunning).toList().toBlocking().first();
     }
@@ -556,24 +576,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         formStoreConfig.setVersion("1");
         FormStore formStore = new FormStore(context, formStoreConfig);
         this.stores.put(formStore.getStoreId(), formStore);
-        // block until store is started
-        formStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
-            @Override
-            public void onCompleted() {
-                Log.d(LOG_TAG, "Registered form store with SCDataService.");
-            }
-
-            @Override
-            public void onError(Throwable e) {
-                Log.e(LOG_TAG, "Couldn't start form store", e);
-                System.exit(0);
-            }
-
-            @Override
-            public void onNext(SCStoreStatusEvent event) {
-                Log.w(LOG_TAG, "Shouldn't return onNext");
-            }
-        });
     }
 
     private void initializeLocationStore() {
@@ -585,24 +587,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         locationStoreConfig.setVersion("1");
         LocationStore locationStore = new LocationStore(context, locationStoreConfig);
         this.stores.put(locationStore.getStoreId(), locationStore);
-        // block until store is started
-        locationStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
-            @Override
-            public void onCompleted() {
-                Log.d(LOG_TAG, "Registered location store with SCDataService.");
-            }
-
-            @Override
-            public void onError(Throwable e) {
-                Log.e(LOG_TAG, "Couldn't start form store", e);
-                System.exit(0);
-            }
-
-            @Override
-            public void onNext(SCStoreStatusEvent event) {
-                Log.w(LOG_TAG, "Shouldn't return onNext");
-            }
-        });
     }
 
     private void addDefaultStoreImpls() {
@@ -612,10 +596,12 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     }
 
     private void syncStore(final ISyncableStore store) {
-        store.unSynced().subscribe(new Action1<SCSpatialFeature>() {
+        Log.e(LOG_TAG,"sync store....");
+        store.unSent().subscribe(new Action1<SCSpatialFeature>() {
             @Override
             public void call(SCSpatialFeature scSpatialFeature) {
-                store.upload(scSpatialFeature);
+                Log.e(LOG_TAG,"got item to send up");
+                store.send(scSpatialFeature);
             }
         });
     }

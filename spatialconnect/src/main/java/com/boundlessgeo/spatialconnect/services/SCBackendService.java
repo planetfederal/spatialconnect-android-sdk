@@ -538,8 +538,18 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void setupSyncListener() {
-        syncStores = storeEdited.mergeWith(connectedToBroker);
-        syncStores
+        //TODO change storeEdited to push feature instead of boolean
+        SCDataService dataService = SpatialConnect.getInstance().getDataService();
+        syncStores = dataService.getISyncableStores(true)
+                .flatMap(new Func1<SCDataStore, Observable<Boolean>>() {
+                    @Override
+                    public Observable<Boolean> call(SCDataStore scDataStore) {
+                        return scDataStore.storeEdited;
+                    }
+                }).mergeWith(connectedToBroker);
+
+        //sync all stores when
+        connectedToBroker
                 .filter(new Func1<Boolean, Boolean>() {
                     @Override
                     public Boolean call(Boolean sync) {

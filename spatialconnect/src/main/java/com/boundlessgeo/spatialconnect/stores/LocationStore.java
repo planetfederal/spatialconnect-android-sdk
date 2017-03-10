@@ -80,7 +80,6 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
                 Map<String, String> typeDefs = new HashMap<>();
                 typeDefs.put(ACCURACY_COLUMN,"TEXT");
                 typeDefs.put(TIMESTAMP_COLUMN,"INTEGER");
-
                 addLayer(LAST_KNOWN_TABLE, typeDefs);
 
                 listenForLocationUpdate();
@@ -109,7 +108,7 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
     }
 
     @Override
-    public void upload(final SCSpatialFeature scSpatialFeature) {
+    public void send(final SCSpatialFeature scSpatialFeature) {
         final SpatialConnect sc = SpatialConnect.getInstance();
         SCSensorService sensorService = sc.getSensorService();
         sensorService.isConnected()
@@ -196,7 +195,7 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
                                         LocationStore locationStore = SpatialConnect.getInstance().getDataService().getLocationStore();
                                         locationStore.create(scFeatureLocationUpdate).subscribe();
 
-                                        upload(new SCPoint((point)));
+                                        send(new SCPoint((point)));
                                     }
                                 });
                     }

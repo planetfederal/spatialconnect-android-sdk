@@ -13,6 +13,7 @@ import org.sqlite.database.SQLException;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -84,6 +85,7 @@ public class GeoPackage {
             if (initializeSpatialMetadata() && validateGeoPackageSchema()) {
                 initializeFeatureSources();
                 getTileSources();
+                initializeAuditTables();
                 isValid = true;
             }
         }
@@ -154,6 +156,145 @@ public class GeoPackage {
                 cursor.close();
             }
         }
+    }
+
+    private void initializeAuditTables() {
+        Cursor cursor = null;
+        try {
+            for (SCGpkgFeatureSource source : getFeatureSources().values()) {
+                //check if table exists
+                String auditTableName = source.getTableName() + "_audit";
+                cursor = db.query(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name=?", auditTableName
+                );
+                if (cursor.getCount() == 1) {
+                    //if table exist check if columns exist
+                    cursor = db.query(String.format("PRAGMA table_info(%s)", auditTableName));
+                    boolean sentColumnFound = false;
+                    boolean recvdColumnFound = false;
+                    while (cursor.moveToNext()) {
+                        String columnName = SCSqliteHelper.getString(cursor, "name");
+                        if (columnName.equalsIgnoreCase("sent")) {
+                            sentColumnFound = true;
+                        }
+                        if (columnName.equalsIgnoreCase("recvd")) {
+                            recvdColumnFound = true;
+                        }
+                    }
+
+                    if (!sentColumnFound) {
+                        cursor = db.query(String.format("ALTER TABLE %s ADD COLUMN sent DATETIME DEFAULT null",
+                                auditTableName)
+                        );
+                        cursor.moveToFirst();
+                    }
+
+                    if (!recvdColumnFound) {
+                        cursor = db.query(String.format("ALTER TABLE %s ADD COLUMN recvd DATETIME DEFAULT null",
+                                auditTableName)
+                        );
+                        cursor.moveToFirst();
+                    }
+
+                    //check for triggers
+                    cursor = db.query(
+                            "SELECT name FROM sqlite_master WHERE type='trigger' AND name=?",
+                            auditTableName + "_insert");
+                    if (cursor.getCount() != 1) {
+                        Map<String,String>  columns = new LinkedHashMap<>();
+                        cursor = db.query(String.format("PRAGMA table_info(%s)", source.getTableName()));
+                        String columnName;
+                        String columnType;
+                        while (cursor.moveToNext()) {
+                            columnName = SCSqliteHelper.getString(cursor, "name");
+                            columnType  = SCSqliteHelper.getString(cursor, "type");
+                            columns.put(columnName, columnType);
+                        }
+                        //create audit table trigger
+                        cursor = db.query(createAuditTableTriggersSQL(source.getTableName(), columns));
+                        cursor.moveToFirst();
+                    }
+
+                } else {
+                    //get feature source fields
+                    Map<String,String> featureFields = new LinkedHashMap<>();
+                    cursor = db.query(String.format("PRAGMA table_info(%s)", source.getTableName()));
+                    String columnName;
+                    String columnType;
+                    while (cursor.moveToNext()) {
+                        columnName = SCSqliteHelper.getString(cursor, "name");
+                        columnType  = SCSqliteHelper.getString(cursor, "type");
+                        featureFields.put(columnName, columnType);
+                    }
+
+                    //create audit tables and add 2 columns
+                    Map<String,String>  auditFields = new LinkedHashMap<>();
+                    auditFields.putAll(featureFields);
+                    auditFields.put("sent","DATETIME DEFAULT NULL");
+                    auditFields.put("recvd","DATETIME");
+                    cursor = db.query(createTableSQL(source.getTableName() + "_audit", auditFields));
+                    cursor.moveToFirst();
+
+                    //create audit table trigger
+                    cursor = db.query(createAuditTableTriggersSQL(source.getTableName(), featureFields));
+                    cursor.moveToFirst();
+                }
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "something when wrong trying to setup audit tables:" + e.getMessage());
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    public String createTableSQL(String layer, Map<String, String> typeDefs){
+        final String tableName = layer;
+        StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName);
+        sb.append(" (");
+        int count = 0;
+        for (String key : typeDefs.keySet()) {
+            if (count != 0) {
+                sb.append(", ");
+            }
+            sb.append(key);
+            sb.append(" ");
+            sb.append(typeDefs.get(key));
+            count++;
+        }
+        sb.append(")");
+
+        return sb.toString();
+    }
+
+    public String createAuditTableTriggersSQL(String layer, Map<String, String> typeDefs)  {
+        //AFTER insert trigger
+        StringBuilder sql = new StringBuilder();
+        sql.append("CREATE TRIGGER ");
+        sql.append(layer).append("_audit_insert ");
+        sql.append("AFTER INSERT ON ");
+        sql.append(layer).append(" BEGIN ");
+        sql.append("INSERT INTO ").append(layer).append("_audit (");
+        int count = 0;
+        for (String key : typeDefs.keySet()) {
+            if (count != 0) {
+                sql.append(",");
+            }
+            sql.append(key);
+            count++;
+        }
+        sql.append(") VALUES (");
+        count = 0;
+        for (String key : typeDefs.keySet()) {
+            if (count != 0) {
+                sql.append(",");
+            }
+            sql.append("NEW.").append(key);
+            count++;
+        }
+        sql.append("); END;");
+        return sql.toString();
     }
 
     // executes the CreateSpatialIndex function for a given table

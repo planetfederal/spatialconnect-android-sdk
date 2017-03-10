@@ -113,7 +113,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
             @Override
             public void call() {
                 final SpatialConnect sc = SpatialConnect.getInstance();
-                sc.getBackendService().storeEdited.onNext(true);
+                storeEdited.onNext(true);
             }
         });
     }
@@ -128,12 +128,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
     }
 
     @Override
-    public Observable<SCSpatialFeature> queryById(final SCKeyTuple keyTuple) {
-        return Observable.empty();
-    }
-
-    @Override
-    public void upload(final SCSpatialFeature scSpatialFeature) {
+    public void send(final SCSpatialFeature scSpatialFeature) {
         final SpatialConnect sc = SpatialConnect.getInstance();
         SCSensorService sensorService = sc.getSensorService();
         sensorService.isConnected()
@@ -158,28 +153,34 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
                         .subscribe(new Action1<SCServiceStatusEvent>() {
                             @Override
                             public void call(SCServiceStatusEvent scServiceStatusEvent) {
+                                Log.e(LOG_TAG,"FInal stages.." + scSpatialFeature.getKey().getLayerId());
                                 SCBackendService backendService = sc.getBackendService();
                                 Integer formId;
                                 SCFormConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
                                 formId = Integer.parseInt(c.getId());
                                 if (formId != null) {
+                                    Log.e(LOG_TAG,"FInal stages..1");
                                     HashMap<String, Object> formSubmissionPayload = new HashMap<>();
                                     formSubmissionPayload.put("form_id", formId);
                                     formSubmissionPayload.put("feature", scSpatialFeature);
                                     try {
+                                        Log.e(LOG_TAG,"FInal stages..2");
                                         String payload = SCObjectMapper.getMapper().writeValueAsString(formSubmissionPayload);
                                         SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
                                                 .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
                                                 .setPayload(payload)
                                                 .build();
 
-                                        backendService.publishReplyTo(syncChannel(), message)
-                                                .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
-                                                    @Override
-                                                    public void call(SCMessageOuterClass.SCMessage scMessage) {
-                                                        updateAuditTable(scSpatialFeature);
-                                                    }
-                                                });
+//                                        backendService.publishReplyTo(syncChannel(), message)
+//                                                .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
+//                                                    @Override
+//                                                    public void call(SCMessageOuterClass.SCMessage scMessage) {
+//                                                        updateAuditTable(scSpatialFeature);
+//                                                    }
+//                                                });
+                                        Log.e(LOG_TAG,"FInal stages..3");
+                                        updateAuditTable(scSpatialFeature);
+                                        Log.e(LOG_TAG,"send complete");
                                     } catch (JsonProcessingException e) {
                                         Log.e(LOG_TAG, "Could not parse form submission payload");
                                     }
@@ -211,6 +212,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         }
 
         if (fieldsValid) {
+            Log.e(LOG_TAG, "adding layer by config");
             storeForms.put(config.getFormKey(), config);
             formIds.put(config.getFormKey(), config.getId());
             final String tableName = config.getFormKey();
