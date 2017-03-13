@@ -108,7 +108,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         }
         mqttHandler.initialize(config);
         setupMqttConnectionListener();
-        setupSyncListener();
     }
 
     /**
@@ -266,6 +265,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         sensorService = (SCSensorService) deps.get(SCSensorService.serviceId());
         dataService = (SCDataService) deps.get(SCDataService.serviceId());
         listenForNetworkConnection();
+        setupSyncListener();
         return super.start(deps);
     }
 
