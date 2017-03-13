@@ -559,7 +559,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     }
                 });
 
-        Observable<SCSpatialFeature>  syncableStores = dataService.getISyncableStores(true)
+        Observable<SCSpatialFeature>  syncableStores = dataService.getISyncableStores()
                 .flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
                     @Override
                     public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
@@ -584,7 +584,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private void syncStores() {
 
-        dataService.getISyncableStores(true)
+        dataService.getISyncableStores()
                 .subscribe(new Action1<SCDataStore>() {
                     @Override
                     public void call(SCDataStore scDataStore) {

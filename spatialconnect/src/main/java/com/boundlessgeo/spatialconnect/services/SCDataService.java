@@ -332,7 +332,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
                 });
     }
 
-    public Observable<SCDataStore> getISyncableStores(final Boolean onlyRunning) {
+    public Observable<SCDataStore> getISyncableStores() {
         return Observable.from(stores.values())
                 .filter(new Func1<SCDataStore, Boolean>() {
                     @Override
@@ -343,11 +343,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
                 .filter(new Func1<SCDataStore, Boolean>() {
                     @Override
                     public Boolean call(final SCDataStore store) {
-                        if (!onlyRunning) {
-                            return true;
-                        } else {
-                            return store.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING;
-                        }
+                        return store.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING;
                     }
                 });
     }

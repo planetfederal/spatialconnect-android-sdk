@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.Set;
 
 import rx.Observable;
-import rx.Subscriber;
 import rx.functions.Action1;
 import rx.functions.Func1;
 
@@ -635,31 +634,19 @@ public class GeoPackage {
 
     public Observable<SCSpatialFeature> unSent() {
 
-        return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
-            @Override
-            public void call(final Subscriber subscriber) {
-                getFeatureTables().flatMap(new Func1<List<SCGpkgFeatureSource>, Observable<SCGpkgFeatureSource>>() {
-                    @Override
-                    public Observable<SCGpkgFeatureSource> call(List<SCGpkgFeatureSource> scGpkgFeatureSources) {
-                        return Observable.from(scGpkgFeatureSources);
-                    }
-                })
-                .flatMap(new Func1<SCGpkgFeatureSource, Observable<SCSpatialFeature>>() {
-                    @Override
-                    public Observable<SCSpatialFeature> call(SCGpkgFeatureSource scGpkgFeatureSource) {
-
-                        scGpkgFeatureSource.unSent().subscribe(new Action1<SCSpatialFeature>() {
-                            @Override
-                            public void call(SCSpatialFeature feature) {
-                                subscriber.onNext(feature);
-                            }
-                        });
-                        return null;
-
-                    }
-                }).subscribe();
-            }
-        });
+        return getFeatureTables()
+            .flatMap(new Func1<List<SCGpkgFeatureSource>, Observable<SCGpkgFeatureSource>>() {
+                @Override
+                public Observable<SCGpkgFeatureSource> call(List<SCGpkgFeatureSource> scGpkgFeatureSources) {
+                    return Observable.from(scGpkgFeatureSources);
+                }
+            })
+            .flatMap(new Func1<SCGpkgFeatureSource, Observable<SCSpatialFeature>>() {
+                @Override
+                public Observable<SCSpatialFeature> call(SCGpkgFeatureSource scGpkgFeatureSource) {
+                    return scGpkgFeatureSource.unSent();
+                }
+            });
     }
 
     public void addFeatureSource(String layer, Map<String,String>  fields) {

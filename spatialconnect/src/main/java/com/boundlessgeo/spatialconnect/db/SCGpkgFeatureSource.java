@@ -218,7 +218,7 @@ public class SCGpkgFeatureSource {
             cursor = gpkg.query(query);
             cursor.moveToFirst();
         } catch (Exception ex) {
-            Log.e(LOG_TAG, "Something went wrong updatign audit table: " + ex.getMessage());
+            Log.e(LOG_TAG, "Something went wrong updating audit table: " + ex.getMessage());
         }
         finally {
             if (cursor != null) {
