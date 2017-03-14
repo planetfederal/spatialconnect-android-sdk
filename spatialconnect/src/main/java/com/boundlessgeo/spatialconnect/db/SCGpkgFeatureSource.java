@@ -1,16 +1,24 @@
 package com.boundlessgeo.spatialconnect.db;
 
+import android.database.Cursor;
 import android.database.DatabaseUtils;
+import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
+import com.squareup.sqlbrite.BriteDatabase;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+
+import rx.Observable;
+import rx.Subscriber;
 
 /**
  * This class is responsible for reading and writing {@link SCSpatialFeature}s to a feature table in a GeoPackage.
@@ -32,6 +40,8 @@ public class SCGpkgFeatureSource {
      */
     private String tableName;
 
+    private String auditName;
+
     /**
      * The name of the primary key column.
      */
@@ -48,6 +58,7 @@ public class SCGpkgFeatureSource {
      */
     private Map<String, String> columns = new LinkedHashMap<>();
 
+    private BriteDatabase db;
 
     /**
      * Creates and instance of the {@link SCGpkgFeatureSource} using the {@link GeoPackage} containing the db
@@ -59,6 +70,7 @@ public class SCGpkgFeatureSource {
     public SCGpkgFeatureSource(GeoPackage geoPackage, String tableName) {
         this.gpkg = geoPackage;
         this.tableName = tableName;
+        this.auditName = String.format("%s_audit", tableName);
     }
 
     public Map<String, String> getColumns() {
@@ -165,6 +177,70 @@ public class SCGpkgFeatureSource {
         return sb.toString();
     }
 
+    public SCSpatialFeature featureFromResultSet(Cursor rs) {
+        Map<String,Object> properties = new HashMap<>();
+        String data;
+        String columnName;
+        for (int i=0; i<rs.getColumnCount(); i++) {
+            data = rs.getString(i);
+            columnName = rs.getColumnName(i);
+            properties.put(columnName, data);
+        }
+
+        SCSpatialFeature  spatialFeature = new SCSpatialFeature();
+        spatialFeature.setId(properties.get(primaryKeyName).toString());
+        spatialFeature.setLayerId(tableName);
+
+        properties.remove(geomColumnName);
+        properties.remove(primaryKeyName);
+        spatialFeature.setProperties(properties);
+
+        return spatialFeature;
+    }
+
+    public Observable<SCSpatialFeature> unSent() {
+
+        final String sql = String.format("SELECT * FROM %s WHERE sent IS NULL", auditName);
+        return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
+            @Override
+            public void call(final Subscriber subscriber) {
+                query(sql, subscriber);
+            }
+        });
+    }
+
+    public void updateAuditTable(SCSpatialFeature feature) {
+        Cursor cursor = null;
+        try {
+            String query =
+                    String.format(Locale.US, "UPDATE %s SET sent = datetime() WHERE %s = %s",
+                            this.auditName, this.primaryKeyName, feature.getId());
+            cursor = gpkg.query(query);
+            cursor.moveToFirst();
+        } catch (Exception ex) {
+            Log.e(LOG_TAG, "Something went wrong updating audit table: " + ex.getMessage());
+        }
+        finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    private void query(String sql, Subscriber subscriber) {
+        Cursor layerCursor = gpkg.query(sql);
+        try {
+            while (layerCursor.moveToNext()) {
+                SCSpatialFeature f = featureFromResultSet(layerCursor);
+                subscriber.onNext(f);
+
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Something went wrong trying to get unsynced features: " + e.getMessage());
+        } finally {
+            layerCursor.close();
+        }
+    }
 
     private static Comparator<String> ALPHABETICAL_ORDER = new Comparator<String>() {
         public int compare(String str1, String str2) {

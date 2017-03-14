@@ -20,6 +20,7 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.dataAdapter.SCDataAdapter;
+import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
 import com.boundlessgeo.spatialconnect.style.SCStyle;
@@ -36,6 +37,7 @@ import java.util.UUID;
 import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Action1;
+import rx.subjects.PublishSubject;
 
 /**
  * Subclasses of SCDataStore provide read/write access to a single data store using an {@link SCDataAdapter}.  Instances
@@ -48,7 +50,7 @@ import rx.functions.Action1;
 public abstract class SCDataStore {
 
     private static final String LOG_TAG = SCDataStore.class.getSimpleName();
-    private String storeId;
+    protected String storeId;
     private String name;
     private String version;
     private String type;
@@ -56,6 +58,7 @@ public abstract class SCDataStore {
     private SCDataStoreStatus status = SCDataStoreStatus.SC_DATA_STORE_STOPPED;
     private float downloadProgress;
     protected SCStyle style;
+    public PublishSubject<SCSpatialFeature> storeEdited = PublishSubject.create();
 
 
     public SCDataStore(Context context, SCStoreConfig scStoreConfig) {

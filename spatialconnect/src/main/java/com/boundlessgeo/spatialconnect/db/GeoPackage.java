@@ -4,6 +4,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.boundlessgeo.spatialconnect.tiles.SCTileMatrixRow;
 import com.squareup.sqlbrite.BriteDatabase;
@@ -13,6 +14,7 @@ import org.sqlite.database.SQLException;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,6 +27,9 @@ import rx.functions.Func1;
  * Represents a single GeoPackage and provides methods for interacting with its features and tiles.
  */
 public class GeoPackage {
+
+    private final String SENT_AUDIT_COL = "sent";
+    private final String RECEIVED_AUDIT_COL = "received";
 
     /**
      * The log tag for this class.
@@ -84,6 +89,7 @@ public class GeoPackage {
             if (initializeSpatialMetadata() && validateGeoPackageSchema()) {
                 initializeFeatureSources();
                 getTileSources();
+                initializeAuditTables();
                 isValid = true;
             }
         }
@@ -154,6 +160,141 @@ public class GeoPackage {
                 cursor.close();
             }
         }
+    }
+
+    private void initializeAuditTables() {
+        Cursor cursor = null;
+        try {
+            for (SCGpkgFeatureSource source : getFeatureSources().values()) {
+                //check if table exists
+                String auditTableName = source.getTableName() + "_audit";
+                cursor = db.query(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name=?", auditTableName
+                );
+                if (cursor.getCount() == 1) {
+                    //if table exist check if columns exist
+                    cursor = db.query(String.format("PRAGMA table_info(%s)", auditTableName));
+                    boolean sentColumnFound = false;
+                    boolean recvdColumnFound = false;
+                    while (cursor.moveToNext()) {
+                        String columnName = SCSqliteHelper.getString(cursor, "name");
+                        if (columnName.equalsIgnoreCase(SENT_AUDIT_COL)) {
+                            sentColumnFound = true;
+                        }
+                        if (columnName.equalsIgnoreCase(RECEIVED_AUDIT_COL)) {
+                            recvdColumnFound = true;
+                        }
+                    }
+
+                    if (!sentColumnFound) {
+                        cursor = db.query(String.format("ALTER TABLE %s ADD COLUMN %s DATETIME DEFAULT null",
+                                auditTableName, SENT_AUDIT_COL)
+                        );
+                        cursor.moveToFirst();
+                    }
+
+                    if (!recvdColumnFound) {
+                        cursor = db.query(String.format("ALTER TABLE %s ADD COLUMN %s DATETIME DEFAULT null",
+                                auditTableName, RECEIVED_AUDIT_COL)
+                        );
+                        cursor.moveToFirst();
+                    }
+
+                    //check for triggers
+                    cursor = db.query(
+                            "SELECT name FROM sqlite_master WHERE type='trigger' AND name=?",
+                            auditTableName + "_insert");
+                    if (cursor.getCount() != 1) {
+                        Map<String,String>  columns = new LinkedHashMap<>();
+                        cursor = db.query(String.format("PRAGMA table_info(%s)", source.getTableName()));
+                        String columnName;
+                        String columnType;
+                        while (cursor.moveToNext()) {
+                            columnName = SCSqliteHelper.getString(cursor, "name");
+                            columnType  = SCSqliteHelper.getString(cursor, "type");
+                            columns.put(columnName, columnType);
+                        }
+                        //create audit table trigger
+                        cursor = db.query(createAuditTableTriggersSQL(source.getTableName(), columns));
+                        cursor.moveToFirst();
+                    }
+
+                } else {
+                    //get feature source fields
+                    Map<String,String> featureFields = new LinkedHashMap<>();
+                    cursor = db.query(String.format("PRAGMA table_info(%s)", source.getTableName()));
+                    String columnName;
+                    String columnType;
+                    while (cursor.moveToNext()) {
+                        columnName = SCSqliteHelper.getString(cursor, "name");
+                        columnType  = SCSqliteHelper.getString(cursor, "type");
+                        featureFields.put(columnName, columnType);
+                    }
+
+                    //create audit tables and add 2 columns
+                    Map<String,String>  auditFields = new LinkedHashMap<>();
+                    auditFields.putAll(featureFields);
+                    auditFields.put(SENT_AUDIT_COL,"DATETIME DEFAULT NULL");
+                    auditFields.put(RECEIVED_AUDIT_COL,"DATETIME");
+                    cursor = db.query(createTableSQL(source.getTableName() + "_audit", auditFields));
+                    cursor.moveToFirst();
+
+                    //create audit table trigger
+                    cursor = db.query(createAuditTableTriggersSQL(source.getTableName(), featureFields));
+                    cursor.moveToFirst();
+                }
+            }
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "something when wrong trying to setup audit tables:" + e.getMessage());
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    public String createTableSQL(String layer, Map<String, String> typeDefs){
+        final String tableName = layer;
+        StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName);
+        sb.append(" (id INTEGER PRIMARY KEY AUTOINCREMENT ");
+        for (String key : typeDefs.keySet()) {
+            sb.append(", ");
+            sb.append(key);
+            sb.append(" ");
+            sb.append(typeDefs.get(key));
+        }
+        sb.append(")");
+
+        return sb.toString();
+    }
+
+    public String createAuditTableTriggersSQL(String layer, Map<String, String> typeDefs)  {
+        //AFTER insert trigger
+        StringBuilder sql = new StringBuilder();
+        sql.append("CREATE TRIGGER ");
+        sql.append(layer).append("_audit_insert ");
+        sql.append("AFTER INSERT ON ");
+        sql.append(layer).append(" BEGIN ");
+        sql.append("INSERT INTO ").append(layer).append("_audit (");
+        int count = 0;
+        for (String key : typeDefs.keySet()) {
+            if (count != 0) {
+                sql.append(",");
+            }
+            sql.append(key);
+            count++;
+        }
+        sql.append(") VALUES (");
+        count = 0;
+        for (String key : typeDefs.keySet()) {
+            if (count != 0) {
+                sql.append(",");
+            }
+            sql.append("NEW.").append(key);
+            count++;
+        }
+        sql.append("); END;");
+        return sql.toString();
     }
 
     // executes the CreateSpatialIndex function for a given table
@@ -489,6 +630,95 @@ public class GeoPackage {
 
     public String getName() {
         return name;
+    }
+
+    public Observable<SCSpatialFeature> unSent() {
+
+        return getFeatureTables()
+            .flatMap(new Func1<List<SCGpkgFeatureSource>, Observable<SCGpkgFeatureSource>>() {
+                @Override
+                public Observable<SCGpkgFeatureSource> call(List<SCGpkgFeatureSource> scGpkgFeatureSources) {
+                    return Observable.from(scGpkgFeatureSources);
+                }
+            })
+            .flatMap(new Func1<SCGpkgFeatureSource, Observable<SCSpatialFeature>>() {
+                @Override
+                public Observable<SCSpatialFeature> call(SCGpkgFeatureSource scGpkgFeatureSource) {
+                    return scGpkgFeatureSource.unSent();
+                }
+            });
+    }
+
+    public void addFeatureSource(String layer, Map<String,String>  fields) {
+        if (!layerExists(layer)) {
+            Log.d(LOG_TAG, "Adding layer " + layer + " to " + getName());
+            final String tableName = layer;
+            Cursor cursor = null;
+            BriteDatabase.Transaction tx = newTransaction();
+            try {
+                //first create the table
+                cursor = db.query(createTableSQL(layer, fields));
+                cursor.moveToFirst(); // force query to execute
+
+                //then add it to gpkg contents and any other tables (gpkg metadata, etc)
+                cursor = db.query(addToGpkgContentsSQL(tableName));
+                cursor.moveToFirst(); // force query to execute
+
+                //add a geometry column to the table b/c we want to store where the package was submitted (if needed)
+                //also, note the this function will add the geometry to gpkg geometry_columns, which has a foreign key
+                //constraint on the table name, which requires the table to exist in gpkg contents
+                cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
+                cursor.moveToFirst(); // force query to execute
+
+                //create audit tables and add 2 columns
+                Map<String,String>  auditFields = new HashMap<>();
+                auditFields.putAll(fields);
+                auditFields.put(SENT_AUDIT_COL,"DATETIME DEFAULT NULL");
+                auditFields.put(RECEIVED_AUDIT_COL,"DATETIME");
+                cursor = db.query(createTableSQL(layer + "_audit", auditFields));
+                cursor.moveToFirst();
+
+                //create audit table trigger
+                cursor = db.query(createAuditTableTriggersSQL(layer, fields));
+                cursor.moveToFirst();
+
+                tx.markSuccessful();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                Log.w(LOG_TAG, "Could not create table b/c " + ex.getMessage());
+            }
+            finally {
+                tx.end();
+                refreshFeatureSources();
+                if (cursor != null) {
+                    cursor.close();
+                }
+            }
+        }
+    }
+
+    private String addToGpkgContentsSQL(String tableName) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("INSERT OR REPLACE INTO gpkg_contents ")
+                .append("(table_name,data_type,identifier,description,min_x,min_y,max_x,max_y,srs_id) ")
+                .append(String.format("VALUES ('%s','features','%s','%s',0,0,0,0,4326)", tableName, tableName, tableName));
+        return sb.toString();
+    }
+
+    private boolean layerExists(String layer) {
+        boolean layerExists = false;
+        String table = layer;
+        Cursor cursor = db.query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",new String[]{table});
+        try {
+            if (cursor.moveToFirst()) {
+                layerExists = cursor.getInt(0) > 0;
+            }
+        }
+        finally {
+            cursor.close();
+        }
+
+        return  layerExists;
     }
 
     @Override

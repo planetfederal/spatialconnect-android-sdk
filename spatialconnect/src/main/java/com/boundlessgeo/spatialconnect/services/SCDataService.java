@@ -24,6 +24,7 @@ import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.boundlessgeo.spatialconnect.stores.GeoJsonStore;
 import com.boundlessgeo.spatialconnect.stores.GeoPackageStore;
 import com.boundlessgeo.spatialconnect.stores.ISCSpatialStore;
+import com.boundlessgeo.spatialconnect.stores.ISyncableStore;
 import com.boundlessgeo.spatialconnect.stores.LocationStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreLifeCycle;
@@ -331,6 +332,22 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
                 });
     }
 
+    public Observable<SCDataStore> getISyncableStores() {
+        return Observable.from(stores.values())
+                .filter(new Func1<SCDataStore, Boolean>() {
+                    @Override
+                    public Boolean call(final SCDataStore store) {
+                        return (store instanceof ISyncableStore);
+                    }
+                })
+                .filter(new Func1<SCDataStore, Boolean>() {
+                    @Override
+                    public Boolean call(final SCDataStore store) {
+                        return store.getStatus() == SCDataStoreStatus.SC_DATA_STORE_RUNNING;
+                    }
+                });
+    }
+
     public List<SCDataStore> getISCSpatialStoresArray(final Boolean onlyRunning) {
         return getISCSpatialStores(onlyRunning).toList().toBlocking().first();
     }
@@ -547,24 +564,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         formStoreConfig.setVersion("1");
         FormStore formStore = new FormStore(context, formStoreConfig);
         this.stores.put(formStore.getStoreId(), formStore);
-        // block until store is started
-        formStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
-            @Override
-            public void onCompleted() {
-                Log.d(LOG_TAG, "Registered form store with SCDataService.");
-            }
-
-            @Override
-            public void onError(Throwable e) {
-                Log.e(LOG_TAG, "Couldn't start form store", e);
-                System.exit(0);
-            }
-
-            @Override
-            public void onNext(SCStoreStatusEvent event) {
-                Log.w(LOG_TAG, "Shouldn't return onNext");
-            }
-        });
     }
 
     private void initializeLocationStore() {
@@ -576,24 +575,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         locationStoreConfig.setVersion("1");
         LocationStore locationStore = new LocationStore(context, locationStoreConfig);
         this.stores.put(locationStore.getStoreId(), locationStore);
-        // block until store is started
-        locationStore.start().toBlocking().subscribe(new Subscriber<SCStoreStatusEvent>() {
-            @Override
-            public void onCompleted() {
-                Log.d(LOG_TAG, "Registered location store with SCDataService.");
-            }
-
-            @Override
-            public void onError(Throwable e) {
-                Log.e(LOG_TAG, "Couldn't start form store", e);
-                System.exit(0);
-            }
-
-            @Override
-            public void onNext(SCStoreStatusEvent event) {
-                Log.w(LOG_TAG, "Shouldn't return onNext");
-            }
-        });
     }
 
     private void addDefaultStoreImpls() {

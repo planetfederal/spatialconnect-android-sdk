@@ -18,6 +18,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.db.GeoPackageContents;
@@ -51,6 +52,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -63,7 +65,7 @@ import rx.functions.Func1;
 /**
  * Provides capabilities for interacting with a single GeoPackage.
  */
-public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCDataStoreLifeCycle, SCRasterStore {
+public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCDataStoreLifeCycle, SCRasterStore, ISyncableStore {
 
     private static final String LOG_TAG = GeoPackageStore.class.getSimpleName();
     public static final String TYPE = "gpkg";
@@ -131,36 +133,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
     }
 
     public void addLayer(String layer, Map<String,String>  fields) {
-        if (!layerExists(layer)) {
-            Log.d(LOG_TAG, "Adding layer " + layer + " to " + gpkg.getName());
-            final String tableName = layer;
-            Cursor cursor = null;
-            BriteDatabase.Transaction tx = gpkg.newTransaction();
-            try {
-                //first create the table
-                cursor = gpkg.query(createTableSQL(layer, fields));
-                cursor.moveToFirst(); // force query to execute
-                //then add it to gpkg contents and any other tables (gpkg metadata, etc)
-                cursor = gpkg.query(addToGpkgContentsSQL(tableName));
-                cursor.moveToFirst(); // force query to execute
-                //add a geometry column to the table b/c we want to store where the package was submitted (if needed)
-                //also, note the this function will add the geometry to gpkg geometry_columns, which has a foreign key
-                //constraint on the table name, which requires the table to exist in gpkg contents
-                cursor = gpkg.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
-                cursor.moveToFirst(); // force query to execute
-                tx.markSuccessful();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                Log.w(LOG_TAG, "Could not create table b/c " + ex.getMessage());
-            }
-            finally {
-                tx.end();
-                gpkg.refreshFeatureSources();
-                if (cursor != null) {
-                    cursor.close();
-                }
-            }
-        }
+        gpkg.addFeatureSource(layer, fields);
     }
 
     public void deleteLayer(String layer) {
@@ -303,6 +276,9 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                             subscriber.onNext(scSpatialFeature);
                             subscriber.onCompleted();
                         }
+
+                        final SpatialConnect sc = SpatialConnect.getInstance();
+                        storeEdited.onNext(scSpatialFeature);
                     }
                     catch (SQLException ex) {
                         subscriber.onError(new Throwable("Could not create the the feature.", ex));
@@ -509,20 +485,31 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
         return null;
     }
 
-    private boolean layerExists(String layer) {
-        boolean layerExists = false;
-        String table = layer;
-        Cursor cursor = gpkg.query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",new String[]{table});
-        try {
-            if (cursor.moveToFirst()) {
-                layerExists = cursor.getInt(0) > 0;
+    @Override
+    public Observable<SCSpatialFeature> unSent() {
+        return gpkg.unSent().map(new Func1<SCSpatialFeature, SCSpatialFeature>() {
+            @Override
+            public SCSpatialFeature call(SCSpatialFeature feature) {
+                feature.setStoreId(storeId);
+                return feature;
             }
-        }
-        finally {
-            cursor.close();
-        }
+        });
+    }
 
-        return  layerExists;
+    @Override
+    public void updateAuditTable(SCSpatialFeature scSpatialFeature) {
+        SCGpkgFeatureSource fs = gpkg.getFeatureSourceByName(scSpatialFeature.getLayerId());
+        fs.updateAuditTable(scSpatialFeature);
+    }
+
+    @Override
+    public String syncChannel() {
+        return String.format(Locale.US, "/store/%s", this.storeId);
+    }
+
+    @Override
+    public Map<String, Object> generateSendPayload(SCSpatialFeature scSpatialFeature) {
+        return null;
     }
 
     private String createRtreeSubQuery(SCGpkgFeatureSource source, SCBoundingBox bbox) {
@@ -561,30 +548,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
         Log.d(LOG_TAG, "Size of file in bytes " + dbFile.length());
     }
 
-    private String createTableSQL(String layer, Map<String, String> typeDefs){
-        final String tableName = layer;
-        StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName);
-        sb.append(" (id INTEGER PRIMARY KEY AUTOINCREMENT ");
-        for (String key : typeDefs.keySet()) {
-            sb.append(", ");
-            sb.append(key);
-            sb.append(" ");
-            sb.append(typeDefs.get(key));
-        }
-        sb.append(")");
-
-        return sb.toString();
-    }
-
-    private String addToGpkgContentsSQL(String tableName) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("INSERT OR REPLACE INTO gpkg_contents ")
-                .append("(table_name,data_type,identifier,description,min_x,min_y,max_x,max_y,srs_id) ")
-                .append(String.format("VALUES ('%s','features','%s','%s',0,0,0,0,4326)", tableName, tableName, tableName));
-        return sb.toString();
-    }
-
-    public Func1<SqlBrite.Query, Observable<SCSpatialFeature>> getFeatureMapper(final SCGpkgFeatureSource source) {
+    private Func1<SqlBrite.Query, Observable<SCSpatialFeature>> getFeatureMapper(final SCGpkgFeatureSource source) {
         return new Func1<SqlBrite.Query, Observable<SCSpatialFeature>>() {
 
             @Override
@@ -652,4 +616,5 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
     public static String getVersionKey() {
         return String.format("%s.%s",TYPE, VERSION);
     }
+
 }

@@ -19,16 +19,11 @@ package com.boundlessgeo.spatialconnect.stores;
 import android.content.Context;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
-import com.boundlessgeo.spatialconnect.schema.SCCommand;
-import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
-import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.style.SCStyle;
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 
 import rx.Observable;
-import rx.functions.Action0;
 import rx.subjects.BehaviorSubject;
 
 public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDataStoreLifeCycle {
@@ -101,38 +95,6 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
     }
 
     @Override
-    public Observable<SCSpatialFeature> create(final SCSpatialFeature scSpatialFeature) {
-
-        return super.create(scSpatialFeature).doOnCompleted(new Action0() {
-            @Override
-            public void call() {
-                Integer formId;
-                SCFormConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
-                formId = Integer.parseInt(c.getId());
-                if (formId != null) {
-                    HashMap<String, Object> formSubmissionPayload = new HashMap<>();
-                    formSubmissionPayload.put("form_id", formId);
-                    formSubmissionPayload.put("feature", scSpatialFeature);
-                    try {
-                        String payload = SCObjectMapper.getMapper().writeValueAsString(formSubmissionPayload);
-                        SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
-                            .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
-                            .setPayload(payload)
-                            .build();
-                        SpatialConnect.getInstance().getBackendService()
-                            .publishExactlyOnce("/store/form", message);
-                    } catch (JsonProcessingException e) {
-                        Log.e(LOG_TAG, "Could not parse form submission payload");
-                    }
-                }
-                else {
-                    Log.w(LOG_TAG, "Did not send feature b/c form id was null");
-                }
-            }
-        });
-    }
-
-    @Override
     public Observable<Void> delete(final SCKeyTuple keyTuple) {
         return Observable.empty();
     }
@@ -142,8 +104,25 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
     }
 
     @Override
-    public Observable<SCSpatialFeature> queryById(final SCKeyTuple keyTuple) {
-        return Observable.empty();
+    public String syncChannel() {
+        return "/store/form";
+    }
+
+    @Override
+    public Map<String, Object> generateSendPayload(SCSpatialFeature scSpatialFeature) {
+        HashMap<String, Object> formSubmissionPayload = new HashMap<>();
+        Integer formId;
+        SCFormConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
+        formId = Integer.parseInt(c.getId());
+        if (formId != null) {
+            formSubmissionPayload.put("form_id", formId);
+            formSubmissionPayload.put("feature", scSpatialFeature);
+        }
+        else {
+            Log.w(LOG_TAG, "Did not send feature b/c form id was null");
+        }
+
+        return formSubmissionPayload;
     }
 
     private void addLayerByConfig(SCFormConfig config) {
@@ -159,6 +138,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         }
 
         if (fieldsValid) {
+            Log.e(LOG_TAG, "adding layer by config");
             storeForms.put(config.getFormKey(), config);
             formIds.put(config.getFormKey(), config.getId());
             final String tableName = config.getFormKey();

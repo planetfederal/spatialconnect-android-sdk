@@ -25,6 +25,7 @@ import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
+import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
@@ -34,7 +35,9 @@ import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
 import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
+import com.boundlessgeo.spatialconnect.stores.ISyncableStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.Timestamp;
 
 import java.io.IOException;
@@ -44,6 +47,8 @@ import java.util.Map;
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
+import rx.functions.Func2;
+import rx.schedulers.Schedulers;
 import rx.subjects.BehaviorSubject;
 
 import static java.util.Arrays.asList;
@@ -58,6 +63,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private Context context;
     private MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
+    private Observable<Boolean> syncStores;
     private SCAuthService authService;
     private SCConfigService configService;
     private SCSensorService sensorService;
@@ -256,6 +262,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         sensorService = (SCSensorService) deps.get(SCSensorService.serviceId());
         dataService = (SCDataService) deps.get(SCDataService.serviceId());
         listenForNetworkConnection();
+        setupSyncListener();
         return super.start(deps);
     }
 
@@ -530,6 +537,95 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         String release = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
         return "Android SDK: " + sdkVersion + " (" + release + ")";
+    }
+
+    private void setupSyncListener() {
+        //sync all stores when connection to broker is true
+        connectedToBroker
+                .filter(new Func1<Boolean, Boolean>() {
+                    @Override
+                    public Boolean call(Boolean sync) {
+                        return sync;
+                    }
+                })
+                .subscribe(new Action1<Boolean>() {
+                    @Override
+                    public void call(Boolean sync) {
+                        Log.d(LOG_TAG, "sync all stores");
+                        syncStores();
+                    }
+                });
+
+        Observable<SCSpatialFeature>  syncableStores = dataService.getISyncableStores()
+                .flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
+                    @Override
+                    public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
+                        return scDataStore.storeEdited;
+                    }
+                });
+        //syncs a single store when edits are found
+        syncStores = Observable.combineLatest(syncableStores, connectedToBroker, new Func2<SCSpatialFeature, Boolean, Boolean>() {
+            @Override
+            public Boolean call(final SCSpatialFeature feature, Boolean connected) {
+                Log.d(LOG_TAG, "should sync single store");
+                final ISyncableStore store = (ISyncableStore)dataService.getStoreByIdentifier(feature.getStoreId());
+                syncStore(store);
+                return connected;
+            }
+        });
+
+        connectedToBroker.mergeWith(syncStores)
+                .subscribeOn(Schedulers.newThread())
+                .subscribe();
+    }
+
+    private void syncStores() {
+
+        dataService.getISyncableStores()
+                .subscribe(new Action1<SCDataStore>() {
+                    @Override
+                    public void call(SCDataStore scDataStore) {
+                        syncStore((ISyncableStore) scDataStore);
+                    }
+                });
+    }
+
+    private void syncStore(final ISyncableStore store) {
+        store.unSent().subscribe(new Action1<SCSpatialFeature>() {
+            @Override
+            public void call(final SCSpatialFeature scSpatialFeature) {
+                sensorService.isConnected()
+                        .filter(new Func1<Boolean, Boolean>() {
+                            @Override
+                            public Boolean call(Boolean connected) {
+                                return connected;
+                            }
+                        })
+                        .subscribe(new Action1<Boolean>() {
+                            @Override
+                            public void call(Boolean connected) {
+                                send(scSpatialFeature);
+                            }
+                        });
+            }
+        });
+    }
+
+    private void send(final SCSpatialFeature feature) {
+        final ISyncableStore store = (ISyncableStore)dataService.getStoreByIdentifier(feature.getStoreId());
+        Map<String, Object> featurePayload = store.generateSendPayload(feature);
+        String payload;
+        try {
+            payload = SCObjectMapper.getMapper().writeValueAsString(featurePayload);
+            SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
+                    .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
+                    .setPayload(payload)
+                    .build();
+            publishExactlyOnce(store.syncChannel(), message);
+            store.updateAuditTable(feature);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
     }
 
     public static String serviceId() {
