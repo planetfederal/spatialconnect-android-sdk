@@ -50,7 +50,6 @@ import rx.functions.Func1;
 import rx.functions.Func2;
 import rx.schedulers.Schedulers;
 import rx.subjects.BehaviorSubject;
-import rx.subjects.PublishSubject;
 
 import static java.util.Arrays.asList;
 
@@ -83,8 +82,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
      * Endpoint running SpatialConnect Server
      */
     public String backendUri = null;
-
-    public PublishSubject<Boolean> storeEdited = PublishSubject.create();
 
     public SCBackendService(final Context context) {
         this.context = context;
@@ -624,14 +621,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
                     .setPayload(payload)
                     .build();
-
-//            publishReplyTo(store.syncChannel(), message)
-//                    .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
-//                        @Override
-//                        public void call(SCMessageOuterClass.SCMessage scMessage) {
-//                            store.updateAuditTable(feature);
-//                        }
-//                    });
+            publishExactlyOnce(store.syncChannel(), message);
             store.updateAuditTable(feature);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
