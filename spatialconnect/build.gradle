@@ -4,7 +4,7 @@ apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'maven'
 
 group 'com.boundlessgeo.spatialconnect'
-version '0.9'
+version '0.10'
 
 ext {
     bintrayRepo = 'mobile'
