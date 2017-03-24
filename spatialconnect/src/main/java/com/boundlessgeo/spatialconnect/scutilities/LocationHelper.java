@@ -26,11 +26,9 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 
-import com.google.android.gms.maps.CameraUpdate;
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.model.LatLng;
 
 import rx.Observable;
 import rx.subjects.AsyncSubject;
@@ -48,15 +46,14 @@ import rx.subjects.PublishSubject;
  *
  * http://developer.android.com/training/location/retrieve-current.html
  */
-public class LocationHelper implements ActivityCompat.OnRequestPermissionsResultCallback,
-        GoogleMap.OnMyLocationButtonClickListener, LocationListener {
+public class LocationHelper implements LocationListener {
 
     private Context context;
     private GoogleMap map;
     private LocationManager locationManager;
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1; // 1 is an arbitrary request code
     private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 10; // 10 meters
-    private static final long MIN_TIME_BETWEEN_UPDATES = 1000; // every second
+    private static final long MIN_TIME_BETWEEN_UPDATES = 15000; // every second
     private static final PublishSubject<Location> LOCATION_SUBJECT = PublishSubject.create();
     private static final AsyncSubject<Boolean> PERMISSION_SUBJECT = AsyncSubject.create();
 
@@ -81,26 +78,6 @@ public class LocationHelper implements ActivityCompat.OnRequestPermissionsResult
      */
     public Observable<Location> getLocation() {
         return LOCATION_SUBJECT.asObservable();
-    }
-
-    /**
-     * Called after the user clicks the "my location" button on the map.  We attempt to get the current last known
-     * location, then attempt to zoom to the user's location.
-     *
-     * @return true if we got the last known location and false otherwise
-     */
-    @Override
-    public boolean onMyLocationButtonClick() {
-        Location lastLocation = this.getLastKnownLocation();
-        if (lastLocation != null) {
-            CameraUpdate cu = CameraUpdateFactory.newLatLngZoom(
-                    new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()),
-                    14
-            );
-            map.animateCamera(cu);
-            return true;
-        }
-        return false;
     }
 
     /**
@@ -129,43 +106,13 @@ public class LocationHelper implements ActivityCompat.OnRequestPermissionsResult
     }
 
     /**
-     * If the permissions request was successful, we trigger a call to onMyLocationButtonClick() to simulate the
-     * request as if it occurred with the permission already granted.
-     *
-     * @param requestCode
-     * @param permissions
-     * @param grantResults
-     */
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION: {
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                    // permission was granted, so now simulate the button being clicked with the permission granted
-                    this.onMyLocationButtonClick();
-                    PERMISSION_SUBJECT.onNext(true);
-                    PERMISSION_SUBJECT.onCompleted();
-                } else {
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
-                    PERMISSION_SUBJECT.onNext(false);
-                    PERMISSION_SUBJECT.onCompleted();
-                }
-                return;
-            }
-        }
-    }
-
-    /**
      * Convenience method to check if the GPS
      * @return boolean
      */
     public boolean isGPSPermissionGranted() {
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) &&
-         ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
-                 == PackageManager.PERMISSION_GRANTED;
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED;
     }
 
     /**
@@ -176,6 +123,7 @@ public class LocationHelper implements ActivityCompat.OnRequestPermissionsResult
     @Override
     public void onLocationChanged(Location location) {
         LOCATION_SUBJECT.onNext(location);
+        Log.e("LocationHelper", "location changed...");
     }
 
     @Override
@@ -193,16 +141,22 @@ public class LocationHelper implements ActivityCompat.OnRequestPermissionsResult
     /**
      * Enable GPS updates.  (start listening)
      */
-    public void enableGps(int accuracy, float distance ) {
+    public void enableGps(int accuracy, float distance) {
 
+        Log.e("LocationHelper", "enableGps");
         Criteria criteria = new Criteria();
         criteria.setAccuracy(accuracy);
         String provider = locationManager.getBestProvider(criteria, true);
 
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
         locationManager.requestLocationUpdates(
                 provider,
                 MIN_TIME_BETWEEN_UPDATES,
-                distance,
+                0,
                 this
         );
     }

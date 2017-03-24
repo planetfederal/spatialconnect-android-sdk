@@ -47,8 +47,6 @@ import java.util.Map;
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
-import rx.functions.Func2;
-import rx.schedulers.Schedulers;
 import rx.subjects.BehaviorSubject;
 
 import static java.util.Arrays.asList;
@@ -410,11 +408,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void registerDevice() {
+
         SpatialConnect sc = SpatialConnect.getInstance();
         SCMessageOuterClass.SCMessage registerConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
                 .setAction(SCCommand.CONFIG_REGISTER_DEVICE.value())
                 .setPayload(
-                        String.format("{\"identifier\": \"%s\", \"device_info\": \"%s\", \"mobile\": \"%s\"}",
+                        String.format("{\"identifier\": \"%s\", \"device_info\": %s, \"name\": \"mobile:%s\"}",
                                 sc.getDeviceIdentifier(),
                                 getAndroidVersion(),
                                 authService.getUsername())
@@ -536,10 +535,20 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private String getAndroidVersion() {
         String release = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
-        return "Android SDK: " + sdkVersion + " (" + release + ")";
+        String os =  String.format("Android SDK: %s (%s)", sdkVersion, release);
+        return String.format("{\"os\": \"%s\"}", os);
     }
 
     private void setupSyncListener() {
+
+//        Observable<Boolean> connected = connectedToBroker
+//                .filter(new Func1<Boolean, Boolean>() {
+//                    @Override
+//                    public Boolean call(Boolean sync) {
+//                        return sync;
+//                    }
+//                });
+
         //sync all stores when connection to broker is true
         connectedToBroker
                 .filter(new Func1<Boolean, Boolean>() {
@@ -551,8 +560,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 .subscribe(new Action1<Boolean>() {
                     @Override
                     public void call(Boolean sync) {
-                        Log.d(LOG_TAG, "sync all stores");
-                        syncStores();
+                        Log.e("Sync", "sync all stores");
+                        //syncStores();
                     }
                 });
 
@@ -563,20 +572,36 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         return scDataStore.storeEdited;
                     }
                 });
-        //syncs a single store when edits are found
-        syncStores = Observable.combineLatest(syncableStores, connectedToBroker, new Func2<SCSpatialFeature, Boolean, Boolean>() {
-            @Override
-            public Boolean call(final SCSpatialFeature feature, Boolean connected) {
-                Log.d(LOG_TAG, "should sync single store");
-                final ISyncableStore store = (ISyncableStore)dataService.getStoreByIdentifier(feature.getStoreId());
-                syncStore(store);
-                return connected;
-            }
-        });
 
-        connectedToBroker.mergeWith(syncStores)
-                .subscribeOn(Schedulers.newThread())
-                .subscribe();
+        syncableStores.subscribe(
+                new Action1<SCSpatialFeature>() {
+                     @Override
+                     public void call(SCSpatialFeature feature) {
+                         Log.e("Sync", "should sync single store for storeId: " + feature.getStoreId());
+                         final ISyncableStore store = (ISyncableStore) dataService.getStoreByIdentifier(feature.getStoreId());
+                         syncStore(store);
+                     }
+                 }, new Action1<Throwable>() {
+                    @Override
+                    public void call(Throwable t) {
+                        String errorMsg = (t != null) ? t.getLocalizedMessage() : "no message available";
+
+                    }
+                });
+
+//                //syncs a single store when edits are found
+//                syncStores = Observable.combineLatest(syncableStores, connectedToBroker, new Func2<SCSpatialFeature, Boolean, Boolean>() {
+//                    @Override
+//                    public Boolean call(final SCSpatialFeature feature, Boolean connected) {
+//                        Log.d(LOG_TAG, "should sync single store");
+//                        final ISyncableStore store = (ISyncableStore) dataService.getStoreByIdentifier(feature.getStoreId());
+//                        syncStore(store);
+//                        return connected;
+//                    }
+//                });
+//
+//        connectedToBroker.mergeWith(syncStores)
+//                .subscribeOn(Schedulers.newThread());
     }
 
     private void syncStores() {
@@ -617,11 +642,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         String payload;
         try {
             payload = SCObjectMapper.getMapper().writeValueAsString(featurePayload);
+            Log.e(LOG_TAG, "featuer send payload: " + payload);
             SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
                     .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
                     .setPayload(payload)
                     .build();
-            publishExactlyOnce(store.syncChannel(), message);
+//            publishExactlyOnce(store.syncChannel(), message);
             store.updateAuditTable(feature);
         } catch (JsonProcessingException e) {
             e.printStackTrace();

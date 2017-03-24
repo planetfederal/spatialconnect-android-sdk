@@ -20,7 +20,7 @@ ext {
     siteUrl = 'https://github.com/boundlessgeo/spatialconnect-android-sdk'
     gitUrl = 'https://github.com/boundlessgeo/spatialconnect-android-sdk.git'
 
-    libraryVersion = '0.8'
+    libraryVersion = '0.10'
 
     developerId = 'boundlessgeo'
     developerName = 'Mobile Boundless'
@@ -41,7 +41,7 @@ android {
         minSdkVersion 16
         targetSdkVersion 25
         versionCode 1
-        versionName "0.8.1"
+        versionName "0.10"
         multiDexEnabled = true
         // http://developer.android.com/tools/building/multidex.html#testing
         testInstrumentationRunner "com.boundlessgeo.spatialconnect.test.MultiDexAndroidJUnitRunner"

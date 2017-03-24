@@ -7,6 +7,10 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.squareup.sqlbrite.BriteDatabase;
+import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.PrecisionModel;
+import com.vividsolutions.jts.io.ParseException;
+import com.vividsolutions.jts.io.WKBReader;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,6 +23,9 @@ import java.util.Map;
 
 import rx.Observable;
 import rx.Subscriber;
+
+import static com.boundlessgeo.spatialconnect.db.GeoPackage.RECEIVED_AUDIT_COL;
+import static com.boundlessgeo.spatialconnect.db.GeoPackage.SENT_AUDIT_COL;
 
 /**
  * This class is responsible for reading and writing {@link SCSpatialFeature}s to a feature table in a GeoPackage.
@@ -181,18 +188,40 @@ public class SCGpkgFeatureSource {
         Map<String,Object> properties = new HashMap<>();
         String data;
         String columnName;
-        for (int i=0; i<rs.getColumnCount(); i++) {
-            data = rs.getString(i);
-            columnName = rs.getColumnName(i);
-            properties.put(columnName, data);
+
+        //check if blob and create SCGeometry
+        SCSpatialFeature spatialFeature = null;
+        SCGeometry geometry = null;
+        // deserialize byte[] to Geometry object
+        byte[] wkb = SCSqliteHelper.getBlob(rs, getGeomColumnName());
+        if (wkb != null && wkb.length > 0) {
+            try {
+                geometry = new SCGeometry(
+                        new WKBReader(new GeometryFactory(new PrecisionModel(), 0)).read(wkb));
+                spatialFeature = geometry;
+            } catch (ParseException e) {
+                e.printStackTrace();
+                Log.e(LOG_TAG, "e: " + e.getMessage());
+                spatialFeature = new SCSpatialFeature();
+            }
+        } else {
+            spatialFeature = new SCSpatialFeature();
         }
 
-        SCSpatialFeature  spatialFeature = new SCSpatialFeature();
+        for (int i=0; i<rs.getColumnCount(); i++) {
+            columnName = rs.getColumnName(i);
+            if (!columnName.equalsIgnoreCase(geomColumnName)) {
+                data = rs.getString(i);
+                properties.put(columnName, data);
+            }
+        }
+
         spatialFeature.setId(properties.get(primaryKeyName).toString());
         spatialFeature.setLayerId(tableName);
 
-        properties.remove(geomColumnName);
         properties.remove(primaryKeyName);
+        properties.remove(RECEIVED_AUDIT_COL);
+        properties.remove(SENT_AUDIT_COL);
         spatialFeature.setProperties(properties);
 
         return spatialFeature;
@@ -200,7 +229,10 @@ public class SCGpkgFeatureSource {
 
     public Observable<SCSpatialFeature> unSent() {
 
-        final String sql = String.format("SELECT * FROM %s WHERE sent IS NULL", auditName);
+        final String sql = String.format("SELECT %s FROM %s WHERE sent IS NULL",
+                gpkg.getSelectColumnsString(this),
+                auditName);
+
         return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
             @Override
             public void call(final Subscriber subscriber) {
@@ -215,6 +247,7 @@ public class SCGpkgFeatureSource {
             String query =
                     String.format(Locale.US, "UPDATE %s SET sent = datetime() WHERE %s = %s",
                             this.auditName, this.primaryKeyName, feature.getId());
+            Log.e(LOG_TAG, "query: " + query);
             cursor = gpkg.query(query);
             cursor.moveToFirst();
         } catch (Exception ex) {

@@ -333,13 +333,16 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     }
 
     public Observable<SCDataStore> getISyncableStores() {
-        return Observable.from(stores.values())
-                .filter(new Func1<SCDataStore, Boolean>() {
-                    @Override
-                    public Boolean call(final SCDataStore store) {
-                        return (store instanceof ISyncableStore);
-                    }
-                })
+        List<SCDataStore> syncableStores = new ArrayList<>();
+        for (String key : stores.keySet()) {
+            SCDataStore scDataStore = stores.get(key);
+            if (scDataStore.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING) &&
+                    scDataStore instanceof ISyncableStore && scDataStore.getName().equalsIgnoreCase(LocationStore.NAME)) {
+                syncableStores.add(scDataStore);
+            }
+        }
+
+        return Observable.from(syncableStores)
                 .filter(new Func1<SCDataStore, Boolean>() {
                     @Override
                     public Boolean call(final SCDataStore store) {
@@ -575,6 +578,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         locationStoreConfig.setVersion("1");
         LocationStore locationStore = new LocationStore(context, locationStoreConfig);
         this.stores.put(locationStore.getStoreId(), locationStore);
+        Log.e(LOG_TAG, "Location store added to stores...");
     }
 
     private void addDefaultStoreImpls() {

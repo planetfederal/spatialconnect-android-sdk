@@ -232,6 +232,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
         final String tableName = scSpatialFeature.getKey().getLayerId();
         final SCGpkgFeatureSource featureSource = gpkg.getFeatureSourceByName(tableName);
         if (featureSource == null) {
+            Log.e("Sync", "featureSource null");
             return Observable.error(
                     new SCDataStoreException(
                             SCDataStoreException.ExceptionType.LAYER_NOT_FOUND,

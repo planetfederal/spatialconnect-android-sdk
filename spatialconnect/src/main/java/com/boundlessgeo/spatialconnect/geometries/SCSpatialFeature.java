@@ -130,4 +130,16 @@ public class SCSpatialFeature
         }
         return null;
     }
+
+    public  Map<String, Object> toMap() {
+        Map<String, Object> map = null;
+        try {
+            map = SCObjectMapper.getMapper().convertValue(this,  Map.class);
+            map.put("type", "Feature");
+        } catch (Exception e) {
+            String s = "";
+        }
+
+        return map;
+    }
 }
