@@ -337,7 +337,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         for (String key : stores.keySet()) {
             SCDataStore scDataStore = stores.get(key);
             if (scDataStore.getStatus().equals(SCDataStoreStatus.SC_DATA_STORE_RUNNING) &&
-                    scDataStore instanceof ISyncableStore && scDataStore.getName().equalsIgnoreCase(LocationStore.NAME)) {
+                    scDataStore instanceof ISyncableStore) {
                 syncableStores.add(scDataStore);
             }
         }
