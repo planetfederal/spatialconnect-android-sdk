@@ -22,6 +22,7 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
+import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCPoint;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -39,6 +40,7 @@ import java.util.Map;
 import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Action1;
+import rx.functions.Func1;
 
 public class LocationStore extends GeoPackageStore implements ISCSpatialStore, SCDataStoreLifeCycle {
 
@@ -75,9 +77,7 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
                 typeDefs.put(ACCURACY_COLUMN,"TEXT");
                 typeDefs.put(TIMESTAMP_COLUMN,"INTEGER");
                 addLayer(LAST_KNOWN_TABLE, typeDefs);
-
                 listenForLocationUpdate();
-                Log.e(LOG_TAG, "Location store started");
             }
         });
     }
@@ -112,18 +112,36 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
         return scSpatialFeature.toMap();
     }
 
+    //only send the last unSent location record
+    @Override
+    public Observable<SCSpatialFeature> unSent() {
+        Observable<SCSpatialFeature> unSentFeatures = gpkg.unSent().takeLast(1);
+        return unSentFeatures.map(new Func1<SCSpatialFeature, SCSpatialFeature>() {
+            @Override
+            public SCSpatialFeature call(SCSpatialFeature feature) {
+                feature.setStoreId(storeId);
+                return feature;
+            }
+        });
+    }
+
+    @Override
+    public void updateAuditTable(SCSpatialFeature scSpatialFeature) {
+        SCGpkgFeatureSource fs = gpkg.getFeatureSourceByName(scSpatialFeature.getLayerId());
+        //since only taking last location, update all others before scSpatialFeature
+        fs.updateAuditTableFromLatest(scSpatialFeature);
+    }
+
     private void listenForLocationUpdate() {
-        SpatialConnect sc = SpatialConnect.getInstance();
-        SCSensorService ss = sc.getSensorService();
+        final SpatialConnect sc = SpatialConnect.getInstance();
+        final SCSensorService ss = sc.getSensorService();
         ss.isConnected().subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {
-                    SpatialConnect sc = SpatialConnect.getInstance();
-                    if (sc.getSensorService() != null) {
-                        SpatialConnect.getInstance()
-                                .getSensorService()
-                                .getLastKnownLocation()
+//                    SpatialConnect sc = SpatialConnect.getInstance();
+                    if (ss != null) {
+                        ss.getLastKnownLocation()
                                 .subscribe(new Action1<Location>() {
                                     @Override
                                     public void call(Location location) {

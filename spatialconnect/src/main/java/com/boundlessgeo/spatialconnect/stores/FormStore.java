@@ -138,7 +138,6 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         }
 
         if (fieldsValid) {
-            Log.e(LOG_TAG, "adding layer by config");
             storeForms.put(config.getFormKey(), config);
             formIds.put(config.getFormKey(), config.getId());
             final String tableName = config.getFormKey();

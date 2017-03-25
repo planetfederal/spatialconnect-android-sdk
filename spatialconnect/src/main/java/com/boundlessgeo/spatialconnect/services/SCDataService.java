@@ -578,7 +578,6 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         locationStoreConfig.setVersion("1");
         LocationStore locationStore = new LocationStore(context, locationStoreConfig);
         this.stores.put(locationStore.getStoreId(), locationStore);
-        Log.e(LOG_TAG, "Location store added to stores...");
     }
 
     private void addDefaultStoreImpls() {

@@ -163,7 +163,6 @@ public class GeoPackage {
     }
 
     private void initializeAuditTables() {
-        Log.e(LOG_TAG, "initializeAuditTables . . . ");
         Cursor cursor = null;
         try {
             for (SCGpkgFeatureSource source : getFeatureSources().values()) {
@@ -296,7 +295,6 @@ public class GeoPackage {
         }
         sql.append("); END;");
 
-        Log.e(LOG_TAG, "trigger sql: " + sql.toString());
         return sql.toString();
     }
 
@@ -653,7 +651,6 @@ public class GeoPackage {
     }
 
     public void addFeatureSource(String layer, Map<String,String>  fields) {
-        Log.e(LOG_TAG, "addFeatureSource . . .");
         if (!layerExists(layer)) {
             Log.d(LOG_TAG, "Adding layer " + layer + " to " + getName());
             final String tableName = layer;

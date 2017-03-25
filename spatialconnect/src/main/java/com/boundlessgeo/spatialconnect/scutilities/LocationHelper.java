@@ -26,7 +26,6 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.util.Log;
 
 import com.google.android.gms.maps.GoogleMap;
 
@@ -53,7 +52,7 @@ public class LocationHelper implements LocationListener {
     private LocationManager locationManager;
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1; // 1 is an arbitrary request code
     private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 10; // 10 meters
-    private static final long MIN_TIME_BETWEEN_UPDATES = 15000; // every second
+    private static final long MIN_TIME_BETWEEN_UPDATES = 15000; // every 15 seconds
     private static final PublishSubject<Location> LOCATION_SUBJECT = PublishSubject.create();
     private static final AsyncSubject<Boolean> PERMISSION_SUBJECT = AsyncSubject.create();
 
@@ -123,7 +122,6 @@ public class LocationHelper implements LocationListener {
     @Override
     public void onLocationChanged(Location location) {
         LOCATION_SUBJECT.onNext(location);
-        Log.e("LocationHelper", "location changed...");
     }
 
     @Override
@@ -142,8 +140,6 @@ public class LocationHelper implements LocationListener {
      * Enable GPS updates.  (start listening)
      */
     public void enableGps(int accuracy, float distance) {
-
-        Log.e("LocationHelper", "enableGps");
         Criteria criteria = new Criteria();
         criteria.setAccuracy(accuracy);
         String provider = locationManager.getBestProvider(criteria, true);

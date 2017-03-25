@@ -247,7 +247,24 @@ public class SCGpkgFeatureSource {
             String query =
                     String.format(Locale.US, "UPDATE %s SET sent = datetime() WHERE %s = %s",
                             this.auditName, this.primaryKeyName, feature.getId());
-            Log.e(LOG_TAG, "query: " + query);
+            cursor = gpkg.query(query);
+            cursor.moveToFirst();
+        } catch (Exception ex) {
+            Log.e(LOG_TAG, "Something went wrong updating audit table: " + ex.getMessage());
+        }
+        finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    public void updateAuditTableFromLatest(SCSpatialFeature feature) {
+        Cursor cursor = null;
+        try {
+            String query =
+                    String.format(Locale.US, "UPDATE %s SET sent = datetime() WHERE %s <= %s AND SENT IS NULL",
+                            this.auditName, this.primaryKeyName, feature.getId());
             cursor = gpkg.query(query);
             cursor.moveToFirst();
         } catch (Exception ex) {
@@ -268,8 +285,10 @@ public class SCGpkgFeatureSource {
                 subscriber.onNext(f);
 
             }
+            subscriber.onCompleted();
         } catch (Exception e) {
             Log.e(LOG_TAG, "Something went wrong trying to get unsynced features: " + e.getMessage());
+            subscriber.onError(e);
         } finally {
             layerCursor.close();
         }

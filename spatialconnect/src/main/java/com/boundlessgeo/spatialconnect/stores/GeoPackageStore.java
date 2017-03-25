@@ -18,7 +18,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.db.GeoPackageContents;
@@ -278,7 +277,6 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                             subscriber.onCompleted();
                         }
 
-                        final SpatialConnect sc = SpatialConnect.getInstance();
                         storeEdited.onNext(scSpatialFeature);
                     }
                     catch (SQLException ex) {

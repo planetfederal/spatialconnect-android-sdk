@@ -47,6 +47,7 @@ import java.util.Map;
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
+import rx.schedulers.Schedulers;
 import rx.subjects.BehaviorSubject;
 
 import static java.util.Arrays.asList;
@@ -260,7 +261,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         sensorService = (SCSensorService) deps.get(SCSensorService.serviceId());
         dataService = (SCDataService) deps.get(SCDataService.serviceId());
         listenForNetworkConnection();
-        setupSyncListener();
         return super.start(deps);
     }
 
@@ -340,6 +340,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         @Override
                         public void call(Boolean aBoolean) {
                             registerAndFetchConfig();
+                            listenForSyncEvents();
                         }
                     });
             }
@@ -423,7 +424,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void setupSubscriptions() {
-
         notifications = listenOnTopic("/notify")
                 .mergeWith(listenOnTopic(String.format("/notify/%s", SpatialConnect.getInstance().getDeviceIdentifier())))
                 .map(new Func1<SCMessageOuterClass.SCMessage, SCNotification>() {
@@ -539,69 +539,42 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         return String.format("{\"os\": \"%s\"}", os);
     }
 
-    private void setupSyncListener() {
+    private void listenForSyncEvents() {
 
-//        Observable<Boolean> connected = connectedToBroker
-//                .filter(new Func1<Boolean, Boolean>() {
-//                    @Override
-//                    public Boolean call(Boolean sync) {
-//                        return sync;
-//                    }
-//                });
+        Observable<SCDataStore> syncableStores = dataService.getISCSpatialStores();
 
-        //sync all stores when connection to broker is true
-        connectedToBroker
-                .filter(new Func1<Boolean, Boolean>() {
-                    @Override
-                    public Boolean call(Boolean sync) {
-                        return sync;
-                    }
-                })
-                .subscribe(new Action1<Boolean>() {
-                    @Override
-                    public void call(Boolean sync) {
-                        Log.e("Sync", "sync all stores");
-                        //syncStores();
-                    }
-                });
-
-        Observable<SCSpatialFeature>  syncableStores = dataService.getISyncableStores()
+        Observable<Boolean>  storeEditSync = syncableStores
                 .flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
                     @Override
                     public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
                         return scDataStore.storeEdited;
                     }
-                });
-
-        syncableStores.subscribe(
-                new Action1<SCSpatialFeature>() {
-                     @Override
-                     public void call(SCSpatialFeature feature) {
-                         Log.e("Sync", "should sync single store for storeId: " + feature.getStoreId());
-                         final ISyncableStore store = (ISyncableStore) dataService.getStoreByIdentifier(feature.getStoreId());
-                         syncStore(store);
-                     }
-                 }, new Action1<Throwable>() {
+                }).map(new Func1<SCSpatialFeature, Boolean>() {
                     @Override
-                    public void call(Throwable t) {
-                        String errorMsg = (t != null) ? t.getLocalizedMessage() : "no message available";
-
+                    public Boolean call(SCSpatialFeature feature) {
+                        final ISyncableStore store = (ISyncableStore) dataService.getStoreByIdentifier(feature.getStoreId());
+                        syncStore(store);
+                        return null;
                     }
                 });
 
-//                //syncs a single store when edits are found
-//                syncStores = Observable.combineLatest(syncableStores, connectedToBroker, new Func2<SCSpatialFeature, Boolean, Boolean>() {
-//                    @Override
-//                    public Boolean call(final SCSpatialFeature feature, Boolean connected) {
-//                        Log.d(LOG_TAG, "should sync single store");
-//                        final ISyncableStore store = (ISyncableStore) dataService.getStoreByIdentifier(feature.getStoreId());
-//                        syncStore(store);
-//                        return connected;
-//                    }
-//                });
-//
-//        connectedToBroker.mergeWith(syncStores)
-//                .subscribeOn(Schedulers.newThread());
+        //sync all stores when connection to broker is true
+        Observable<Boolean> onlineSync = connectedToBroker
+                .filter(new Func1<Boolean, Boolean>() {
+                    @Override
+                    public Boolean call(Boolean sync) {
+                        return sync;
+                    }
+                }).map(new Func1<Boolean, Boolean>() {
+                    @Override
+                    public Boolean call(Boolean sync) {
+                        syncStores();
+                        return sync;
+                    }
+                });
+
+        Observable<Boolean> sync = onlineSync.mergeWith(storeEditSync);
+        sync.subscribeOn(Schedulers.newThread()).subscribe();
     }
 
     private void syncStores() {
@@ -619,39 +592,34 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         store.unSent().subscribe(new Action1<SCSpatialFeature>() {
             @Override
             public void call(final SCSpatialFeature scSpatialFeature) {
-                sensorService.isConnected()
-                        .filter(new Func1<Boolean, Boolean>() {
-                            @Override
-                            public Boolean call(Boolean connected) {
-                                return connected;
-                            }
-                        })
-                        .subscribe(new Action1<Boolean>() {
-                            @Override
-                            public void call(Boolean connected) {
-                                send(scSpatialFeature);
-                            }
-                        });
+                send(scSpatialFeature);
             }
         });
     }
 
     private void send(final SCSpatialFeature feature) {
-        final ISyncableStore store = (ISyncableStore)dataService.getStoreByIdentifier(feature.getStoreId());
-        Map<String, Object> featurePayload = store.generateSendPayload(feature);
-        String payload;
-        try {
-            payload = SCObjectMapper.getMapper().writeValueAsString(featurePayload);
-            Log.e(LOG_TAG, "featuer send payload: " + payload);
-            SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
-                    .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
-                    .setPayload(payload)
-                    .build();
-//            publishExactlyOnce(store.syncChannel(), message);
-            store.updateAuditTable(feature);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-        }
+        connectedToBroker.take(1).flatMap(new Func1<Boolean, Observable<Boolean>>() {
+            @Override
+            public Observable<Boolean> call(Boolean connected) {
+                if (connected) {
+                    final ISyncableStore store = (ISyncableStore)dataService.getStoreByIdentifier(feature.getStoreId());
+                    Map<String, Object> featurePayload = store.generateSendPayload(feature);
+                    String payload;
+                    try {
+                        payload = SCObjectMapper.getMapper().writeValueAsString(featurePayload);
+                        SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
+                                .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
+                                .setPayload(payload)
+                                .build();
+                        publishExactlyOnce(store.syncChannel(), message);
+                        store.updateAuditTable(feature);
+                    } catch (JsonProcessingException e) {
+                        e.printStackTrace();
+                    }
+                }
+                return Observable.empty();
+            }
+        }).subscribe();
     }
 
     public static String serviceId() {
