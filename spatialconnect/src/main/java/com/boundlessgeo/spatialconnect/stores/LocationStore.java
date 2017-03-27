@@ -139,7 +139,6 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
             @Override
             public void call(Boolean connected) {
                 if (connected) {
-//                    SpatialConnect sc = SpatialConnect.getInstance();
                     if (ss != null) {
                         ss.getLastKnownLocation()
                                 .subscribe(new Action1<Location>() {
