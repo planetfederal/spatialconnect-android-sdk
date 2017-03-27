@@ -541,7 +541,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private void listenForSyncEvents() {
 
-        Observable<SCDataStore> syncableStores = dataService.getISCSpatialStores();
+        Observable<SCDataStore> syncableStores = dataService.getISyncableStores();
 
         Observable<Boolean>  storeEditSync = syncableStores
                 .flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
