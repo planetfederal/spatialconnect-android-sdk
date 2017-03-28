@@ -22,7 +22,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.annotation.JsonRawValue;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryCollection;
 import com.vividsolutions.jts.geom.LineString;
@@ -116,7 +115,8 @@ import java.io.File;
     }
     */
 
-    @JsonIgnore()
+
+    @JsonProperty("geometry")
     public Geometry getGeometry()
     {
         return geometry;
@@ -126,8 +126,7 @@ import java.io.File;
         this.geometry = geometry;
     }
 
-    @JsonRawValue()
-    @JsonProperty("geometry")
+    @JsonIgnore()
     public String getGeometryGeoJson()
     {
         return geometryGeoJson;
@@ -173,5 +172,4 @@ import java.io.File;
             Log.e(TAG, "Error in toGeoJsonFile()", ex);
         }
     }
-
 }

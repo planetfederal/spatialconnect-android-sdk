@@ -22,14 +22,13 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
+import com.boundlessgeo.spatialconnect.db.SCGpkgFeatureSource;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCPoint;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.style.SCStyle;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -41,6 +40,7 @@ import java.util.Map;
 import rx.Observable;
 import rx.functions.Action0;
 import rx.functions.Action1;
+import rx.functions.Func1;
 
 public class LocationStore extends GeoPackageStore implements ISCSpatialStore, SCDataStoreLifeCycle {
 
@@ -77,7 +77,6 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
                 typeDefs.put(ACCURACY_COLUMN,"TEXT");
                 typeDefs.put(TIMESTAMP_COLUMN,"INTEGER");
                 addLayer(LAST_KNOWN_TABLE, typeDefs);
-
                 listenForLocationUpdate();
             }
         });
@@ -110,25 +109,38 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
 
     @Override
     public Map<String, Object> generateSendPayload(SCSpatialFeature scSpatialFeature) {
-        SCPoint point = (SCPoint) scSpatialFeature;
-        Map<String, Object> payload =
-                SCObjectMapper.getMapper().convertValue(point, new TypeReference<Object>() {});
+        return scSpatialFeature.toMap();
+    }
 
-        return payload;
+    //only send the last unSent location record
+    @Override
+    public Observable<SCSpatialFeature> unSent() {
+        Observable<SCSpatialFeature> unSentFeatures = gpkg.unSent().takeLast(1);
+        return unSentFeatures.map(new Func1<SCSpatialFeature, SCSpatialFeature>() {
+            @Override
+            public SCSpatialFeature call(SCSpatialFeature feature) {
+                feature.setStoreId(storeId);
+                return feature;
+            }
+        });
+    }
+
+    @Override
+    public void updateAuditTable(SCSpatialFeature scSpatialFeature) {
+        SCGpkgFeatureSource fs = gpkg.getFeatureSourceByName(scSpatialFeature.getLayerId());
+        //since only taking last location, update all others before scSpatialFeature
+        fs.updateAuditTableFromLatest(scSpatialFeature);
     }
 
     private void listenForLocationUpdate() {
-        SpatialConnect sc = SpatialConnect.getInstance();
-        SCSensorService ss = sc.getSensorService();
+        final SpatialConnect sc = SpatialConnect.getInstance();
+        final SCSensorService ss = sc.getSensorService();
         ss.isConnected().subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
                 if (connected) {
-                    SpatialConnect sc = SpatialConnect.getInstance();
-                    if (sc.getSensorService() != null) {
-                        SpatialConnect.getInstance()
-                                .getSensorService()
-                                .getLastKnownLocation()
+                    if (ss != null) {
+                        ss.getLastKnownLocation()
                                 .subscribe(new Action1<Location>() {
                                     @Override
                                     public void call(Location location) {
@@ -141,12 +153,12 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
                                                 )
                                         );
                                         SCGeometry scFeatureLocationUpdate = new SCGeometry(point);
+                                        scFeatureLocationUpdate.setStoreId(getStoreId());
                                         scFeatureLocationUpdate.setLayerId(LAST_KNOWN_TABLE);
                                         scFeatureLocationUpdate.getProperties().put(TIMESTAMP_COLUMN, System.currentTimeMillis());
                                         scFeatureLocationUpdate.getProperties().put(ACCURACY_COLUMN, "GPS");
 
-                                        LocationStore locationStore = SpatialConnect.getInstance().getDataService().getLocationStore();
-                                        locationStore.create(scFeatureLocationUpdate).subscribe();
+                                        create(scFeatureLocationUpdate).subscribe();
                                     }
                                 });
                     }

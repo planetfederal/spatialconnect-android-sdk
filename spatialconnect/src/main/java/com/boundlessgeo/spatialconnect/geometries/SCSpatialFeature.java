@@ -15,6 +15,8 @@
 package com.boundlessgeo.spatialconnect.geometries;
 
 
+import android.util.Log;
+
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
@@ -31,6 +33,7 @@ public class SCSpatialFeature
     /**
      * For a GeoPackage, the ID will follow the convention storeId.featureTableName.idOfRow
      */
+    private static final String LOG_TAG = SCSpatialFeature.class.getSimpleName();
     protected String storeId;
     protected String layerId;
     protected String id;
@@ -126,8 +129,20 @@ public class SCSpatialFeature
             return SCObjectMapper.getMapper().writeValueAsString(this);
         }
         catch (JsonProcessingException e) {
-            e.printStackTrace();
+            Log.e(LOG_TAG, "error converting to json: " + e.getMessage());
         }
         return null;
+    }
+
+    public  Map<String, Object> toMap() {
+        Map<String, Object> map = null;
+        try {
+            map = SCObjectMapper.getMapper().convertValue(this,  Map.class);
+            map.put("type", "Feature");
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "error converting to map: " + e.getMessage());
+        }
+
+        return map;
     }
 }
