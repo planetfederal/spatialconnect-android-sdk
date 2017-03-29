@@ -90,14 +90,14 @@ dependencies {
     compile 'com.android.support:appcompat-v7:25.1.0'
     compile 'com.google.android.gms:play-services-maps:10.0.1'
     compile 'com.android.support:multidex:1.0.0'
-    compile "com.bedatadriven:jackson-datatype-jts:2.2"
+    compile 'com.bedatadriven:jackson-datatype-jts:2.2'
     compile 'io.reactivex:rxandroid:1.1.0'
     compile 'io.reactivex:rxjava:1.1.0'
     compile 'commons-io:commons-io:2.4'
     compile 'com.squareup.okhttp3:okhttp:3.3.1'
     compile 'com.google.protobuf:protobuf-java:3.0.0'
     compile 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.1.0'
-    compile ('org.eclipse.paho:org.eclipse.paho.android.service:1.1.0') {
+    compile('org.eclipse.paho:org.eclipse.paho.android.service:1.1.0') {
         exclude module: 'support-v4'
     }
     compile 'com.github.rtoshiro.securesharedpreferences:securesharedpreferences:1.2.0'
@@ -108,11 +108,11 @@ dependencies {
     }
     compile 'com.auth0:java-jwt:2.2.1'
     compile 'com.google.firebase:firebase-messaging:10.0.1'
-
     // testing dependencies
     androidTestCompile 'junit:junit:4.12'
     androidTestCompile 'com.android.support.test:runner:0.5'
     androidTestCompile 'com.android.support.test:rules:0.5'
+    compile files('libs/LyrsProtos-v.0.1.jar')
 }
 
 task sourcesJar(type: Jar) {

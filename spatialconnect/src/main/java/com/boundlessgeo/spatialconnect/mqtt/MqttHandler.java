@@ -17,10 +17,10 @@ package com.boundlessgeo.spatialconnect.mqtt;
 import android.content.Context;
 import android.util.Log;
 
+import com.boundlessgeo.lyrs.protobuf.LyrsProtos;
 import com.boundlessgeo.spatialconnect.R;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
-import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
 import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
 
@@ -184,7 +184,7 @@ public class MqttHandler implements MqttCallbackExtended {
      * @param message SCMessage to send as payload
      * @param qos     quality of service (0, 1, 2)
      */
-    public void publish(final String topic, final SCMessageOuterClass.SCMessage message, final int qos) {
+    public void publish(final String topic, final LyrsProtos.ConnectMessage message, final int qos) {
         clientConnected.subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
@@ -213,9 +213,9 @@ public class MqttHandler implements MqttCallbackExtended {
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
         Log.d(LOG_TAG, "received message on topic " + topic);
-        SCMessageOuterClass.SCMessage scMessage = SCMessageOuterClass.SCMessage.parseFrom(message.getPayload());
-        Log.d(LOG_TAG, "message payload: " + scMessage.getPayload());
-        SCTuple scTuple = new SCTuple(topic, scMessage);
+        LyrsProtos.ConnectMessage connectMessage = LyrsProtos.ConnectMessage.parseFrom(message.getPayload());
+        Log.d(LOG_TAG, "message payload: " + connectMessage.getPayload());
+        SCTuple scTuple = new SCTuple(topic, connectMessage);
         scMessageSubject.onNext(scTuple);
     }
 

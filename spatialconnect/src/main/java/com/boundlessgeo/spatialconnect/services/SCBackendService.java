@@ -19,6 +19,7 @@ import android.content.Context;
 import android.os.Build;
 import android.util.Log;
 
+import com.boundlessgeo.lyrs.protobuf.LyrsProtos;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.cloudMessaging.CloudMessagingService;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
@@ -30,7 +31,6 @@ import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
 import com.boundlessgeo.spatialconnect.schema.SCCommand;
-import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
@@ -51,7 +51,6 @@ import rx.schedulers.Schedulers;
 import rx.subjects.BehaviorSubject;
 
 import static java.util.Arrays.asList;
-
 /**
  * SCBackendService handles any communication with backend SpatialConnect services.
  */
@@ -117,15 +116,14 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     /**
      * Publishes an SCMessage to the SpatialConnect Server
      * @param topic topic MQTT destination topic
-     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
+     * @param message msg {@link LyrsProtos.ConnectMessage} to be sent
      */
-    public void publish(String topic, SCMessageOuterClass.SCMessage message) {
-        SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
-        scMessagebuilder.setAction(message.getAction())
+    public void publish(String topic, LyrsProtos.ConnectMessage message) {
+        LyrsProtos.ConnectMessage.Builder scMessagebuilder =  LyrsProtos.ConnectMessage.newBuilder();
+        scMessagebuilder.setCommand(message.getCommand())
                 .setPayload(message.getPayload())
-                .setReplyTo(message.getReplyTo())
-                .setJwt(getJwt())
-                .setTime(getTimestamp());
+                .setTo(message.getTo())
+                .setJwt(getJwt());
 
         mqttHandler.publish(topic, scMessagebuilder.build(), QoS.EXACTLY_ONCE.value());
     }
@@ -133,15 +131,14 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     /**
      * Publishes an SCMessage to the SpatialConnect Server with At Most Once Delivery QoS 0
      * @param topic topic MQTT destination topic
-     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
+     * @param message msg {@link LyrsProtos.ConnectMessage} to be sent
      */
-    public void publishAtMostOnce(String topic, SCMessageOuterClass.SCMessage message) {
-        SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
-        scMessagebuilder.setAction(message.getAction())
+    public void publishAtMostOnce(String topic, LyrsProtos.ConnectMessage message) {
+        LyrsProtos.ConnectMessage.Builder scMessagebuilder =  LyrsProtos.ConnectMessage.newBuilder();
+        scMessagebuilder.setCommand(message.getCommand())
                 .setPayload(message.getPayload())
-                .setReplyTo(message.getReplyTo())
-                .setJwt(getJwt())
-                .setTime(getTimestamp());
+                .setTo(message.getTo())
+                .setJwt(getJwt());
 
         mqttHandler.publish(topic, scMessagebuilder.build(), QoS.AT_MOST_ONCE.value());
     }
@@ -149,33 +146,31 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     /**
      * Publishes an SCMessage to the SpatialConnect Server with At Least Once Delivery QoS 1
      * @param topic topic MQTT destination topic
-     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
+     * @param message msg {@link LyrsProtos.ConnectMessage} to be sent
      */
-    public void publishAtLeastOnce(String topic, SCMessageOuterClass.SCMessage message) {
-        SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
-        scMessagebuilder.setAction(message.getAction())
+    public void publishAtLeastOnce(String topic, LyrsProtos.ConnectMessage message) {
+        LyrsProtos.ConnectMessage.Builder connectMessagebuilder =  LyrsProtos.ConnectMessage.newBuilder();
+        connectMessagebuilder.setCommand(message.getCommand())
                 .setPayload(message.getPayload())
-                .setReplyTo(message.getReplyTo())
-                .setJwt(getJwt())
-                .setTime(getTimestamp());
+                .setTo(message.getTo())
+                .setJwt(getJwt());
 
-        mqttHandler.publish(topic, scMessagebuilder.build(), QoS.AT_LEAST_ONCE.value());
+        mqttHandler.publish(topic, connectMessagebuilder.build(), QoS.AT_LEAST_ONCE.value());
     }
 
     /**
      * Publishes an SCMessage to the SpatialConnect Server with Exactly Once Delivery QoS 2
      * @param topic topic MQTT destination topic
-     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
+     * @param message msg {@link LyrsProtos.ConnectMessage} to be sent
      */
-    public void publishExactlyOnce(String topic, SCMessageOuterClass.SCMessage message) {
-        SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
-        scMessagebuilder.setAction(message.getAction())
+    public void publishExactlyOnce(String topic, LyrsProtos.ConnectMessage message) {
+        LyrsProtos.ConnectMessage.Builder connectMessagebuilder =  LyrsProtos.ConnectMessage.newBuilder();
+        connectMessagebuilder.setCommand(message.getCommand())
                 .setPayload(message.getPayload())
-                .setReplyTo(message.getReplyTo())
-                .setJwt(getJwt())
-                .setTime(getTimestamp());
+                .setTo(message.getTo())
+                .setJwt(getJwt());
 
-        mqttHandler.publish(topic, scMessagebuilder.build(), QoS.EXACTLY_ONCE.value());
+        mqttHandler.publish(topic, connectMessagebuilder.build(), QoS.EXACTLY_ONCE.value());
     }
 
     /**
@@ -183,35 +178,34 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
      * reply with the server.
      *
      * @param topic topic MQTT destination topic
-     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
-     * @return Observable of the {@link SCMessageOuterClass.SCMessage} filtered by the correlation id
+     * @param message msg {@link LyrsProtos.ConnectMessage} to be sent
+     * @return Observable of the {@link LyrsProtos.ConnectMessage} filtered by the correlation id
      */
-    public Observable<SCMessageOuterClass.SCMessage> publishReplyTo(
+    public Observable<LyrsProtos.ConnectMessage> publishReplyTo(
             String topic,
-            final SCMessageOuterClass.SCMessage message) {
+            final LyrsProtos.ConnectMessage message) {
 
         // set the correlation id and replyTo topic
         int correlationId = (int) System.currentTimeMillis();
-        final SCMessageOuterClass.SCMessage newMessage = SCMessageOuterClass.SCMessage.newBuilder()
-                .setAction(message.getAction())
+        final LyrsProtos.ConnectMessage newMessage = LyrsProtos.ConnectMessage.newBuilder()
+                .setCommand(message.getCommand())
                 .setPayload(message.getPayload())
-                .setReplyTo(MqttHandler.REPLY_TO_TOPIC)
+                .setTo(MqttHandler.REPLY_TO_TOPIC)
                 .setCorrelationId(correlationId)
                 .setJwt(getJwt())
-                .setTime(getTimestamp())
                 .build();
         mqttHandler.publish(topic, newMessage, QoS.EXACTLY_ONCE.value());
         // filter message from reply to topic on the correlation id
         return listenOnTopic(MqttHandler.REPLY_TO_TOPIC)
-                .filter(new Func1<SCMessageOuterClass.SCMessage, Boolean>() {
+                .filter(new Func1<LyrsProtos.ConnectMessage, Boolean>() {
                     @Override
-                    public Boolean call(SCMessageOuterClass.SCMessage incomingMessage) {
+                    public Boolean call(LyrsProtos.ConnectMessage incomingMessage) {
                         return incomingMessage.getCorrelationId() == newMessage.getCorrelationId();
                     }
                 })
-                .flatMap(new Func1<SCMessageOuterClass.SCMessage, Observable<SCMessageOuterClass.SCMessage>>() {
+                .flatMap(new Func1<LyrsProtos.ConnectMessage, Observable<LyrsProtos.ConnectMessage>>() {
                     @Override
-                    public Observable<SCMessageOuterClass.SCMessage> call(SCMessageOuterClass.SCMessage message) {
+                    public Observable<LyrsProtos.ConnectMessage> call(LyrsProtos.ConnectMessage message) {
                         return Observable.just(message);
                     }
                 });
@@ -221,10 +215,10 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
      * Subscribes to an MQTT Topic
      *
      * @param topic topic to listen on
-     * @return Observable of {@link SCMessageOuterClass.SCMessage}
+     * @return Observable of {@link LyrsProtos.ConnectMessage}
      * filtered to only receive messages from the stated topic
      */
-    public Observable<SCMessageOuterClass.SCMessage> listenOnTopic(final String topic) {
+    public Observable<LyrsProtos.ConnectMessage> listenOnTopic(final String topic) {
         mqttHandler.subscribe(topic, QoS.EXACTLY_ONCE.value());
         // filter messages for this topic
         return mqttHandler.getMulticast()
@@ -234,10 +228,10 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         return tuple.first().toString().equalsIgnoreCase(topic);
                     }
                 })
-                .map(new Func1<SCTuple, SCMessageOuterClass.SCMessage>() {
+                .map(new Func1<SCTuple, LyrsProtos.ConnectMessage>() {
                     @Override
-                    public SCMessageOuterClass.SCMessage call(SCTuple scTuple) {
-                        return (SCMessageOuterClass.SCMessage) scTuple.second();
+                    public LyrsProtos.ConnectMessage call(SCTuple scTuple) {
+                        return (LyrsProtos.ConnectMessage) scTuple.second();
                     }
                 });
     }
@@ -372,7 +366,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         });
     }
 
-    private void loadConfig(SCMessageOuterClass.SCMessage message) {
+    private void loadConfig(LyrsProtos.ConnectMessage message) {
         try {
             SCConfig config = SCObjectMapper.getMapper().readValue(
                     message.getPayload(),
@@ -396,23 +390,23 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private void fetchConfig() {
         Log.d(LOG_TAG, "fetching config from mqtt config topic");
-        SCMessageOuterClass.SCMessage getConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
-                .setAction(SCCommand.CONFIG_FULL.value()).build();
+
+        LyrsProtos.ConnectMessage getConfigMsg = LyrsProtos.ConnectMessage.newBuilder()
+                .setCommand(SCCommand.CONFIG_FULL.value()).build();
 
         publishReplyTo("/config", getConfigMsg)
-                .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
+                .subscribe(new Action1<LyrsProtos.ConnectMessage>() {
                     @Override
-                    public void call(SCMessageOuterClass.SCMessage scMessage) {
+                    public void call(LyrsProtos.ConnectMessage scMessage) {
                         loadConfig(scMessage);
                     }
                 });
     }
 
     private void registerDevice() {
-
         SpatialConnect sc = SpatialConnect.getInstance();
-        SCMessageOuterClass.SCMessage registerConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
-                .setAction(SCCommand.CONFIG_REGISTER_DEVICE.value())
+        LyrsProtos.ConnectMessage registerConfigMsg = LyrsProtos.ConnectMessage.newBuilder()
+                .setCommand(SCCommand.CONFIG_REGISTER_DEVICE.value())
                 .setPayload(
                         String.format("{\"identifier\": \"%s\", \"device_info\": %s, \"name\": \"mobile:%s\"}",
                                 sc.getDeviceIdentifier(),
@@ -426,26 +420,26 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private void setupSubscriptions() {
         notifications = listenOnTopic("/notify")
                 .mergeWith(listenOnTopic(String.format("/notify/%s", SpatialConnect.getInstance().getDeviceIdentifier())))
-                .map(new Func1<SCMessageOuterClass.SCMessage, SCNotification>() {
+                .map(new Func1<LyrsProtos.ConnectMessage, SCNotification>() {
                     @Override
-                    public SCNotification call(SCMessageOuterClass.SCMessage scMessage) {
+                    public SCNotification call(LyrsProtos.ConnectMessage scMessage) {
                         return new SCNotification(scMessage);
                     }
                 })
                 .mergeWith(CloudMessagingService.getMulticast());
 
-        listenOnTopic("/config/update").subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
+        listenOnTopic("/config/update").subscribe(new Action1<LyrsProtos.ConnectMessage>() {
             @Override
-            public void call(SCMessageOuterClass.SCMessage scMessage) {
-                Log.d("FormStore","action: " + scMessage.getAction());
+            public void call(LyrsProtos.ConnectMessage connectMessage) {
+                Log.d("FormStore","action: " + connectMessage.getCommand());
                 SCConfig cachedConfig = configService.getCachedConfig();
                 JsonUtilities utilities = new JsonUtilities();
 
-                switch (SCCommand.fromActionNumber(scMessage.getAction())) {
+                switch (SCCommand.fromActionNumber(connectMessage.getCommand())) {
                     case CONFIG_ADD_STORE:
                         try {
                             SCStoreConfig config = SCObjectMapper.getMapper()
-                                    .readValue(scMessage.getPayload(), SCStoreConfig.class);
+                                    .readValue(connectMessage.getPayload(), SCStoreConfig.class);
                             cachedConfig.addStore(config);
                             dataService.registerAndStartStoreByConfig(config);
 
@@ -456,7 +450,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     case CONFIG_UPDATE_STORE:
                         try {
                             SCStoreConfig config = SCObjectMapper.getMapper()
-                                    .readValue(scMessage.getPayload(), SCStoreConfig.class);
+                                    .readValue(connectMessage.getPayload(), SCStoreConfig.class);
                             cachedConfig.updateStore(config);
                             dataService.updateStoresByConfig(config);
                         } catch (IOException e) {
@@ -464,7 +458,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         }
                         break;
                     case CONFIG_REMOVE_STORE:
-                        String storeId = utilities.getMapFromJson(scMessage.getPayload())
+                        String storeId = utilities.getMapFromJson(connectMessage.getPayload())
                                 .get("id").toString();
                         SCDataStore store = dataService.getStoreByIdentifier(storeId);
                         cachedConfig.removeStore(storeId);
@@ -473,7 +467,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     case CONFIG_ADD_FORM:
                         try {
                             SCFormConfig config = SCObjectMapper.getMapper()
-                                    .readValue(scMessage.getPayload(), SCFormConfig.class);
+                                    .readValue(connectMessage.getPayload(), SCFormConfig.class);
                             cachedConfig.addForm(config);
                             dataService.getFormStore().registerFormByConfig(config);
                         } catch (IOException e) {
@@ -483,7 +477,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     case CONFIG_UPDATE_FORM:
                         try {
                             SCFormConfig config = SCObjectMapper.getMapper()
-                                    .readValue(scMessage.getPayload(), SCFormConfig.class);
+                                    .readValue(connectMessage.getPayload(), SCFormConfig.class);
                             cachedConfig.updateForm(config);
                             dataService.getFormStore().updateFormByConfig(config);
                         } catch (IOException e) {
@@ -491,7 +485,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         }
                         break;
                     case CONFIG_REMOVE_FORM:
-                        String formKey = utilities.getMapFromJson(scMessage.getPayload())
+                        String formKey = utilities.getMapFromJson(connectMessage.getPayload())
                                 .get("form_key").toString();
                         cachedConfig.removeForm(formKey);
                         dataService.getFormStore().unregisterFormByKey(formKey);
@@ -506,9 +500,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private void registerForLocalNotifications() {
         notifications = listenOnTopic("/notify")
                 .mergeWith(listenOnTopic(String.format("/notify/%s", SpatialConnect.getInstance().getDeviceIdentifier())))
-                .map(new Func1<SCMessageOuterClass.SCMessage, SCNotification>() {
+                .map(new Func1<LyrsProtos.ConnectMessage, SCNotification>() {
                     @Override
-                    public SCNotification call(SCMessageOuterClass.SCMessage scMessage) {
+                    public SCNotification call(LyrsProtos.ConnectMessage scMessage) {
                         return new SCNotification(scMessage);
                     }
                 })
@@ -607,8 +601,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     String payload;
                     try {
                         payload = SCObjectMapper.getMapper().writeValueAsString(featurePayload);
-                        SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
-                                .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
+                        LyrsProtos.ConnectMessage message = LyrsProtos.ConnectMessage.newBuilder()
+                                .setCommand(SCCommand.DATASERVICE_CREATEFEATURE.value())
                                 .setPayload(payload)
                                 .build();
                         publishExactlyOnce(store.syncChannel(), message);
