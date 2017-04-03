@@ -657,14 +657,33 @@ public class GeoPackage {
             Cursor cursor = null;
             BriteDatabase.Transaction tx = newTransaction();
             try {
+
+                //separate geometry fields from non-geometry fields
+                HashMap<String,String>  nonGeometryFields = new HashMap<>();
+                HashMap<String,String>  geometryFields = new HashMap<>();
+
+                for (Map.Entry<String, String> entry : fields.entrySet()) {
+                    if (isGeometry(entry.getValue())) {
+                        geometryFields.put(entry.getKey(), entry.getValue());
+                    } else {
+                        nonGeometryFields.put(entry.getKey(), entry.getValue());
+                    }
+                }
                 //first create the table
-                cursor = db.query(createTableSQL(layer, fields));
+                cursor = db.query(createTableSQL(layer, nonGeometryFields));
                 cursor.moveToFirst(); // force query to execute
 
                 //then add it to gpkg contents and any other tables (gpkg metadata, etc)
                 cursor = db.query(addToGpkgContentsSQL(tableName));
                 cursor.moveToFirst(); // force query to execute
 
+                //add geometry columns
+                for (Map.Entry<String, String> geom : geometryFields.entrySet()) {
+                    cursor = db.query(String.format("SELECT AddGeometryColumn('%s', '%s', '%s', 4326)",
+                            tableName, geom.getKey(), geom.getValue()));
+                    cursor.moveToFirst(); // force query to execute
+                }
+                //TODO: do we want to add a default geom column still?
                 //add a geometry column to the table b/c we want to store where the package was submitted (if needed)
                 //also, note the this function will add the geometry to gpkg geometry_columns, which has a foreign key
                 //constraint on the table name, which requires the table to exist in gpkg contents
@@ -749,6 +768,20 @@ public class GeoPackage {
         }
 
         return  layerExists;
+    }
+
+    private boolean isGeometry(String type) {
+        if (type.equalsIgnoreCase("GEOMETRY")
+                || type.equalsIgnoreCase("POINT")
+                || type.equalsIgnoreCase("MULTIPOINT")
+                || type.equalsIgnoreCase("LINESTRING")
+                || type.equalsIgnoreCase("MULTILINESTRING")
+                || type.equalsIgnoreCase("POLYGON")
+                || type.equalsIgnoreCase("MULTIPOLYGON")) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override
