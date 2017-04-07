@@ -253,18 +253,8 @@ public class SCFormField {
                 return "INTEGER";
             case "select":
                 return "TEXT";
-            case "point":
-                return "POINT";
-            case "linestring":
-                return "LINESTRING";
-            case "polygon":
-                return "POLYGON";
-            case "multipoint":
-                return "MULTIPOINT";
-            case "multilinestring":
-                return "MULTILINESTRING";
-            case "multipolygon":
-                return "MULTIPOLYGON";
+            case "geometry":
+                return "GEOMETRY";
             default:
                 return "NULL";
         }

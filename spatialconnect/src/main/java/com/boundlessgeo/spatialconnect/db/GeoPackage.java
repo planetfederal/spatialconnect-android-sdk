@@ -89,7 +89,7 @@ public class GeoPackage {
             if (initializeSpatialMetadata() && validateGeoPackageSchema()) {
                 initializeFeatureSources();
                 getTileSources();
-                initializeAuditTables();
+                //initializeAuditTables();
                 isValid = true;
             }
         }
@@ -268,6 +268,18 @@ public class GeoPackage {
         return sb.toString();
     }
 
+    public String createGeometryTableSQL(String field, String layer){
+        final String layerIdColumn = String.format("%s_id", layer);
+        final String geomFeatureTable = String.format("%s_%s", layer, field);
+        final StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(geomFeatureTable);
+        sb.append(String.format(" (%s_id INTEGER PRIMARY KEY AUTOINCREMENT, ", field));
+        sb.append(String.format(" %s INTEGER , ", layerIdColumn));
+        sb.append(String.format("FOREIGN KEY(%s) REFERENCES %s(id) ", layerIdColumn, layer ));
+        sb.append(")");
+
+        return sb.toString();
+    }
+
     public String createAuditTableTriggersSQL(String layer, Map<String, String> typeDefs)  {
         //AFTER insert trigger
         StringBuilder sql = new StringBuilder();
@@ -295,6 +307,7 @@ public class GeoPackage {
         }
         sql.append("); END;");
 
+        Log.e(LOG_TAG, "query: " + sql.toString());
         return sql.toString();
     }
 
@@ -494,6 +507,43 @@ public class GeoPackage {
                                 source.addColumn(columnName, SCSqliteHelper.getString(cursor, "type"));
                             }
                         }
+
+                        //find tables that begin with tableName_ that represent the geometry properties
+                        cursor = db.query(
+                                // need to use String.format b/c you can't prepare PRAGMA queries:
+                                // http://stackoverflow.com/questions/2389813/cant-prepare-pragma-queries-on-android
+                                String.format("SELECT table_name FROM gpkg_contents where data_type = 'features' AND table_name LIKE %s_%", tableName)
+                        );
+                        if (cursor == null) {
+                            Log.e(LOG_TAG, "Something wrong with the locating gemoetry tables.");
+                            return Observable.empty();
+                        }
+                        source.addGeometryTables(SCSqliteHelper.getString(cursor, "table_name"));
+                        while (cursor.moveToNext()) {
+                            String tn = SCSqliteHelper.getString(cursor, "table_name");
+                            Cursor cursor2 = db.query(
+                                    // need to use String.format b/c you can't prepare PRAGMA queries:
+                                    // http://stackoverflow.com/questions/2389813/cant-prepare-pragma-queries-on-android
+                                    String.format("PRAGMA table_info(%s)", tn)
+                            );
+                            if (cursor2 == null) {
+                                Log.e(LOG_TAG, "Something wrong with the PRAGMA table_info query.");
+                                return Observable.empty();
+                            }
+                            // build a feature source from the table schema
+                            while (cursor2.moveToNext()) {
+                                String type = SCSqliteHelper.getString(cursor, "type");
+                                String columnName = SCSqliteHelper.getString(cursor, "name");
+                                if (type.equalsIgnoreCase("GEOMETRY")
+                                        || SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("POINT")
+                                        || SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("LINESTRING")
+                                        || SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("POLYGON")) {
+                                    source.addGeometryColumn(columnName, type);
+                                }
+
+                            }
+                        }
+
                         return Observable.just(source);
                     }
                 })
@@ -677,22 +727,76 @@ public class GeoPackage {
                 cursor = db.query(addToGpkgContentsSQL(tableName));
                 cursor.moveToFirst(); // force query to execute
 
-                //add geometry columns
-                for (Map.Entry<String, String> geom : geometryFields.entrySet()) {
-                    cursor = db.query(String.format("SELECT AddGeometryColumn('%s', '%s', '%s', 4326)",
-                            tableName, geom.getKey(), geom.getValue()));
-                    cursor.moveToFirst(); // force query to execute
-                }
-                //TODO: do we want to add a default geom column still?
-                //add a geometry column to the table b/c we want to store where the package was submitted (if needed)
-                //also, note the this function will add the geometry to gpkg geometry_columns, which has a foreign key
-                //constraint on the table name, which requires the table to exist in gpkg contents
+
+                // add generic geometry column to geometries table
                 cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
                 cursor.moveToFirst(); // force query to execute
 
+                //add geometry columns as feature tables
+                for (Map.Entry<String, String> geom : geometryFields.entrySet()) {
+                    final String geomFeatureTable = String.format("%s_%s", layer, geom.getKey());
+                    //first create the table
+                    cursor = db.query(createGeometryTableSQL(geom.getKey(), layer));
+                    cursor.moveToFirst(); // force query to execute
+
+                    //then add it to gpkg contents and any other tables (gpkg metadata, etc)
+                    cursor = db.query(addToGpkgContentsSQL(geomFeatureTable));
+                    cursor.moveToFirst(); // force query to execute
+
+                    cursor = db.query(String.format("SELECT AddGeometryColumn('%s', '%s', '%s', 4326)",
+                            geomFeatureTable, geom.getKey(), geom.getValue()));
+                    cursor.moveToFirst(); // force query to execute
+
+                    //create audit tables and add 2 columns
+                    Map<String,String>  auditFields = new HashMap<>();
+                    //auditFields.put(geom.getKey(), geom.getValue());
+                    auditFields.put(SENT_AUDIT_COL,"DATETIME DEFAULT NULL");
+                    auditFields.put(RECEIVED_AUDIT_COL,"DATETIME");
+                    cursor = db.query(createTableSQL(geomFeatureTable + "_audit", auditFields));
+                    cursor.moveToFirst();
+
+                    //then add audit table to gpkg contents
+                    cursor = db.query(addAuditTableToGpkgContentsSQL(geomFeatureTable + "_audit"));
+                    cursor.moveToFirst(); // force query to execute
+
+                    //add geom column to audit table
+                    cursor = db.query(String.format("SELECT AddGeometryColumn('%s', '%s', 'Geometry', 4326)", geomFeatureTable + "_audit",
+                            geom.getKey()));
+                    cursor.moveToFirst(); // force query to execute
+
+                    //create audit table trigger
+                    Map<String,String>  f = new HashMap<>();
+                    f.put(geom.getKey(), geom.getValue());
+                    cursor = db.query(createAuditTableTriggersSQL(geomFeatureTable, f));
+                    cursor.moveToFirst();
+                }
+
+//                //add table to store geometry
+//                if (geometryFields.size() > 0) {
+//                    String geomTable = String.format("%s_geometries", layer);
+//                    //first create the table
+//                    cursor = db.query(createGeometryTableSQL(geomTable));
+//                    cursor.moveToFirst(); // force query to execute
+//
+//                    //then add it to gpkg contents and any other tables (gpkg metadata, etc)
+//                    cursor = db.query(addToGpkgContentsSQL(tableName));
+//                    cursor.moveToFirst(); // force query to execute
+//
+//                    // add generic geometry column to geometries table
+//                    cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
+//                    cursor.moveToFirst(); // force query to execute
+//
+//                } else {
+//                    //add a geometry column to the table b/c we want to store where the package was submitted (if needed)
+//                    //also, note the this function will add the geometry to gpkg geometry_columns, which has a foreign key
+//                    //constraint on the table name, which requires the table to exist in gpkg contents
+//                    cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
+//                    cursor.moveToFirst(); // force query to execute
+//                }
+
                 //create audit tables and add 2 columns
                 Map<String,String>  auditFields = new HashMap<>();
-                auditFields.putAll(fields);
+                auditFields.putAll(nonGeometryFields);
                 auditFields.put(SENT_AUDIT_COL,"DATETIME DEFAULT NULL");
                 auditFields.put(RECEIVED_AUDIT_COL,"DATETIME");
                 cursor = db.query(createTableSQL(tableName + "_audit", auditFields));
@@ -708,7 +812,7 @@ public class GeoPackage {
 
                 //create audit table trigger
                 fields.put("geom", "Geometry");
-                cursor = db.query(createAuditTableTriggersSQL(layer, fields));
+                cursor = db.query(createAuditTableTriggersSQL(layer, nonGeometryFields));
                 cursor.moveToFirst();
 
                 tx.markSuccessful();
@@ -771,13 +875,7 @@ public class GeoPackage {
     }
 
     private boolean isGeometry(String type) {
-        if (type.equalsIgnoreCase("GEOMETRY")
-                || type.equalsIgnoreCase("POINT")
-                || type.equalsIgnoreCase("MULTIPOINT")
-                || type.equalsIgnoreCase("LINESTRING")
-                || type.equalsIgnoreCase("MULTILINESTRING")
-                || type.equalsIgnoreCase("POLYGON")
-                || type.equalsIgnoreCase("MULTIPOLYGON")) {
+        if (type.equalsIgnoreCase("GEOMETRY")) {
             return true;
         } else {
             return false;

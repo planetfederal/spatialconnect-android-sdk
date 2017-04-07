@@ -64,6 +64,8 @@ public class SCGpkgFeatureSource {
      * A map of the columns and their database types.
      */
     private Map<String, String> columns = new LinkedHashMap<>();
+    private Map<String, String> geomertycolumns = new LinkedHashMap<>();
+    private List<String> geomertyTables = new ArrayList<>();
 
     private BriteDatabase db;
 
@@ -88,6 +90,14 @@ public class SCGpkgFeatureSource {
         this.columns.put(columnName, columnType);
     }
 
+    public void addGeometryColumn(String columnName, String columnType) {
+        this.geomertycolumns.put(columnName, columnType);
+    }
+
+    public void addGeometryTables(String tableName) {
+        this.geomertyTables.add(tableName);
+    }
+
     public void setGeomColumnName(String geomColumnName) {
         this.geomColumnName = geomColumnName;
     }
@@ -106,6 +116,14 @@ public class SCGpkgFeatureSource {
 
     public String getGeomColumnName() {
         return geomColumnName;
+    }
+
+    public Map<String, String> getGeometryColumns() {
+        return geomertycolumns;
+    }
+
+    public List<String> getGeometryTables() {
+        return geomertyTables;
     }
 
     /**
