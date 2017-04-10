@@ -207,10 +207,8 @@ public class SCGpkgFeatureSource {
         return sb.toString();
     }
 
-    public SCSpatialFeature featureFromResultSet(Cursor rs) {
-        Map<String,Object> properties = new HashMap<>();
-        String data;
-        String columnName;
+    public SCSpatialFeature featureFromResultSet(final Cursor rs) {
+        final Map<String,Object> properties = new HashMap<>();
 
         //check if blob and create SCGeometry
         SCSpatialFeature spatialFeature = null;
@@ -231,18 +229,62 @@ public class SCGpkgFeatureSource {
             spatialFeature = new SCSpatialFeature();
         }
 
-        for (int i=0; i<rs.getColumnCount(); i++) {
-            columnName = rs.getColumnName(i);
-            if (!columnName.equalsIgnoreCase(geomColumnName)) {
-                data = rs.getString(i);
-                properties.put(columnName, data);
-            }
-        }
+        Observable<Map.Entry<String, String>> columns =
+                Observable.from(getColumns().entrySet())
+                        .mergeWith(Observable.from(getGeometryColumns().entrySet()));
 
-        spatialFeature.setId(properties.get(primaryKeyName).toString());
+        columns.subscribe(new Action1<Map.Entry<String, String>>() {
+            @Override
+            public void call(Map.Entry<String, String> column) {
+                if (column.getValue().equalsIgnoreCase("BLOB")
+                        || column.getValue().equalsIgnoreCase("GEOMETRY")
+                        || column.getValue().equalsIgnoreCase("POINT")
+                        || column.getValue().equalsIgnoreCase("LINESTRING")
+                        || column.getValue().equalsIgnoreCase("POLYGON")) {
+
+                    SCGeometry geometry = null;
+                    byte[] wkb = SCSqliteHelper.getBlob(rs, column.getKey());
+                    try {
+                        if (wkb != null && wkb.length > 0) {
+                            geometry = new SCGeometry(
+                                    new WKBReader(GEOMETRY_FACTORY).read(wkb)
+                            );
+                        }
+                    }
+                    catch (ParseException e) {
+                        Log.w(LOG_TAG, "Could not parse geometry");
+                    }
+
+                    properties.put(column.getKey(),geometry);
+                }
+                else if (column.getValue().startsWith("INTEGER")) {
+                    properties.put(
+                            column.getKey(),
+                            SCSqliteHelper.getInt(rs, column.getKey())
+                    );
+                }
+                else if (column.getValue().startsWith("REAL")) {
+                    properties.put(
+                            column.getKey(),
+                            SCSqliteHelper.getLong(rs, column.getKey())
+                    );
+                }
+                else if (column.getValue().startsWith("TEXT")) {
+                    properties.put(
+                            column.getKey(),
+                            SCSqliteHelper.getString(rs, column.getKey())
+                    );
+                }
+                else {
+                    Log.w(LOG_TAG, "The column type " + column.getValue() + " did not match any supported" +
+                            " column type so it wasn't added to the feature.");
+                }
+            }
+        });
+
+        spatialFeature.setId(String.valueOf(SCSqliteHelper.getInt(rs, primaryKeyName)));
         spatialFeature.setLayerId(tableName);
 
-        properties.remove(primaryKeyName);
         properties.remove(RECEIVED_AUDIT_COL);
         properties.remove(SENT_AUDIT_COL);
         spatialFeature.setProperties(properties);
@@ -279,7 +321,7 @@ public class SCGpkgFeatureSource {
 
             //add default form submission geometry
             sql.append(",");
-            sql.append(getGeomColumnName());
+            sql.append("ST_AsBinary(").append(getGeomColumnName()).append(") AS ").append(getGeomColumnName());
 
             //add other gemetry columsn
             if (geometrycolumns.size() > 0) {
@@ -542,7 +584,6 @@ public class SCGpkgFeatureSource {
             while (layerCursor.moveToNext()) {
                 SCSpatialFeature f = featureFromResultSet(layerCursor);
                 subscriber.onNext(f);
-
             }
             subscriber.onCompleted();
         } catch (Exception e) {
