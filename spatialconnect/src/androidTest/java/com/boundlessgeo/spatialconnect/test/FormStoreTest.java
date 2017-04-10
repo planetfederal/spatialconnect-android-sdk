@@ -2,10 +2,16 @@ package com.boundlessgeo.spatialconnect.test;
 
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
+import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
+import com.boundlessgeo.spatialconnect.geometries.SCPoint;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.PrecisionModel;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -107,6 +113,51 @@ public class FormStoreTest extends BaseTestCase {
         formStore.deleteFormLayer(TEST_LAYER_NAME);
         assertTrue("The Form store should have 0 form tables.",
                 0 == formStore.getGeoPackageContents().size());
+    }
+
+    @Test
+    public void testGeometryFormSubmission() {
+
+        FormStore formStore =  sc.getDataService().getFormStore();
+        SCSpatialFeature formSubmissionFeature = new SCSpatialFeature();
+
+        // create a feature representing a form submission
+        formSubmissionFeature.setLayerId("fire_hydrant");
+        formSubmissionFeature.setStoreId(FormStore.NAME);
+
+        HashMap properties = new HashMap<>();
+        Coordinate coordinate = new Coordinate(32,-32);
+        GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 0);
+        Geometry geometry = geometryFactory.createPoint(coordinate);
+        SCPoint point = new SCPoint(geometry);
+
+        properties.put("address","123 main street");
+        properties.put("need_sevice", point);
+        properties.put("service_range", point);
+        formSubmissionFeature.setProperties(properties);
+
+        TestSubscriber testSubscriber = new TestSubscriber();
+        formStore.create(formSubmissionFeature).subscribe(testSubscriber);
+
+        SCSpatialFeature submittedFeature = ((SCSpatialFeature)testSubscriber.getOnNextEvents().get(0));
+
+        assertTrue("The feature should have an id after it's created",
+                !((SCSpatialFeature)testSubscriber.getOnNextEvents().get(0)).getId().equals("123"));
+
+        //Query newly created feature
+        SCKeyTuple keys = new SCKeyTuple(FormStore.NAME, "fire_hydrant", submittedFeature.getId());
+        formStore.queryById(keys).subscribe(testSubscriber);
+        SCSpatialFeature feature = ((SCSpatialFeature)testSubscriber.getOnNextEvents().get(0));
+
+        assertTrue("Submitted need_sevice geometry property should be SCGeometry object",
+                feature.getProperties().get("need_sevice") instanceof SCGeometry);
+
+        assertTrue("Submitted service_range geometry property should be SCGeometry object",
+                feature.getProperties().get("service_range") instanceof SCGeometry);
+
+        assertTrue("Submitted geometry property should be SCGeometry object",
+                feature.getProperties().get("address").toString().equalsIgnoreCase("123 main street"));
+
     }
 
     private static void waitForStoreToStart(final String storeId) {
