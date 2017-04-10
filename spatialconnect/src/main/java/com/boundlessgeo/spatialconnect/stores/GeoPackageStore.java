@@ -215,7 +215,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
         else {
             String query;
             Map<String, String> geometrycolumns = featureSource.getGeometryColumns();
-            Map<String, String> nonGeometrycolumns = featureSource.getGeometryColumns();
+            Map<String, String> nonGeometrycolumns = featureSource.getColumns();
             List<String> geomTables = featureSource.getGeometryTables();
 
             if (geometrycolumns.size() > 0) {
@@ -223,7 +223,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                 sql.append("SELECT ");
                 boolean firstIteration = true;
                 if (nonGeometrycolumns.size() > 0) {
-                    for (Map.Entry<String, String> nonGeom : geometrycolumns.entrySet()) {
+                    for (Map.Entry<String, String> nonGeom : nonGeometrycolumns.entrySet()) {
                         if (firstIteration) {
                             sql.append(nonGeom.getKey());
                             firstIteration = false;
@@ -235,6 +235,15 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
 
                 }
 
+                //add id
+                sql.append(",");
+                sql.append(featureSource.getPrimaryKeyName());
+
+                //add default form submission geometry
+                sql.append(",");
+                sql.append(featureSource.getGeomColumnName());
+
+                //add other gemetry columsn
                 if (geometrycolumns.size() > 0) {
 
                     for (Map.Entry<String, String> geom : geometrycolumns.entrySet()) {
@@ -252,14 +261,16 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                 sql.append(tableName);
 
                 for (String gt : geomTables) {
+                //for (Map.Entry<String, String> gt : geomTables.entrySet()) {
                     sql.append(" LEFT JOIN ");
                     sql.append(gt);
                     sql.append(" ON ");
                     sql.append(String.format("%s.id", tableName));
                     sql.append(" = ");
-                    sql.append(String.format("%s.id", gt));
+                    sql.append(String.format("%s.%s_id", gt, tableName));
                 }
-                sql.append(String.format(" WHERE %s = %s LIMIT 1",
+                sql.append(String.format(" WHERE %s.%s = %s LIMIT 1",
+                        tableName,
                         featureSource.getPrimaryKeyName(),
                         keyTuple.getFeatureId())) ;
                 query = sql.toString();
@@ -272,6 +283,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                         keyTuple.getFeatureId()
                 );
             }
+            Log.e(LOG_TAG, "query: " + query);
             return gpkg.createQuery(
                     tableName,
                     query
@@ -334,18 +346,29 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                             for (Map.Entry<String, Object> entry : scSpatialFeature.getProperties().entrySet()) {
                                 if (entry.getValue() instanceof SCGeometry && ((SCGeometry)entry.getValue()).getGeometry() != null) {
                                     String geometryFieldTableName = String.format("%s_%s", tableName, entry.getKey());
-                                    //insert into fire_hydrant_need_service table
-                                    String colName = entry.getKey();
+                                    StringBuilder colNames = new StringBuilder();
+                                    colNames.append(tableName);
+                                    colNames.append("_id, ");
+                                    colNames.append(entry.getKey());
+
 
                                     StringBuilder sb = new StringBuilder();
-                                        sb.append("ST_GeomFromText('")
-                                                .append(((SCGeometry)entry.getValue()).getGeometry().toString())
-                                                .append("')");
+                                    sb.append(scSpatialFeature.getId());
+                                    sb.append(", ");
+                                    sb.append("ST_GeomFromText('")
+                                            .append(((SCGeometry)entry.getValue()).getGeometry().toString())
+                                            .append("')");
+
                                     String colValue = sb.toString();
+                                    Log.e(LOG_TAG, "INSERT query: " + String.format("INSERT OR REPLACE INTO %s (%s) VALUES (%s)",
+                                            geometryFieldTableName,
+                                            colNames.toString(),
+                                            colValue
+                                    ));
                                     gpkg.executeAndTrigger(geometryFieldTableName,
                                             String.format("INSERT OR REPLACE INTO %s (%s) VALUES (%s)",
                                                     geometryFieldTableName,
-                                                    colName,
+                                                    colNames.toString(),
                                                     colValue
                                             )
                                     );
@@ -666,9 +689,22 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                                         || column.getValue().equalsIgnoreCase("POINT")
                                         || column.getValue().equalsIgnoreCase("LINESTRING")
                                         || column.getValue().equalsIgnoreCase("POLYGON")) {
+
+                                    SCGeometry f = null;
+                                    byte[] wkb = SCSqliteHelper.getBlob(cursor, column.getKey());
+                                    try {
+                                        if (wkb != null && wkb.length > 0) {
+                                            f = new SCGeometry(
+                                                    new WKBReader(GEOMETRY_FACTORY).read(wkb)
+                                            );
+                                        }
+                                    }
+                                    catch (ParseException e) {
+                                        Log.w(LOG_TAG, "Could not parse geometry");
+                                    }
+
                                     finalFeature.getProperties().put(
-                                            column.getKey(),
-                                            SCSqliteHelper.getBlob(cursor, column.getKey())
+                                            column.getKey(),f
                                     );
                                 }
                                 else if (column.getValue().startsWith("INTEGER")) {

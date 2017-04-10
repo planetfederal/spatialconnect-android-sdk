@@ -508,17 +508,18 @@ public class GeoPackage {
                             }
                         }
 
+                        Log.e(LOG_TAG, "SQL: " + String.format("SELECT table_name FROM gpkg_contents where data_type = 'features' AND table_name LIKE %s_%%", tableName));
                         //find tables that begin with tableName_ that represent the geometry properties
                         cursor = db.query(
                                 // need to use String.format b/c you can't prepare PRAGMA queries:
                                 // http://stackoverflow.com/questions/2389813/cant-prepare-pragma-queries-on-android
-                                String.format("SELECT table_name FROM gpkg_contents where data_type = 'features' AND table_name LIKE %s_%", tableName)
+                                String.format("SELECT table_name FROM gpkg_contents where data_type = 'features' AND table_name LIKE '%s_%%'", tableName)
                         );
                         if (cursor == null) {
                             Log.e(LOG_TAG, "Something wrong with the locating gemoetry tables.");
                             return Observable.empty();
                         }
-                        source.addGeometryTables(SCSqliteHelper.getString(cursor, "table_name"));
+
                         while (cursor.moveToNext()) {
                             String tn = SCSqliteHelper.getString(cursor, "table_name");
                             Cursor cursor2 = db.query(
@@ -532,16 +533,17 @@ public class GeoPackage {
                             }
                             // build a feature source from the table schema
                             while (cursor2.moveToNext()) {
-                                String type = SCSqliteHelper.getString(cursor, "type");
-                                String columnName = SCSqliteHelper.getString(cursor, "name");
+                                String type = SCSqliteHelper.getString(cursor2, "type");
+                                String columnName = SCSqliteHelper.getString(cursor2, "name");
                                 if (type.equalsIgnoreCase("GEOMETRY")
-                                        || SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("POINT")
-                                        || SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("LINESTRING")
-                                        || SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("POLYGON")) {
+                                        || SCSqliteHelper.getString(cursor2, "type").equalsIgnoreCase("POINT")
+                                        || SCSqliteHelper.getString(cursor2, "type").equalsIgnoreCase("LINESTRING")
+                                        || SCSqliteHelper.getString(cursor2, "type").equalsIgnoreCase("POLYGON")) {
                                     source.addGeometryColumn(columnName, type);
                                 }
 
                             }
+                            source.addGeometryTables(SCSqliteHelper.getString(cursor, "table_name"));
                         }
 
                         return Observable.just(source);
