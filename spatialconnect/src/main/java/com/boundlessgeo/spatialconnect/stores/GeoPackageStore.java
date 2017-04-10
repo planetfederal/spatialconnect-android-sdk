@@ -180,17 +180,13 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                         @Override
                         public Observable<SCSpatialFeature> call(final String layerName) {
                             final SCGpkgFeatureSource featureSource = gpkg.getFeatureSourceByName(layerName);
-                            return gpkg.createQuery(
-                                    layerName,
-                                    String.format(
-                                            "SELECT %s FROM %s WHERE %s IN (%s) LIMIT %d",
-                                            getSelectColumnsString(featureSource),
-                                            layerName,
-                                            featureSource.getPrimaryKeyName(),
-                                            createRtreeSubQuery(featureSource, queryFilter.getPredicate().getBoundingBox()),
-                                            queryLimit
-                                    )
-                            ).flatMap(getFeatureMapper(featureSource)).onBackpressureBuffer(queryFilter.getLimit());
+                            return featureSource.query(queryFilter).map(new Func1<SCSpatialFeature, SCSpatialFeature>() {
+                                @Override
+                                public SCSpatialFeature call(SCSpatialFeature feature) {
+                                    feature.setStoreId(storeId);
+                                    return feature;
+                                }
+                            });
                         }
                     });
         }
@@ -213,79 +209,13 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
             );
         }
         else {
-            String query;
-            Map<String, String> geometrycolumns = featureSource.getGeometryColumns();
-            Map<String, String> nonGeometrycolumns = featureSource.getColumns();
-            List<String> geomTables = featureSource.getGeometryTables();
-
-            if (geometrycolumns.size() > 0) {
-                StringBuilder sql = new StringBuilder();
-                sql.append("SELECT ");
-                boolean firstIteration = true;
-                if (nonGeometrycolumns.size() > 0) {
-                    for (Map.Entry<String, String> nonGeom : nonGeometrycolumns.entrySet()) {
-                        if (firstIteration) {
-                            sql.append(nonGeom.getKey());
-                            firstIteration = false;
-                        } else {
-                            sql.append(",");
-                            sql.append(nonGeom.getKey());
-                        }
-                    }
+            return featureSource.findById(keyTuple.getFeatureId()).map(new Func1<SCSpatialFeature, SCSpatialFeature>() {
+                @Override
+                public SCSpatialFeature call(SCSpatialFeature feature) {
+                    feature.setStoreId(storeId);
+                    return feature;
                 }
-
-                //add id
-                sql.append(",");
-                sql.append(featureSource.getPrimaryKeyName());
-
-                //add default form submission geometry
-                sql.append(",");
-                sql.append(featureSource.getGeomColumnName());
-
-                //add other gemetry columsn
-                if (geometrycolumns.size() > 0) {
-
-                    for (Map.Entry<String, String> geom : geometrycolumns.entrySet()) {
-                        if (firstIteration) {
-                            sql.append("ST_AsBinary(").append(geom.getKey()).append(") AS ").append(geom.getKey());
-                            firstIteration = false;
-                        } else {
-                            sql.append(",");
-                            sql.append("ST_AsBinary(").append(geom.getKey()).append(") AS ").append(geom.getKey());
-                        }
-                    }
-
-                }
-
-                sql.append(" FROM ");
-                sql.append(tableName);
-
-                for (String gt : geomTables) {
-                    sql.append(" LEFT JOIN ");
-                    sql.append(gt);
-                    sql.append(" ON ");
-                    sql.append(String.format("%s.id", tableName));
-                    sql.append(" = ");
-                    sql.append(String.format("%s.%s_id", gt, tableName));
-                }
-                sql.append(String.format(" WHERE %s.%s = %s LIMIT 1",
-                        tableName,
-                        featureSource.getPrimaryKeyName(),
-                        keyTuple.getFeatureId())) ;
-                query = sql.toString();
-            } else {
-                query = String.format(
-                        "SELECT %s FROM %s WHERE %s = %s LIMIT 1",
-                        getSelectColumnsString(featureSource),
-                        tableName,
-                        featureSource.getPrimaryKeyName(),
-                        keyTuple.getFeatureId()
-                );
-            }
-            return gpkg.createQuery(
-                    tableName,
-                    query
-            ).flatMap(getFeatureMapper(featureSource));
+            });
         }
     }
 
@@ -354,11 +284,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                                             .append("')");
 
                                     String colValue = sb.toString();
-                                    Log.e(LOG_TAG, "INSERT query: " + String.format("INSERT OR REPLACE INTO %s (%s) VALUES (%s)",
-                                            geometryFieldTableName,
-                                            colNames.toString(),
-                                            colValue
-                                    ));
+
                                     gpkg.executeAndTrigger(geometryFieldTableName,
                                             String.format("INSERT OR REPLACE INTO %s (%s) VALUES (%s)",
                                                     geometryFieldTableName,

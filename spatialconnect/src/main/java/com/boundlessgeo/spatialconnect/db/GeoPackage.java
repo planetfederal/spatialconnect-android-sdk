@@ -4,6 +4,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.boundlessgeo.spatialconnect.tiles.SCTileMatrixRow;
@@ -16,6 +17,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -89,7 +91,7 @@ public class GeoPackage {
             if (initializeSpatialMetadata() && validateGeoPackageSchema()) {
                 initializeFeatureSources();
                 getTileSources();
-                //initializeAuditTables();
+                initializeAuditTables();
                 isValid = true;
             }
         }
@@ -280,6 +282,20 @@ public class GeoPackage {
         return sb.toString();
     }
 
+    public String createGeometryAuditTableSQL(String field, String layer){
+        final String layerIdColumn = String.format("%s_id", layer);
+        final String geomFeatureTable = String.format("%s_%s_audit", layer, field);
+        final StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(geomFeatureTable);
+        sb.append(String.format(" (%s_id INTEGER PRIMARY KEY AUTOINCREMENT,", field));
+        sb.append(String.format(" %s INTEGER ,", layerIdColumn));
+        sb.append(String.format(" %s DATETIME DEFAULT NULL,", SENT_AUDIT_COL));
+        sb.append(String.format(" %s DATETIME,", RECEIVED_AUDIT_COL));
+        sb.append(String.format(" FOREIGN KEY(%s) REFERENCES %s(id) ", layerIdColumn, layer ));
+        sb.append(")");
+
+        return sb.toString();
+    }
+
     public String createAuditTableTriggersSQL(String layer, Map<String, String> typeDefs)  {
         //AFTER insert trigger
         StringBuilder sql = new StringBuilder();
@@ -307,7 +323,6 @@ public class GeoPackage {
         }
         sql.append("); END;");
 
-        Log.e(LOG_TAG, "query: " + sql.toString());
         return sql.toString();
     }
 
@@ -508,42 +523,39 @@ public class GeoPackage {
                             }
                         }
 
-                        Log.e(LOG_TAG, "SQL: " + String.format("SELECT table_name FROM gpkg_contents where data_type = 'features' AND table_name LIKE %s_%%", tableName));
                         //find tables that begin with tableName_ that represent the geometry properties
                         cursor = db.query(
                                 // need to use String.format b/c you can't prepare PRAGMA queries:
                                 // http://stackoverflow.com/questions/2389813/cant-prepare-pragma-queries-on-android
                                 String.format("SELECT table_name FROM gpkg_contents where data_type = 'features' AND table_name LIKE '%s_%%'", tableName)
                         );
-                        if (cursor == null) {
-                            Log.e(LOG_TAG, "Something wrong with the locating gemoetry tables.");
-                            return Observable.empty();
-                        }
 
-                        while (cursor.moveToNext()) {
-                            String tn = SCSqliteHelper.getString(cursor, "table_name");
-                            Cursor cursor2 = db.query(
-                                    // need to use String.format b/c you can't prepare PRAGMA queries:
-                                    // http://stackoverflow.com/questions/2389813/cant-prepare-pragma-queries-on-android
-                                    String.format("PRAGMA table_info(%s)", tn)
-                            );
-                            if (cursor2 == null) {
-                                Log.e(LOG_TAG, "Something wrong with the PRAGMA table_info query.");
-                                return Observable.empty();
-                            }
-                            // build a feature source from the table schema
-                            while (cursor2.moveToNext()) {
-                                String type = SCSqliteHelper.getString(cursor2, "type");
-                                String columnName = SCSqliteHelper.getString(cursor2, "name");
-                                if (type.equalsIgnoreCase("GEOMETRY")
-                                        || SCSqliteHelper.getString(cursor2, "type").equalsIgnoreCase("POINT")
-                                        || SCSqliteHelper.getString(cursor2, "type").equalsIgnoreCase("LINESTRING")
-                                        || SCSqliteHelper.getString(cursor2, "type").equalsIgnoreCase("POLYGON")) {
-                                    source.addGeometryColumn(columnName, type);
+                        if (cursor != null) {
+                            while (cursor.moveToNext()) {
+                                String tn = SCSqliteHelper.getString(cursor, "table_name");
+                                Cursor cursor2 = db.query(
+                                        // need to use String.format b/c you can't prepare PRAGMA queries:
+                                        // http://stackoverflow.com/questions/2389813/cant-prepare-pragma-queries-on-android
+                                        String.format("PRAGMA table_info(%s)", tn)
+                                );
+                                if (cursor2 == null) {
+                                    Log.e(LOG_TAG, "Something wrong with the PRAGMA table_info query.");
+                                    return Observable.empty();
                                 }
+                                // build a feature source from the table schema
+                                while (cursor2.moveToNext()) {
+                                    String type = SCSqliteHelper.getString(cursor2, "type");
+                                    String columnName = SCSqliteHelper.getString(cursor2, "name");
+                                    if (type.equalsIgnoreCase("GEOMETRY")
+                                            || SCSqliteHelper.getString(cursor2, "type").equalsIgnoreCase("POINT")
+                                            || SCSqliteHelper.getString(cursor2, "type").equalsIgnoreCase("LINESTRING")
+                                            || SCSqliteHelper.getString(cursor2, "type").equalsIgnoreCase("POLYGON")) {
+                                        source.addGeometryColumn(columnName, type);
+                                    }
 
+                                }
+                                source.addGeometryTables(SCSqliteHelper.getString(cursor, "table_name"));
                             }
-                            source.addGeometryTables(SCSqliteHelper.getString(cursor, "table_name"));
                         }
 
                         return Observable.just(source);
@@ -749,12 +761,8 @@ public class GeoPackage {
                             geomFeatureTable, geom.getKey(), geom.getValue()));
                     cursor.moveToFirst(); // force query to execute
 
-                    //create audit tables and add 2 columns
-                    Map<String,String>  auditFields = new HashMap<>();
-                    //auditFields.put(geom.getKey(), geom.getValue());
-                    auditFields.put(SENT_AUDIT_COL,"DATETIME DEFAULT NULL");
-                    auditFields.put(RECEIVED_AUDIT_COL,"DATETIME");
-                    cursor = db.query(createTableSQL(geomFeatureTable + "_audit", auditFields));
+                    //create audit tables for geometry tables
+                    cursor = db.query(createGeometryAuditTableSQL(geom.getKey(), layer));
                     cursor.moveToFirst();
 
                     //then add audit table to gpkg contents
@@ -769,6 +777,7 @@ public class GeoPackage {
                     //create audit table trigger
                     Map<String,String>  f = new HashMap<>();
                     f.put(geom.getKey(), geom.getValue());
+                    f.put(String.format("%s_id", layer), "INTEGER"); //the foreign key field
                     cursor = db.query(createAuditTableTriggersSQL(geomFeatureTable, f));
                     cursor.moveToFirst();
                 }
@@ -835,6 +844,17 @@ public class GeoPackage {
         sb.append("ST_AsBinary(").append(geomColumnName).append(") AS ").append(geomColumnName);
         return sb.toString();
 
+    }
+
+    public String createRtreeSubQuery(SCGpkgFeatureSource source, SCBoundingBox bbox) {
+        return String.format(Locale.US, "SELECT id FROM rtree_%s_%s WHERE minx > %f AND maxx < %f AND miny > %f AND maxy < %f",
+                source.getTableName(),
+                source.getGeomColumnName(),
+                bbox.getMinX(),
+                bbox.getMaxX(),
+                bbox.getMinY(),
+                bbox.getMaxY()
+        );
     }
 
     private boolean layerExists(String layer) {
