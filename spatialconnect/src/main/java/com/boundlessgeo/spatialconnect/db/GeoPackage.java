@@ -773,29 +773,6 @@ public class GeoPackage {
                     cursor.moveToFirst();
                 }
 
-//                //add table to store geometry
-//                if (geometryFields.size() > 0) {
-//                    String geomTable = String.format("%s_geometries", layer);
-//                    //first create the table
-//                    cursor = db.query(createGeometryTableSQL(geomTable));
-//                    cursor.moveToFirst(); // force query to execute
-//
-//                    //then add it to gpkg contents and any other tables (gpkg metadata, etc)
-//                    cursor = db.query(addToGpkgContentsSQL(tableName));
-//                    cursor.moveToFirst(); // force query to execute
-//
-//                    // add generic geometry column to geometries table
-//                    cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
-//                    cursor.moveToFirst(); // force query to execute
-//
-//                } else {
-//                    //add a geometry column to the table b/c we want to store where the package was submitted (if needed)
-//                    //also, note the this function will add the geometry to gpkg geometry_columns, which has a foreign key
-//                    //constraint on the table name, which requires the table to exist in gpkg contents
-//                    cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
-//                    cursor.moveToFirst(); // force query to execute
-//                }
-
                 //create audit tables and add 2 columns
                 Map<String,String>  auditFields = new HashMap<>();
                 auditFields.putAll(nonGeometryFields);

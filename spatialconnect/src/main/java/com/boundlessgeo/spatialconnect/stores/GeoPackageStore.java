@@ -232,7 +232,6 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                             sql.append(nonGeom.getKey());
                         }
                     }
-
                 }
 
                 //add id
@@ -257,11 +256,11 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                     }
 
                 }
+
                 sql.append(" FROM ");
                 sql.append(tableName);
 
                 for (String gt : geomTables) {
-                //for (Map.Entry<String, String> gt : geomTables.entrySet()) {
                     sql.append(" LEFT JOIN ");
                     sql.append(gt);
                     sql.append(" ON ");
@@ -283,7 +282,6 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                         keyTuple.getFeatureId()
                 );
             }
-            Log.e(LOG_TAG, "query: " + query);
             return gpkg.createQuery(
                     tableName,
                     query
@@ -309,8 +307,6 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                 @Override
                 public void call(Subscriber<? super SCSpatialFeature> subscriber) {
                     try {
-
-
                         Set<String> columns = featureSource.getColumns().keySet();
                         Map<String, Object> props = new HashMap<>();
                         for (String col : columns) {
@@ -326,7 +322,6 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                         if ((props.size() + 1 )!= properties.length) {
                             subscriber.onError(new Throwable("Invalid column names or values"));
                         }
-
 
                         gpkg.executeAndTrigger(tableName,
                                 String.format("INSERT OR REPLACE INTO %s (%s) VALUES (%s)",
@@ -351,7 +346,6 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                                     colNames.append("_id, ");
                                     colNames.append(entry.getKey());
 
-
                                     StringBuilder sb = new StringBuilder();
                                     sb.append(scSpatialFeature.getId());
                                     sb.append(", ");
@@ -372,7 +366,6 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                                                     colValue
                                             )
                                     );
-
                                 }
                             }
 
@@ -690,11 +683,11 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                                         || column.getValue().equalsIgnoreCase("LINESTRING")
                                         || column.getValue().equalsIgnoreCase("POLYGON")) {
 
-                                    SCGeometry f = null;
+                                    SCGeometry geometry = null;
                                     byte[] wkb = SCSqliteHelper.getBlob(cursor, column.getKey());
                                     try {
                                         if (wkb != null && wkb.length > 0) {
-                                            f = new SCGeometry(
+                                            geometry = new SCGeometry(
                                                     new WKBReader(GEOMETRY_FACTORY).read(wkb)
                                             );
                                         }
@@ -704,7 +697,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                                     }
 
                                     finalFeature.getProperties().put(
-                                            column.getKey(),f
+                                            column.getKey(),geometry
                                     );
                                 }
                                 else if (column.getValue().startsWith("INTEGER")) {
@@ -731,40 +724,7 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
                                 }
                             }
                         });
-//                        for (Map.Entry<String, String> column : source.getColumns().entrySet()) {
-//                            if (column.getValue().equalsIgnoreCase("BLOB")
-//                                    || column.getValue().equalsIgnoreCase("GEOMETRY")
-//                                    || column.getValue().equalsIgnoreCase("POINT")
-//                                    || column.getValue().equalsIgnoreCase("LINESTRING")
-//                                    || column.getValue().equalsIgnoreCase("POLYGON")) {
-//                                feature.getProperties().put(
-//                                        column.getKey(),
-//                                        SCSqliteHelper.getBlob(cursor, column.getKey())
-//                                );
-//                            }
-//                            else if (column.getValue().startsWith("INTEGER")) {
-//                                feature.getProperties().put(
-//                                        column.getKey(),
-//                                        SCSqliteHelper.getInt(cursor, column.getKey())
-//                                );
-//                            }
-//                            else if (column.getValue().startsWith("REAL")) {
-//                                feature.getProperties().put(
-//                                        column.getKey(),
-//                                        SCSqliteHelper.getLong(cursor, column.getKey())
-//                                );
-//                            }
-//                            else if (column.getValue().startsWith("TEXT")) {
-//                                feature.getProperties().put(
-//                                        column.getKey(),
-//                                        SCSqliteHelper.getString(cursor, column.getKey())
-//                                );
-//                            }
-//                            else {
-//                                Log.w(LOG_TAG, "The column type " + column.getValue() + " did not match any supported" +
-//                                        " column type so it wasn't added to the feature.");
-//                            }
-//                        }
+
                         return finalFeature;
                     }
                 });
@@ -774,13 +734,5 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
 
     public static String getVersionKey() {
         return String.format("%s.%s",TYPE, VERSION);
-    }
-
-    private boolean isGeometry(String type) {
-        if (type.equalsIgnoreCase("GEOMETRY")) {
-            return true;
-        } else {
-            return false;
-        }
     }
 }
