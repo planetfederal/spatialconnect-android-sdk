@@ -253,6 +253,8 @@ public class SCFormField {
                 return "INTEGER";
             case "select":
                 return "TEXT";
+            case "geometry":
+                return "GEOMETRY";
             default:
                 return "NULL";
         }

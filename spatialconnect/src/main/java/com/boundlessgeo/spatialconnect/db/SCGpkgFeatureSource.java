@@ -6,7 +6,9 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
+import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.squareup.sqlbrite.BriteDatabase;
+import com.squareup.sqlbrite.SqlBrite;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.PrecisionModel;
 import com.vividsolutions.jts.io.ParseException;
@@ -23,6 +25,8 @@ import java.util.Map;
 
 import rx.Observable;
 import rx.Subscriber;
+import rx.functions.Action1;
+import rx.functions.Func1;
 
 import static com.boundlessgeo.spatialconnect.db.GeoPackage.RECEIVED_AUDIT_COL;
 import static com.boundlessgeo.spatialconnect.db.GeoPackage.SENT_AUDIT_COL;
@@ -64,8 +68,11 @@ public class SCGpkgFeatureSource {
      * A map of the columns and their database types.
      */
     private Map<String, String> columns = new LinkedHashMap<>();
+    private Map<String, String> geomertycolumns = new LinkedHashMap<>();
+    private List<String> geomertyTables = new ArrayList<>();
 
     private BriteDatabase db;
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
 
     /**
      * Creates and instance of the {@link SCGpkgFeatureSource} using the {@link GeoPackage} containing the db
@@ -88,6 +95,14 @@ public class SCGpkgFeatureSource {
         this.columns.put(columnName, columnType);
     }
 
+    public void addGeometryColumn(String columnName, String columnType) {
+        this.geomertycolumns.put(columnName, columnType);
+    }
+
+    public void addGeometryTables(String tableName) {
+        this.geomertyTables.add(tableName);
+    }
+
     public void setGeomColumnName(String geomColumnName) {
         this.geomColumnName = geomColumnName;
     }
@@ -106,6 +121,14 @@ public class SCGpkgFeatureSource {
 
     public String getGeomColumnName() {
         return geomColumnName;
+    }
+
+    public Map<String, String> getGeometryColumns() {
+        return geomertycolumns;
+    }
+
+    public List<String> getGeometryTables() {
+        return geomertyTables;
     }
 
     /**
@@ -184,10 +207,8 @@ public class SCGpkgFeatureSource {
         return sb.toString();
     }
 
-    public SCSpatialFeature featureFromResultSet(Cursor rs) {
-        Map<String,Object> properties = new HashMap<>();
-        String data;
-        String columnName;
+    public SCSpatialFeature featureFromResultSet(final Cursor rs) {
+        final Map<String,Object> properties = new HashMap<>();
 
         //check if blob and create SCGeometry
         SCSpatialFeature spatialFeature = null;
@@ -208,18 +229,62 @@ public class SCGpkgFeatureSource {
             spatialFeature = new SCSpatialFeature();
         }
 
-        for (int i=0; i<rs.getColumnCount(); i++) {
-            columnName = rs.getColumnName(i);
-            if (!columnName.equalsIgnoreCase(geomColumnName)) {
-                data = rs.getString(i);
-                properties.put(columnName, data);
-            }
-        }
+        Observable<Map.Entry<String, String>> columns =
+                Observable.from(getColumns().entrySet())
+                        .mergeWith(Observable.from(getGeometryColumns().entrySet()));
 
-        spatialFeature.setId(properties.get(primaryKeyName).toString());
+        columns.subscribe(new Action1<Map.Entry<String, String>>() {
+            @Override
+            public void call(Map.Entry<String, String> column) {
+                if (column.getValue().equalsIgnoreCase("BLOB")
+                        || column.getValue().equalsIgnoreCase("GEOMETRY")
+                        || column.getValue().equalsIgnoreCase("POINT")
+                        || column.getValue().equalsIgnoreCase("LINESTRING")
+                        || column.getValue().equalsIgnoreCase("POLYGON")) {
+
+                    SCGeometry geometry = null;
+                    byte[] wkb = SCSqliteHelper.getBlob(rs, column.getKey());
+                    try {
+                        if (wkb != null && wkb.length > 0) {
+                            geometry = new SCGeometry(
+                                    new WKBReader(GEOMETRY_FACTORY).read(wkb)
+                            );
+                        }
+                    }
+                    catch (ParseException e) {
+                        Log.w(LOG_TAG, "Could not parse geometry");
+                    }
+
+                    properties.put(column.getKey(),geometry);
+                }
+                else if (column.getValue().startsWith("INTEGER")) {
+                    properties.put(
+                            column.getKey(),
+                            SCSqliteHelper.getInt(rs, column.getKey())
+                    );
+                }
+                else if (column.getValue().startsWith("REAL")) {
+                    properties.put(
+                            column.getKey(),
+                            SCSqliteHelper.getLong(rs, column.getKey())
+                    );
+                }
+                else if (column.getValue().startsWith("TEXT")) {
+                    properties.put(
+                            column.getKey(),
+                            SCSqliteHelper.getString(rs, column.getKey())
+                    );
+                }
+                else {
+                    Log.w(LOG_TAG, "The column type " + column.getValue() + " did not match any supported" +
+                            " column type so it wasn't added to the feature.");
+                }
+            }
+        });
+
+        spatialFeature.setId(String.valueOf(SCSqliteHelper.getInt(rs, primaryKeyName)));
         spatialFeature.setLayerId(tableName);
 
-        properties.remove(primaryKeyName);
         properties.remove(RECEIVED_AUDIT_COL);
         properties.remove(SENT_AUDIT_COL);
         spatialFeature.setProperties(properties);
@@ -229,10 +294,71 @@ public class SCGpkgFeatureSource {
 
     public Observable<SCSpatialFeature> unSent() {
 
-        final String sql = String.format("SELECT %s FROM %s WHERE sent IS NULL",
-                gpkg.getSelectColumnsString(this),
-                auditName);
+        String query;
+        Map<String, String> geometrycolumns = getGeometryColumns();
+        Map<String, String> nonGeometrycolumns = getColumns();
+        List<String> geomTables = getGeometryTables();
 
+        if (geometrycolumns.size() > 0) {
+            StringBuilder sql = new StringBuilder();
+            sql.append("SELECT ");
+            boolean firstIteration = true;
+            if (nonGeometrycolumns.size() > 0) {
+                for (Map.Entry<String, String> nonGeom : nonGeometrycolumns.entrySet()) {
+                    if (firstIteration) {
+                        sql.append(nonGeom.getKey());
+                        firstIteration = false;
+                    } else {
+                        sql.append(",");
+                        sql.append(nonGeom.getKey());
+                    }
+                }
+            }
+
+            //add id
+            sql.append(",");
+            sql.append(getPrimaryKeyName());
+
+            //add default form submission geometry
+            sql.append(",");
+            sql.append("ST_AsBinary(").append(getGeomColumnName()).append(") AS ").append(getGeomColumnName());
+
+            //add other gemetry columsn
+            if (geometrycolumns.size() > 0) {
+
+                for (Map.Entry<String, String> geom : geometrycolumns.entrySet()) {
+                    if (firstIteration) {
+                        sql.append("ST_AsBinary(").append(geom.getKey()).append(") AS ").append(geom.getKey());
+                        firstIteration = false;
+                    } else {
+                        sql.append(",");
+                        sql.append("ST_AsBinary(").append(geom.getKey()).append(") AS ").append(geom.getKey());
+                    }
+                }
+
+            }
+
+            sql.append(" FROM ");
+            sql.append(auditName);
+
+            for (String gt : geomTables) {
+                sql.append(" LEFT JOIN ");
+                sql.append(String.format("%s_audit", gt));
+                sql.append(" ON ");
+                sql.append(String.format("%s.id", auditName));
+                sql.append(" = ");
+                sql.append(String.format("%s.%s_id", String.format("%s_audit", gt), tableName));
+            }
+            sql.append(String.format(" WHERE %s.sent IS NULL",
+                    auditName));
+            query = sql.toString();
+        } else {
+            query = String.format("SELECT %s FROM %s WHERE sent IS NULL",
+                    gpkg.getSelectColumnsString(this),
+                    auditName);
+        }
+
+        final String sql = query.toString();
         return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
             @Override
             public void call(final Subscriber subscriber) {
@@ -277,13 +403,187 @@ public class SCGpkgFeatureSource {
         }
     }
 
+    public Observable<SCSpatialFeature> query(final SCQueryFilter queryFilter) {
+
+        final List<String> featureTableNames = queryFilter.getLayerIds().size() > 0 ?
+                queryFilter.getLayerIds() :
+                new ArrayList<>(gpkg.getFeatureSources().keySet());
+        // TODO: decide on what to do if queryLimit division is 0
+        final int queryLimit = queryFilter.getLimit() / featureTableNames.size();
+
+        String query;
+        Map<String, String> geometrycolumns = getGeometryColumns();
+        Map<String, String> nonGeometrycolumns = getColumns();
+        List<String> geomTables = getGeometryTables();
+
+        if (geometrycolumns.size() > 0) {
+            StringBuilder sql = new StringBuilder();
+            sql.append("SELECT ");
+            boolean firstIteration = true;
+            if (nonGeometrycolumns.size() > 0) {
+                for (Map.Entry<String, String> nonGeom : nonGeometrycolumns.entrySet()) {
+                    if (firstIteration) {
+                        sql.append(nonGeom.getKey());
+                        firstIteration = false;
+                    } else {
+                        sql.append(",");
+                        sql.append(nonGeom.getKey());
+                    }
+                }
+            }
+
+            //add id
+            sql.append(",");
+            sql.append(getPrimaryKeyName());
+
+            //add default form submission geometry
+            sql.append(",");
+            sql.append(getGeomColumnName());
+
+            //add other gemetry columsn
+            if (geometrycolumns.size() > 0) {
+
+                for (Map.Entry<String, String> geom : geometrycolumns.entrySet()) {
+                    if (firstIteration) {
+                        sql.append("ST_AsBinary(").append(geom.getKey()).append(") AS ").append(geom.getKey());
+                        firstIteration = false;
+                    } else {
+                        sql.append(",");
+                        sql.append("ST_AsBinary(").append(geom.getKey()).append(") AS ").append(geom.getKey());
+                    }
+                }
+
+            }
+
+            sql.append(" FROM ");
+            sql.append(tableName);
+
+            for (String gt : geomTables) {
+                sql.append(" LEFT JOIN ");
+                sql.append(gt);
+                sql.append(" ON ");
+                sql.append(String.format("%s.id", tableName));
+                sql.append(" = ");
+                sql.append(String.format("%s.%s_id", gt, tableName));
+            }
+            sql.append(String.format(Locale.US, " WHERE %s.%s IN (%s) LIMIT %d",
+                    tableName,
+                    getPrimaryKeyName(),
+                    gpkg.createRtreeSubQuery(this, queryFilter.getPredicate().getBoundingBox()),
+                    queryLimit));
+
+            query = sql.toString();
+
+        } else {
+            query = String.format(Locale.US,
+                    "SELECT %s FROM %s WHERE %s IN (%s) LIMIT %d",
+                    getSelectColumnsString(),
+                    tableName,
+                    getPrimaryKeyName(),
+                    gpkg.createRtreeSubQuery(this, queryFilter.getPredicate().getBoundingBox()),
+                    queryLimit
+            );
+        }
+
+        return gpkg.createQuery(
+                tableName,
+                query
+        ).flatMap(getFeatureMapper(this)).onBackpressureBuffer(queryFilter.getLimit());
+    }
+
+    public Observable<SCSpatialFeature> findById(String featureId) {
+        String query;
+        Map<String, String> geometrycolumns = getGeometryColumns();
+        Map<String, String> nonGeometrycolumns = getColumns();
+        List<String> geomTables = getGeometryTables();
+
+        if (geometrycolumns.size() > 0) {
+            StringBuilder sql = new StringBuilder();
+            sql.append("SELECT ");
+            boolean firstIteration = true;
+            if (nonGeometrycolumns.size() > 0) {
+                for (Map.Entry<String, String> nonGeom : nonGeometrycolumns.entrySet()) {
+                    if (firstIteration) {
+                        sql.append(nonGeom.getKey());
+                        firstIteration = false;
+                    } else {
+                        sql.append(",");
+                        sql.append(nonGeom.getKey());
+                    }
+                }
+            }
+
+            //add id
+            sql.append(",");
+            sql.append(getPrimaryKeyName());
+
+            //add default form submission geometry
+            sql.append(",");
+            sql.append(getGeomColumnName());
+
+            //add other gemetry columsn
+            if (geometrycolumns.size() > 0) {
+
+                for (Map.Entry<String, String> geom : geometrycolumns.entrySet()) {
+                    if (firstIteration) {
+                        sql.append("ST_AsBinary(").append(geom.getKey()).append(") AS ").append(geom.getKey());
+                        firstIteration = false;
+                    } else {
+                        sql.append(",");
+                        sql.append("ST_AsBinary(").append(geom.getKey()).append(") AS ").append(geom.getKey());
+                    }
+                }
+
+            }
+
+            sql.append(" FROM ");
+            sql.append(tableName);
+
+            for (String gt : geomTables) {
+                sql.append(" LEFT JOIN ");
+                sql.append(gt);
+                sql.append(" ON ");
+                sql.append(String.format("%s.id", tableName));
+                sql.append(" = ");
+                sql.append(String.format("%s.%s_id", gt, tableName));
+            }
+            sql.append(String.format(" WHERE %s.%s = %s LIMIT 1",
+                    tableName,
+                    getPrimaryKeyName(),
+                    featureId)) ;
+            query = sql.toString();
+        } else {
+            query = String.format(
+                    "SELECT %s FROM %s WHERE %s = %s LIMIT 1",
+                    getSelectColumnsString(),
+                    tableName,
+                    getPrimaryKeyName(),
+                    featureId
+            );
+        }
+        return gpkg.createQuery(
+                tableName,
+                query
+        ).flatMap(getFeatureMapper(this));
+    }
+
+    private String getSelectColumnsString() {
+        StringBuilder sb = new StringBuilder();
+        for (String columnName : getColumns().keySet()) {
+            sb.append(columnName).append(",");
+        }
+        sb.append(getPrimaryKeyName()).append(",");
+        String geomColumnName = getGeomColumnName();
+        sb.append("ST_AsBinary(").append(geomColumnName).append(") AS ").append(geomColumnName);
+        return sb.toString();
+    }
+
     private void query(String sql, Subscriber subscriber) {
         Cursor layerCursor = gpkg.query(sql);
         try {
             while (layerCursor.moveToNext()) {
                 SCSpatialFeature f = featureFromResultSet(layerCursor);
                 subscriber.onNext(f);
-
             }
             subscriber.onCompleted();
         } catch (Exception e) {
@@ -303,6 +603,95 @@ public class SCGpkgFeatureSource {
             return res;
         }
     };
+
+    private Func1<SqlBrite.Query, Observable<SCSpatialFeature>> getFeatureMapper(final SCGpkgFeatureSource source) {
+        return new Func1<SqlBrite.Query, Observable<SCSpatialFeature>>() {
+
+            @Override
+            public Observable<SCSpatialFeature> call(SqlBrite.Query query) {
+                return query.asRows(new Func1<Cursor, SCSpatialFeature>() {
+                    @Override
+                    public SCSpatialFeature call(final Cursor cursor) {
+                        SCSpatialFeature feature = new SCSpatialFeature();
+                        // deserialize byte[] to Geometry object
+                        byte[] wkb = SCSqliteHelper.getBlob(cursor, source.getGeomColumnName());
+                        try {
+                            if (wkb != null && wkb.length > 0) {
+                                feature = new SCGeometry(
+                                        new WKBReader(GEOMETRY_FACTORY).read(wkb)
+                                );
+                            }
+                        }
+                        catch (ParseException e) {
+                            Log.w(LOG_TAG, "Could not parse geometry");
+                        }
+
+                        final SCSpatialFeature finalFeature = feature;
+//                        finalFeature.setStoreId(scStoreConfig.getUniqueID());
+                        finalFeature.setLayerId(source.getTableName());
+                        finalFeature.setId(SCSqliteHelper.getString(cursor, source.getPrimaryKeyName()));
+
+                        Observable<Map.Entry<String, String>> columns =
+                                Observable.from(source.getColumns().entrySet())
+                                        .mergeWith(Observable.from(source.getGeometryColumns().entrySet()));
+
+                        columns.subscribe(new Action1<Map.Entry<String, String>>() {
+                            @Override
+                            public void call(Map.Entry<String, String> column) {
+                                if (column.getValue().equalsIgnoreCase("BLOB")
+                                        || column.getValue().equalsIgnoreCase("GEOMETRY")
+                                        || column.getValue().equalsIgnoreCase("POINT")
+                                        || column.getValue().equalsIgnoreCase("LINESTRING")
+                                        || column.getValue().equalsIgnoreCase("POLYGON")) {
+
+                                    SCGeometry geometry = null;
+                                    byte[] wkb = SCSqliteHelper.getBlob(cursor, column.getKey());
+                                    try {
+                                        if (wkb != null && wkb.length > 0) {
+                                            geometry = new SCGeometry(
+                                                    new WKBReader(GEOMETRY_FACTORY).read(wkb)
+                                            );
+                                        }
+                                    }
+                                    catch (ParseException e) {
+                                        Log.w(LOG_TAG, "Could not parse geometry");
+                                    }
+
+                                    finalFeature.getProperties().put(
+                                            column.getKey(),geometry
+                                    );
+                                }
+                                else if (column.getValue().startsWith("INTEGER")) {
+                                    finalFeature.getProperties().put(
+                                            column.getKey(),
+                                            SCSqliteHelper.getInt(cursor, column.getKey())
+                                    );
+                                }
+                                else if (column.getValue().startsWith("REAL")) {
+                                    finalFeature.getProperties().put(
+                                            column.getKey(),
+                                            SCSqliteHelper.getLong(cursor, column.getKey())
+                                    );
+                                }
+                                else if (column.getValue().startsWith("TEXT")) {
+                                    finalFeature.getProperties().put(
+                                            column.getKey(),
+                                            SCSqliteHelper.getString(cursor, column.getKey())
+                                    );
+                                }
+                                else {
+                                    Log.w(LOG_TAG, "The column type " + column.getValue() + " did not match any supported" +
+                                            " column type so it wasn't added to the feature.");
+                                }
+                            }
+                        });
+
+                        return finalFeature;
+                    }
+                });
+            }
+        };
+    }
 
     @Override
     public boolean equals(Object o) {

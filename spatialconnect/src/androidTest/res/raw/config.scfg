@@ -39,11 +39,11 @@
   ],
   "forms":[
     {
-      "id":2,
-      "version":0,
-      "form_key":"baseball_team",
-      "form_label":"Baseball Team",
-      "fields":[
+        "id":2,
+        "version":0,
+        "form_key":"baseball_team",
+        "form_label":"Baseball Team",
+        "fields":[
         {
           "id":13,
           "type":"string",
@@ -57,7 +57,36 @@
           "field_key":"why",
           "position":1
         }
-      ]
-    }
+          ]
+    },
+    {
+         "id":2,
+         "version":0,
+         "form_key":"fire_hydrant",
+         "form_label":"Fire Hydrant",
+         "fields":[
+           {
+             "id":13,
+             "type":"geometry",
+             "field_label":"Service range",
+             "field_key":"service_range",
+             "position":0
+           },
+           {
+             "id":14,
+             "type":"geometry",
+             "field_label":"Need service",
+             "field_key":"need_sevice",
+             "position":1
+           },
+           {
+             "id":15,
+             "type":"string",
+             "field_label":"address",
+             "field_key":"address",
+             "position":2
+           }
+         ]
+        }
   ]
 }
