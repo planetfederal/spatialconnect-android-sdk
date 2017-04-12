@@ -1,4 +1,3 @@
-
 {
   "build":"./gradlew build.gradle",
   "install":"./gradlew uploadArchives",
