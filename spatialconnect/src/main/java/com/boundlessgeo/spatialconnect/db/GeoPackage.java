@@ -28,8 +28,8 @@ import rx.functions.Func1;
  */
 public class GeoPackage {
 
-    private final String SENT_AUDIT_COL = "sent";
-    private final String RECEIVED_AUDIT_COL = "received";
+    public static final String SENT_AUDIT_COL = "sent";
+    public static final String RECEIVED_AUDIT_COL = "received";
 
     /**
      * The log tag for this class.
@@ -294,6 +294,7 @@ public class GeoPackage {
             count++;
         }
         sql.append("); END;");
+
         return sql.toString();
     }
 
@@ -324,7 +325,7 @@ public class GeoPackage {
      * @return observable stream of the list of {@link GeoPackageContents}
      */
     public Observable<List<GeoPackageContents>> getGpkgContents() {
-        return db.createQuery("gpkg_contents", "SELECT * FROM gpkg_contents")
+        return db.createQuery("gpkg_contents", "SELECT * FROM gpkg_contents where data_type = 'features'")
                 .mapToList(new Func1<Cursor, GeoPackageContents>() {
                     @Override
                     public GeoPackageContents call(Cursor cursor) {
@@ -675,10 +676,19 @@ public class GeoPackage {
                 auditFields.putAll(fields);
                 auditFields.put(SENT_AUDIT_COL,"DATETIME DEFAULT NULL");
                 auditFields.put(RECEIVED_AUDIT_COL,"DATETIME");
-                cursor = db.query(createTableSQL(layer + "_audit", auditFields));
+                cursor = db.query(createTableSQL(tableName + "_audit", auditFields));
                 cursor.moveToFirst();
 
+                //then add audit table to gpkg contents
+                cursor = db.query(addAuditTableToGpkgContentsSQL(tableName + "_audit"));
+                cursor.moveToFirst(); // force query to execute
+
+                //add geom column to audit table
+                cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName + "_audit"));
+                cursor.moveToFirst(); // force query to execute
+
                 //create audit table trigger
+                fields.put("geom", "Geometry");
                 cursor = db.query(createAuditTableTriggersSQL(layer, fields));
                 cursor.moveToFirst();
 
@@ -703,6 +713,26 @@ public class GeoPackage {
                 .append("(table_name,data_type,identifier,description,min_x,min_y,max_x,max_y,srs_id) ")
                 .append(String.format("VALUES ('%s','features','%s','%s',0,0,0,0,4326)", tableName, tableName, tableName));
         return sb.toString();
+    }
+
+    private String addAuditTableToGpkgContentsSQL(String tableName) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("INSERT OR REPLACE INTO gpkg_contents ")
+                .append("(table_name,data_type,identifier,description,min_x,min_y,max_x,max_y,srs_id) ")
+                .append(String.format("VALUES ('%s','audits','%s','%s',0,0,0,0,4326)", tableName, tableName, tableName));
+        return sb.toString();
+    }
+
+    public String getSelectColumnsString(SCGpkgFeatureSource featureSource) {
+        StringBuilder sb = new StringBuilder();
+        for (String columnName : featureSource.getColumns().keySet()) {
+            sb.append(columnName).append(",");
+        }
+        sb.append(featureSource.getPrimaryKeyName()).append(",");
+        String geomColumnName = featureSource.getGeomColumnName();
+        sb.append("ST_AsBinary(").append(geomColumnName).append(") AS ").append(geomColumnName);
+        return sb.toString();
+
     }
 
     private boolean layerExists(String layer) {

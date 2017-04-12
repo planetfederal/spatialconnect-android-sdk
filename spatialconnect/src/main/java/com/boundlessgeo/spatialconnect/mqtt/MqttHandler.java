@@ -227,7 +227,7 @@ public class MqttHandler implements MqttCallbackExtended {
     @Override
     public void connectComplete(boolean reconnect, String serverURI) {
         if (reconnect) {
-            clientConnected.onNext(true);
+            Log.d(LOG_TAG, "connectComplete on reconnection!");
             //clean session, re-subscribe
             SpatialConnect.getInstance().getBackendService().reconnect();
         }

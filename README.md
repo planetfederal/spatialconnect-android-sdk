@@ -2,7 +2,7 @@
 SpatialConnect library for Android
 
 # Current Version
-0.9
+0.10
 
 # Overview
 
