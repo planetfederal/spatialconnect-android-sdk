@@ -1,8 +1,8 @@
 {
-  "build":"./gradlew build.gradle",
-  "install":"./gradlew uploadArchives",
+  "build":"./gradlew uploadArchives",
+  "install":"./gradlew assembleRelease",
   "unit_test":"./gradlew :spatialconnect:connectedCheck",
   "integration_test":"./gradlew :SpaconApp:connectedCheck",
   "run":"",
-  "release":"./gradlew uploadArchives"
+  "release":""
 }
