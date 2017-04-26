@@ -1,5 +1,5 @@
 {
   "build":"./gradlew assembleRelease; ./gradlew uploadArchives",
-  "test":"./gradlew :spatialconnect:connectedCheck; ./gradlew :SpaconApp:connectedCheck",
+  "test":"./gradlew :spatialconnect:connectedCheck; && ./gradlew :SpaconApp:connectedCheck",
   "deploy": "./gradlew bintrayUpload"
 }
