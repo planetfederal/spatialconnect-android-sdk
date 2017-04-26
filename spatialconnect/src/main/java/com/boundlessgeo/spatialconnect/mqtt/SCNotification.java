@@ -16,7 +16,7 @@ package com.boundlessgeo.spatialconnect.mqtt;
 
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
+import com.boundlessgeo.lyrs.protobuf.LyrsProtos;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -29,7 +29,7 @@ public class SCNotification {
     private JSONObject payload;
     private String priority; // info, alert, background
 
-    public SCNotification(SCMessageOuterClass.SCMessage message) {
+    public SCNotification(LyrsProtos.ConnectMessage message) {
         try {
             JSONObject payload = new JSONObject(message.getPayload());
             this.to = payload.getString("to");
