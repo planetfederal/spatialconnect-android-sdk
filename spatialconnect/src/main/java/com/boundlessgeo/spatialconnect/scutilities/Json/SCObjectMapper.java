@@ -18,7 +18,6 @@ import com.bedatadriven.jackson.datatype.jts.JtsModule;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 
 /**
  * SCObjectMapper holds the single instance of Jackson's {@link com.fasterxml.jackson.databind.ObjectMapper} used by
@@ -32,7 +31,9 @@ public class SCObjectMapper {
         mapper = new ObjectMapper();
         mapper.registerModule(new JtsModule());
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+//        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+//        mapper.setPropertyNamingStrategy(
+//                PropertyNamingStrategy.LOWER_CASE);
         mapper.configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, false);
         mapper.registerModule(new JtsModule());
     }

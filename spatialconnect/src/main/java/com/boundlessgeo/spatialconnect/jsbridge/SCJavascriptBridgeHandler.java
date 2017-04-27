@@ -17,6 +17,8 @@ package com.boundlessgeo.spatialconnect.jsbridge;
 import android.location.Location;
 import android.util.Log;
 
+import com.boundlessgeo.schema.SCCommand;
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
@@ -24,12 +26,10 @@ import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
-import com.boundlessgeo.spatialconnect.SpatialConnect;
+import com.boundlessgeo.spatialconnect.stores.ISCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
-import com.boundlessgeo.spatialconnect.stores.ISCSpatialStore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -76,8 +76,8 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
             return;
         } else {
             JsonNode bridgeMessage = getBridgeMessage(data);
-            Integer actionNumber = getActionNumber(bridgeMessage);
-            SCCommand command = SCCommand.fromActionNumber(actionNumber);
+            String action = getActionNumber(bridgeMessage);
+            SCCommand command = SCCommand.fromAction(action);
 
             if (command.equals(SCCommand.SENSORSERVICE_GPS)) {
                 SCSensorService sensorService = manager.getSensorService();
@@ -305,8 +305,8 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
         return payload.get("payload").get("storeId").asText();
     }
 
-    private Integer getActionNumber(JsonNode payload) {
-        return payload.get("action").asInt();
+    private String getActionNumber(JsonNode payload) {
+        return payload.get("action").asText();
     }
 
     private JsonNode getBridgeMessage(String payload) {

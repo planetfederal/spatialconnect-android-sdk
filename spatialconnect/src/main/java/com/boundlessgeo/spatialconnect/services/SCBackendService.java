@@ -19,6 +19,8 @@ import android.content.Context;
 import android.os.Build;
 import android.util.Log;
 
+import com.boundlessgeo.schema.ConnectMessagePbf;
+import com.boundlessgeo.schema.SCCommand;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.cloudMessaging.CloudMessagingService;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
@@ -29,10 +31,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
-import com.boundlessgeo.spatialconnect.schema.SCCommand;
-import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
-import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
 import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
 import com.boundlessgeo.spatialconnect.stores.ISyncableStore;
@@ -50,6 +49,7 @@ import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 import rx.subjects.BehaviorSubject;
 
+import static com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper.getMapper;
 import static java.util.Arrays.asList;
 
 /**
@@ -117,47 +117,44 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     /**
      * Publishes an SCMessage to the SpatialConnect Server
      * @param topic topic MQTT destination topic
-     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
+     * @param message msg {@link ConnectMessagePbf.ConnectMessage} to be sent
      */
-    public void publish(String topic, SCMessageOuterClass.SCMessage message) {
-        SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
-        scMessagebuilder.setAction(message.getAction())
+    public void publish(String topic, ConnectMessagePbf.ConnectMessage message) {
+        ConnectMessagePbf.ConnectMessage.Builder connectMessagebuilder =  ConnectMessagePbf.ConnectMessage.newBuilder();
+        connectMessagebuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
-                .setReplyTo(message.getReplyTo())
-                .setJwt(getJwt())
-                .setTime(getTimestamp());
+                .setTo(message.getTo())
+                .setJwt(getJwt());
 
-        mqttHandler.publish(topic, scMessagebuilder.build(), QoS.EXACTLY_ONCE.value());
+        mqttHandler.publish(topic, connectMessagebuilder.build(), QoS.EXACTLY_ONCE.value());
     }
 
     /**
      * Publishes an SCMessage to the SpatialConnect Server with At Most Once Delivery QoS 0
      * @param topic topic MQTT destination topic
-     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
+     * @param message msg {@link ConnectMessagePbf.ConnectMessage} to be sent
      */
-    public void publishAtMostOnce(String topic, SCMessageOuterClass.SCMessage message) {
-        SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
-        scMessagebuilder.setAction(message.getAction())
+    public void publishAtMostOnce(String topic, ConnectMessagePbf.ConnectMessage message) {
+        ConnectMessagePbf.ConnectMessage.Builder connectMessagebuilder =  ConnectMessagePbf.ConnectMessage.newBuilder();
+        connectMessagebuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
-                .setReplyTo(message.getReplyTo())
-                .setJwt(getJwt())
-                .setTime(getTimestamp());
+                .setTo(message.getTo())
+                .setJwt(getJwt());
 
-        mqttHandler.publish(topic, scMessagebuilder.build(), QoS.AT_MOST_ONCE.value());
+        mqttHandler.publish(topic, connectMessagebuilder.build(), QoS.AT_MOST_ONCE.value());
     }
 
     /**
      * Publishes an SCMessage to the SpatialConnect Server with At Least Once Delivery QoS 1
      * @param topic topic MQTT destination topic
-     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
+     * @param message msg {@link ConnectMessagePbf.ConnectMessage} to be sent
      */
-    public void publishAtLeastOnce(String topic, SCMessageOuterClass.SCMessage message) {
-        SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
+    public void publishAtLeastOnce(String topic, ConnectMessagePbf.ConnectMessage message) {
+        ConnectMessagePbf.ConnectMessage.Builder scMessagebuilder =  ConnectMessagePbf.ConnectMessage.newBuilder();
         scMessagebuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
-                .setReplyTo(message.getReplyTo())
-                .setJwt(getJwt())
-                .setTime(getTimestamp());
+                .setTo(message.getTo())
+                .setJwt(getJwt());
 
         mqttHandler.publish(topic, scMessagebuilder.build(), QoS.AT_LEAST_ONCE.value());
     }
@@ -165,15 +162,14 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     /**
      * Publishes an SCMessage to the SpatialConnect Server with Exactly Once Delivery QoS 2
      * @param topic topic MQTT destination topic
-     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
+     * @param message msg {@link ConnectMessagePbf.ConnectMessage} to be sent
      */
-    public void publishExactlyOnce(String topic, SCMessageOuterClass.SCMessage message) {
-        SCMessageOuterClass.SCMessage.Builder scMessagebuilder =  SCMessageOuterClass.SCMessage.newBuilder();
+    public void publishExactlyOnce(String topic, ConnectMessagePbf.ConnectMessage message) {
+        ConnectMessagePbf.ConnectMessage.Builder scMessagebuilder =  ConnectMessagePbf.ConnectMessage.newBuilder();
         scMessagebuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
-                .setReplyTo(message.getReplyTo())
-                .setJwt(getJwt())
-                .setTime(getTimestamp());
+                .setTo(message.getTo())
+                .setJwt(getJwt());
 
         mqttHandler.publish(topic, scMessagebuilder.build(), QoS.EXACTLY_ONCE.value());
     }
@@ -183,35 +179,36 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
      * reply with the server.
      *
      * @param topic topic MQTT destination topic
-     * @param message msg {@link SCMessageOuterClass.SCMessage} to be sent
-     * @return Observable of the {@link SCMessageOuterClass.SCMessage} filtered by the correlation id
+     * @param message msg {@link ConnectMessagePbf.ConnectMessage} to be sent
+     * @return Observable of the {@link ConnectMessagePbf.ConnectMessage} filtered by the correlation id
      */
-    public Observable<SCMessageOuterClass.SCMessage> publishReplyTo(
+    public Observable<ConnectMessagePbf.ConnectMessage> publishReplyTo(
             String topic,
-            final SCMessageOuterClass.SCMessage message) {
+            final ConnectMessagePbf.ConnectMessage message) {
 
         // set the correlation id and replyTo topic
         int correlationId = (int) System.currentTimeMillis();
-        final SCMessageOuterClass.SCMessage newMessage = SCMessageOuterClass.SCMessage.newBuilder()
+        final ConnectMessagePbf.ConnectMessage newMessage = ConnectMessagePbf.ConnectMessage.newBuilder()
+                .setContext("MOBILE")
                 .setAction(message.getAction())
                 .setPayload(message.getPayload())
-                .setReplyTo(MqttHandler.REPLY_TO_TOPIC)
+                .setTo(MqttHandler.REPLY_TO_TOPIC)
                 .setCorrelationId(correlationId)
                 .setJwt(getJwt())
-                .setTime(getTimestamp())
                 .build();
+
         mqttHandler.publish(topic, newMessage, QoS.EXACTLY_ONCE.value());
         // filter message from reply to topic on the correlation id
         return listenOnTopic(MqttHandler.REPLY_TO_TOPIC)
-                .filter(new Func1<SCMessageOuterClass.SCMessage, Boolean>() {
+                .filter(new Func1<ConnectMessagePbf.ConnectMessage, Boolean>() {
                     @Override
-                    public Boolean call(SCMessageOuterClass.SCMessage incomingMessage) {
+                    public Boolean call(ConnectMessagePbf.ConnectMessage incomingMessage) {
                         return incomingMessage.getCorrelationId() == newMessage.getCorrelationId();
                     }
                 })
-                .flatMap(new Func1<SCMessageOuterClass.SCMessage, Observable<SCMessageOuterClass.SCMessage>>() {
+                .flatMap(new Func1<ConnectMessagePbf.ConnectMessage, Observable<ConnectMessagePbf.ConnectMessage>>() {
                     @Override
-                    public Observable<SCMessageOuterClass.SCMessage> call(SCMessageOuterClass.SCMessage message) {
+                    public Observable<ConnectMessagePbf.ConnectMessage> call(ConnectMessagePbf.ConnectMessage message) {
                         return Observable.just(message);
                     }
                 });
@@ -221,10 +218,10 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
      * Subscribes to an MQTT Topic
      *
      * @param topic topic to listen on
-     * @return Observable of {@link SCMessageOuterClass.SCMessage}
+     * @return Observable of {@link ConnectMessagePbf.ConnectMessage}
      * filtered to only receive messages from the stated topic
      */
-    public Observable<SCMessageOuterClass.SCMessage> listenOnTopic(final String topic) {
+    public Observable<ConnectMessagePbf.ConnectMessage> listenOnTopic(final String topic) {
         mqttHandler.subscribe(topic, QoS.EXACTLY_ONCE.value());
         // filter messages for this topic
         return mqttHandler.getMulticast()
@@ -234,10 +231,10 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         return tuple.first().toString().equalsIgnoreCase(topic);
                     }
                 })
-                .map(new Func1<SCTuple, SCMessageOuterClass.SCMessage>() {
+                .map(new Func1<SCTuple, ConnectMessagePbf.ConnectMessage>() {
                     @Override
-                    public SCMessageOuterClass.SCMessage call(SCTuple scTuple) {
-                        return (SCMessageOuterClass.SCMessage) scTuple.second();
+                    public ConnectMessagePbf.ConnectMessage call(SCTuple scTuple) {
+                        return (ConnectMessagePbf.ConnectMessage) scTuple.second();
                     }
                 });
     }
@@ -372,9 +369,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         });
     }
 
-    private void loadConfig(SCMessageOuterClass.SCMessage message) {
+    private void loadConfig(ConnectMessagePbf.ConnectMessage message) {
         try {
-            SCConfig config = SCObjectMapper.getMapper().readValue(
+            SCConfig config = getMapper().readValue(
                     message.getPayload(),
                     SCConfig.class
             );
@@ -396,14 +393,14 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private void fetchConfig() {
         Log.d(LOG_TAG, "fetching config from mqtt config topic");
-        SCMessageOuterClass.SCMessage getConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
+        ConnectMessagePbf.ConnectMessage getConfigMsg = ConnectMessagePbf.ConnectMessage.newBuilder()
                 .setAction(SCCommand.CONFIG_FULL.value()).build();
 
         publishReplyTo("/config", getConfigMsg)
-                .subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
+                .subscribe(new Action1<ConnectMessagePbf.ConnectMessage>() {
                     @Override
-                    public void call(SCMessageOuterClass.SCMessage scMessage) {
-                        loadConfig(scMessage);
+                    public void call(ConnectMessagePbf.ConnectMessage message) {
+                        loadConfig(message);
                     }
                 });
     }
@@ -411,7 +408,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private void registerDevice() {
 
         SpatialConnect sc = SpatialConnect.getInstance();
-        SCMessageOuterClass.SCMessage registerConfigMsg = SCMessageOuterClass.SCMessage.newBuilder()
+        ConnectMessagePbf.ConnectMessage registerConfigMsg = ConnectMessagePbf.ConnectMessage.newBuilder()
                 .setAction(SCCommand.CONFIG_REGISTER_DEVICE.value())
                 .setPayload(
                         String.format("{\"identifier\": \"%s\", \"device_info\": %s, \"name\": \"mobile:%s\"}",
@@ -426,25 +423,25 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private void setupSubscriptions() {
         notifications = listenOnTopic("/notify")
                 .mergeWith(listenOnTopic(String.format("/notify/%s", SpatialConnect.getInstance().getDeviceIdentifier())))
-                .map(new Func1<SCMessageOuterClass.SCMessage, SCNotification>() {
+                .map(new Func1<ConnectMessagePbf.ConnectMessage, SCNotification>() {
                     @Override
-                    public SCNotification call(SCMessageOuterClass.SCMessage scMessage) {
+                    public SCNotification call(ConnectMessagePbf.ConnectMessage scMessage) {
                         return new SCNotification(scMessage);
                     }
                 })
                 .mergeWith(CloudMessagingService.getMulticast());
 
-        listenOnTopic("/config/update").subscribe(new Action1<SCMessageOuterClass.SCMessage>() {
+        listenOnTopic("/config/update").subscribe(new Action1<ConnectMessagePbf.ConnectMessage>() {
             @Override
-            public void call(SCMessageOuterClass.SCMessage scMessage) {
+            public void call(ConnectMessagePbf.ConnectMessage scMessage) {
                 Log.d("FormStore","action: " + scMessage.getAction());
                 SCConfig cachedConfig = configService.getCachedConfig();
                 JsonUtilities utilities = new JsonUtilities();
 
-                switch (SCCommand.fromActionNumber(scMessage.getAction())) {
+                switch (SCCommand.fromAction(scMessage.getAction())) {
                     case CONFIG_ADD_STORE:
                         try {
-                            SCStoreConfig config = SCObjectMapper.getMapper()
+                            SCStoreConfig config = getMapper()
                                     .readValue(scMessage.getPayload(), SCStoreConfig.class);
                             cachedConfig.addStore(config);
                             dataService.registerAndStartStoreByConfig(config);
@@ -455,7 +452,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         break;
                     case CONFIG_UPDATE_STORE:
                         try {
-                            SCStoreConfig config = SCObjectMapper.getMapper()
+                            SCStoreConfig config = getMapper()
                                     .readValue(scMessage.getPayload(), SCStoreConfig.class);
                             cachedConfig.updateStore(config);
                             dataService.updateStoresByConfig(config);
@@ -472,7 +469,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         break;
                     case CONFIG_ADD_FORM:
                         try {
-                            SCFormConfig config = SCObjectMapper.getMapper()
+                            SCFormConfig config = getMapper()
                                     .readValue(scMessage.getPayload(), SCFormConfig.class);
                             cachedConfig.addForm(config);
                             dataService.getFormStore().registerFormByConfig(config);
@@ -482,7 +479,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         break;
                     case CONFIG_UPDATE_FORM:
                         try {
-                            SCFormConfig config = SCObjectMapper.getMapper()
+                            SCFormConfig config = getMapper()
                                     .readValue(scMessage.getPayload(), SCFormConfig.class);
                             cachedConfig.updateForm(config);
                             dataService.getFormStore().updateFormByConfig(config);
@@ -506,9 +503,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private void registerForLocalNotifications() {
         notifications = listenOnTopic("/notify")
                 .mergeWith(listenOnTopic(String.format("/notify/%s", SpatialConnect.getInstance().getDeviceIdentifier())))
-                .map(new Func1<SCMessageOuterClass.SCMessage, SCNotification>() {
+                .map(new Func1<ConnectMessagePbf.ConnectMessage, SCNotification>() {
                     @Override
-                    public SCNotification call(SCMessageOuterClass.SCMessage scMessage) {
+                    public SCNotification call(ConnectMessagePbf.ConnectMessage scMessage) {
                         return new SCNotification(scMessage);
                     }
                 })
@@ -606,8 +603,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     Map<String, Object> featurePayload = store.generateSendPayload(feature);
                     String payload;
                     try {
-                        payload = SCObjectMapper.getMapper().writeValueAsString(featurePayload);
-                        SCMessageOuterClass.SCMessage message = SCMessageOuterClass.SCMessage.newBuilder()
+                        payload = getMapper().writeValueAsString(featurePayload);
+                        ConnectMessagePbf.ConnectMessage message = ConnectMessagePbf.ConnectMessage.newBuilder()
                                 .setAction(SCCommand.DATASERVICE_CREATEFEATURE.value())
                                 .setPayload(payload)
                                 .build();
