@@ -191,7 +191,17 @@ public class MqttHandler implements MqttCallbackExtended {
                 if (connected) {
                     Log.d(LOG_TAG, "publishing to topic " + topic + " with qos " + qos);
                     // create a new MqttMessage from the message string
-                    MqttMessage mqttMsg = new MqttMessage(message.toByteArray());
+
+                    final ConnectMessagePbf.ConnectMessage connectMessage = ConnectMessagePbf.ConnectMessage.newBuilder()
+                            .setContext("MOBILE")
+                            .setAction(message.getAction())
+                            .setPayload(message.getPayload())
+                            .setTo(REPLY_TO_TOPIC)
+                            .setCorrelationId(message.getCorrelationId())
+                            .setJwt(message.getJwt())
+                            .build();
+
+                    MqttMessage mqttMsg = new MqttMessage(connectMessage.toByteArray());
                     mqttMsg.setQos(qos);
                     try {
                         client.publish(topic, mqttMsg);
