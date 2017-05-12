@@ -17,7 +17,7 @@ package com.boundlessgeo.spatialconnect.mqtt;
 import android.content.Context;
 import android.util.Log;
 
-import com.boundlessgeo.schema.ConnectMessagePbf;
+import com.boundlessgeo.schema.MessagePbf;
 import com.boundlessgeo.spatialconnect.R;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
@@ -184,7 +184,7 @@ public class MqttHandler implements MqttCallbackExtended {
      * @param message SCMessage to send as payload
      * @param qos     quality of service (0, 1, 2)
      */
-    public void publish(final String topic, final ConnectMessagePbf.ConnectMessage message, final int qos) {
+    public void publish(final String topic, final MessagePbf.Msg message, final int qos) {
         clientConnected.subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean connected) {
@@ -192,7 +192,7 @@ public class MqttHandler implements MqttCallbackExtended {
                     Log.d(LOG_TAG, "publishing to topic " + topic + " with qos " + qos);
                     // create a new MqttMessage from the message string
 
-                    final ConnectMessagePbf.ConnectMessage connectMessage = ConnectMessagePbf.ConnectMessage.newBuilder()
+                    final MessagePbf.Msg msg = MessagePbf.Msg.newBuilder()
                             .setContext("MOBILE")
                             .setAction(message.getAction())
                             .setPayload(message.getPayload())
@@ -201,7 +201,7 @@ public class MqttHandler implements MqttCallbackExtended {
                             .setJwt(message.getJwt())
                             .build();
 
-                    MqttMessage mqttMsg = new MqttMessage(connectMessage.toByteArray());
+                    MqttMessage mqttMsg = new MqttMessage(msg.toByteArray());
                     mqttMsg.setQos(qos);
                     try {
                         client.publish(topic, mqttMsg);
@@ -223,9 +223,9 @@ public class MqttHandler implements MqttCallbackExtended {
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
         Log.d(LOG_TAG, "received message on topic " + topic);
-        ConnectMessagePbf.ConnectMessage scMessage = ConnectMessagePbf.ConnectMessage.parseFrom(message.getPayload());
-        Log.d(LOG_TAG, "message payload: " + scMessage.getPayload());
-        SCTuple scTuple = new SCTuple(topic, scMessage);
+        MessagePbf.Msg msg = MessagePbf.Msg.parseFrom(message.getPayload());
+        Log.d(LOG_TAG, "message payload: " + msg.getPayload());
+        SCTuple scTuple = new SCTuple(topic, msg);
         scMessageSubject.onNext(scTuple);
     }
 

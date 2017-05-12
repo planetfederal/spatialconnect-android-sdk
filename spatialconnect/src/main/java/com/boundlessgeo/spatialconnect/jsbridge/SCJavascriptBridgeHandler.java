@@ -17,7 +17,7 @@ package com.boundlessgeo.spatialconnect.jsbridge;
 import android.location.Location;
 import android.util.Log;
 
-import com.boundlessgeo.schema.SCCommand;
+import com.boundlessgeo.schema.Actions;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
@@ -77,9 +77,9 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
         } else {
             JsonNode bridgeMessage = getBridgeMessage(data);
             String action = getActionNumber(bridgeMessage);
-            SCCommand command = SCCommand.fromAction(action);
+            Actions command = Actions.fromAction(action);
 
-            if (command.equals(SCCommand.SENSORSERVICE_GPS)) {
+            if (command.equals(Actions.SENSORSERVICE_GPS)) {
                 SCSensorService sensorService = manager.getSensorService();
                 Integer payloadNumber = getPayloadNumber(bridgeMessage);
 
@@ -102,7 +102,7 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                     return;
                 }
             }
-            if (command.equals(SCCommand.DATASERVICE_ACTIVESTORESLIST)) {
+            if (command.equals(Actions.DATASERVICE_ACTIVESTORESLIST)) {
                 List<SCDataStore> stores = manager.getDataService().getActiveStores();
                 StringBuilder sb = new StringBuilder();
                 for (SCDataStore store : stores) {
@@ -118,7 +118,7 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 bridge.callHandler("storesList", "{\"stores\": [" + sb.toString() + "]}");
                 return;
             }
-            if (command.equals(SCCommand.DATASERVICE_ACTIVESTOREBYID)) {
+            if (command.equals(Actions.DATASERVICE_ACTIVESTOREBYID)) {
                 String storeId = getStoreId(bridgeMessage);
                 String dataStoreString = null;
                 try {
@@ -130,8 +130,8 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 bridge.callHandler("store", dataStoreString);
                 return;
             }
-            if (command.equals(SCCommand.DATASERVICE_SPATIALQUERYALL) || command.equals(
-                SCCommand.DATASERVICE_QUERYALL)) {
+            if (command.equals(Actions.DATASERVICE_SPATIALQUERYALL) || command.equals(
+                    Actions.DATASERVICE_QUERYALL)) {
                 SCQueryFilter filter = getFilter(bridgeMessage);
                 if (filter != null) {
                     manager.getDataService().queryAllStores(filter)
@@ -164,7 +164,7 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                             );
                 }
             }
-            if (command.equals(SCCommand.DATASERVICE_UPDATEFEATURE)) {
+            if (command.equals(Actions.DATASERVICE_UPDATEFEATURE)) {
               try {
                 SCSpatialFeature featureToUpdate = getFeatureToUpdate(
                   bridgeMessage.get("payload").get("feature").asText()
@@ -195,7 +195,7 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 e.printStackTrace();
               }
             }
-            if (command.equals(SCCommand.DATASERVICE_DELETEFEATURE)) {
+            if (command.equals(Actions.DATASERVICE_DELETEFEATURE)) {
               try {
                 SCKeyTuple featureKey = new SCKeyTuple(bridgeMessage.get("payload").asText());
                 SCDataStore store = manager.getDataService().getStoreByIdentifier(featureKey.getStoreId());
@@ -224,7 +224,7 @@ public class SCJavascriptBridgeHandler implements WebViewJavascriptBridge.WVJBHa
                 e.printStackTrace();
               }
             }
-            if (command.equals(SCCommand.DATASERVICE_CREATEFEATURE)) {
+            if (command.equals(Actions.DATASERVICE_CREATEFEATURE)) {
               try {
                 SCSpatialFeature newFeature = getNewFeature(bridgeMessage.get("payload"));
                 SCDataStore store = manager.getDataService().getStoreByIdentifier(newFeature.getKey().getStoreId());
