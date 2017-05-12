@@ -32,7 +32,7 @@ public class SCObjectMapper {
         mapper = new ObjectMapper();
         mapper.registerModule(new JtsModule());
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        mapper.enable(SerializationFeature.INDENT_OUTPUT.INDENT_OUTPUT);
+        mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, false);
         mapper.registerModule(new JtsModule());
     }
