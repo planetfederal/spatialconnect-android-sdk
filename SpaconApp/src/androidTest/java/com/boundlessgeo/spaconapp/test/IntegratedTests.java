@@ -6,6 +6,8 @@ import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
 import android.util.Log;
 
+import com.boundlessgeo.schema.MessagePbf;
+import com.boundlessgeo.schema.Actions;
 import com.boundlessgeo.spaconapp.MainActivity;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
@@ -15,7 +17,6 @@ import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
-import com.boundlessgeo.spatialconnect.schema.SCMessageOuterClass;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
@@ -98,7 +99,7 @@ public class IntegratedTests {
             sc.getConfigService().addConfigFilePath(remoteConfigFile.getAbsolutePath());
             sc.startAllServices();
             sc.getAuthService().authenticate("admin@something.com", "admin");
-            waitForStoreToStart(WFS_STORE_ID);
+            //waitForStoreToStart(WFS_STORE_ID);
 
         } catch (IOException ex) {
             System.exit(0);
@@ -112,13 +113,13 @@ public class IntegratedTests {
     @Test
     public void testMqttNetworkServiceCanPublishAndSubscribe() {
         SCBackendService networkService = sc.getBackendService();
-        SCMessageOuterClass.SCMessage.Builder builder =  SCMessageOuterClass.SCMessage.newBuilder();
-        builder.setAction(0)
+        MessagePbf.Msg.Builder builder =  MessagePbf.Msg.newBuilder();
+        builder.setAction(Actions.START_ALL_SERVICES.value())
                 .setPayload("{\"testing\": true}")
-                .setReplyTo(MqttHandler.REPLY_TO_TOPIC)
+                .setTo(MqttHandler.REPLY_TO_TOPIC)
                 .build();
-        SCMessageOuterClass.SCMessage message = builder.build();
-        TestSubscriber<SCMessageOuterClass.SCMessage> testSubscriber = new TestSubscriber();
+        MessagePbf.Msg message = builder.build();
+        TestSubscriber<MessagePbf.Msg> testSubscriber = new TestSubscriber();
         networkService.publishReplyTo("/ping", message)
                 .take(1)
                 .timeout(15, TimeUnit.SECONDS)
