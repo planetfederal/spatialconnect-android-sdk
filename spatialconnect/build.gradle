@@ -4,7 +4,7 @@ apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'maven'
 
 group 'com.boundlessgeo.spatialconnect'
-version '0.11.0'
+version '0.11.1'
 
 ext {
     bintrayRepo = 'mobile'
@@ -20,7 +20,7 @@ ext {
     siteUrl = 'https://github.com/boundlessgeo/spatialconnect-android-sdk'
     gitUrl = 'https://github.com/boundlessgeo/spatialconnect-android-sdk.git'
 
-    libraryVersion = '0.11.0'
+    libraryVersion = '0.11.1'
 
     developerId = 'boundlessgeo'
     developerName = 'Mobile Boundless'
@@ -36,7 +36,7 @@ def preDexEnabled = "true".equals(System.getProperty("pre-dex", "true"))
 
 android {
     compileSdkVersion 25
-    buildToolsVersion '23.0.3'
+    buildToolsVersion '25.0.0'
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 25
@@ -88,7 +88,7 @@ android {
 
 dependencies {
     compile 'com.android.support:appcompat-v7:25.1.0'
-    compile 'com.google.android.gms:play-services-maps:10.0.1'
+    compile 'com.google.android.gms:play-services-maps:10.2.6'
     compile 'com.android.support:multidex:1.0.0'
     compile "com.bedatadriven:jackson-datatype-jts:2.2"
     compile 'io.reactivex:rxandroid:1.1.0'
@@ -107,7 +107,7 @@ dependencies {
         exclude group: 'io.jeo', module: 'proj4j'
     }
     compile 'com.auth0:java-jwt:2.2.1'
-    compile 'com.google.firebase:firebase-messaging:10.0.1'
+    compile 'com.google.firebase:firebase-messaging:10.2.6'
     compile files('libs/boundlessSchema-0.8.jar')
 
     // testing dependencies
