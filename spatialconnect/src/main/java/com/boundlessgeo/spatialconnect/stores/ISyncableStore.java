@@ -26,4 +26,5 @@ public interface ISyncableStore {
     Map<String, Object> generateSendPayload(SCSpatialFeature scSpatialFeature);
     Observable<SCSpatialFeature> unSent();
     String syncChannel();
+    String syncReplyChannel();
 }

@@ -39,6 +39,9 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.Timestamp;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -191,14 +194,13 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         final MessagePbf.Msg newMessage = MessagePbf.Msg.newBuilder()
                 .setAction(message.getAction())
                 .setPayload(message.getPayload())
-                .setTo(MqttHandler.REPLY_TO_TOPIC)
+                .setTo(message.getTo())
                 .setCorrelationId(Math.abs(correlationId))
                 .setJwt(getJwt())
                 .build();
-
         mqttHandler.publish(topic, newMessage, QoS.EXACTLY_ONCE.value());
         // filter message from reply to topic on the correlation id
-        return listenOnTopic(MqttHandler.REPLY_TO_TOPIC)
+        return listenOnTopic(message.getTo())
                 .filter(new Func1<MessagePbf.Msg, Boolean>() {
                     @Override
                     public Boolean call(MessagePbf.Msg incomingMessage) {
@@ -393,7 +395,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private void fetchConfig() {
         Log.d(LOG_TAG, "fetching config from mqtt config topic");
         MessagePbf.Msg getConfigMsg = MessagePbf.Msg.newBuilder()
-                .setAction(Actions.CONFIG_FULL.value()).build();
+                .setAction(Actions.CONFIG_FULL.value())
+                .setTo(MqttHandler.REPLY_TO_TOPIC)
+                .build();
 
         publishReplyTo("/config", getConfigMsg)
                 .subscribe(new Action1<MessagePbf.Msg>() {
@@ -606,9 +610,24 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         MessagePbf.Msg message = MessagePbf.Msg.newBuilder()
                                 .setAction(Actions.DATASERVICE_CREATEFEATURE.value())
                                 .setPayload(payload)
+                                .setTo(store.syncReplyChannel())
                                 .build();
-                        publishExactlyOnce(store.syncChannel(), message);
-                        store.updateAuditTable(feature);
+                        publishReplyTo(store.syncChannel(), message)
+                            .subscribe(new Action1<MessagePbf.Msg>() {
+                                @Override
+                                public void call(MessagePbf.Msg message) {
+                                    try {
+                                        final JSONObject payload = new JSONObject(message.getPayload());
+                                        if (payload.getBoolean("result")) {
+                                            store.updateAuditTable(feature);
+                                        } else {
+                                            Log.e(LOG_TAG, "Something went wrong sending to server: " + payload.getString("err"));
+                                        }
+                                    } catch (JSONException je) {
+                                        Log.e(LOG_TAG, "json parse error: " + je.getMessage());
+                                    }
+                                }
+                            });
                     } catch (JsonProcessingException e) {
                         e.printStackTrace();
                     }

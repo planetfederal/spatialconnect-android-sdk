@@ -35,6 +35,7 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.PrecisionModel;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import rx.Observable;
@@ -105,6 +106,11 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
     @Override
     public String syncChannel() {
         return "/store/tracking";
+    }
+
+    @Override
+    public String syncReplyChannel() {
+        return String.format(Locale.US, "/store/tracking/%s-replyTo", SpatialConnect.getInstance().getDeviceIdentifier());
     }
 
     @Override

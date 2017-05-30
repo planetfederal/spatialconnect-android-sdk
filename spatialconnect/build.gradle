@@ -4,7 +4,7 @@ apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'maven'
 
 group 'com.boundlessgeo.spatialconnect'
-version '0.11.1'
+version '0.11.2'
 
 ext {
     bintrayRepo = 'mobile'
@@ -20,7 +20,7 @@ ext {
     siteUrl = 'https://github.com/boundlessgeo/spatialconnect-android-sdk'
     gitUrl = 'https://github.com/boundlessgeo/spatialconnect-android-sdk.git'
 
-    libraryVersion = '0.11.1'
+    libraryVersion = '0.11.2'
 
     developerId = 'boundlessgeo'
     developerName = 'Mobile Boundless'
@@ -41,7 +41,7 @@ android {
         minSdkVersion 16
         targetSdkVersion 25
         versionCode 1
-        versionName "0.11"
+        versionName "0.11.2"
         multiDexEnabled = true
         // http://developer.android.com/tools/building/multidex.html#testing
         testInstrumentationRunner "com.boundlessgeo.spatialconnect.test.MultiDexAndroidJUnitRunner"
@@ -87,7 +87,7 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:appcompat-v7:25.1.0'
+    compile 'com.android.support:appcompat-v7:25.3.1'
     compile 'com.google.android.gms:play-services-maps:10.2.6'
     compile 'com.android.support:multidex:1.0.0'
     compile "com.bedatadriven:jackson-datatype-jts:2.2"
