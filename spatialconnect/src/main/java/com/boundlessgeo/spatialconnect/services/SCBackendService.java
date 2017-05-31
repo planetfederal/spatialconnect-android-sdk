@@ -194,13 +194,13 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         final MessagePbf.Msg newMessage = MessagePbf.Msg.newBuilder()
                 .setAction(message.getAction())
                 .setPayload(message.getPayload())
-                .setTo(message.getTo())
+                .setTo(MqttHandler.REPLY_TO_TOPIC)
                 .setCorrelationId(Math.abs(correlationId))
                 .setJwt(getJwt())
                 .build();
         mqttHandler.publish(topic, newMessage, QoS.EXACTLY_ONCE.value());
         // filter message from reply to topic on the correlation id
-        return listenOnTopic(message.getTo())
+        return listenOnTopic(MqttHandler.REPLY_TO_TOPIC)
                 .filter(new Func1<MessagePbf.Msg, Boolean>() {
                     @Override
                     public Boolean call(MessagePbf.Msg incomingMessage) {
@@ -395,9 +395,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private void fetchConfig() {
         Log.d(LOG_TAG, "fetching config from mqtt config topic");
         MessagePbf.Msg getConfigMsg = MessagePbf.Msg.newBuilder()
-                .setAction(Actions.CONFIG_FULL.value())
-                .setTo(MqttHandler.REPLY_TO_TOPIC)
-                .build();
+                .setAction(Actions.CONFIG_FULL.value()).build();
 
         publishReplyTo("/config", getConfigMsg)
                 .subscribe(new Action1<MessagePbf.Msg>() {
@@ -610,7 +608,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         MessagePbf.Msg message = MessagePbf.Msg.newBuilder()
                                 .setAction(Actions.DATASERVICE_CREATEFEATURE.value())
                                 .setPayload(payload)
-                                .setTo(store.syncReplyChannel())
                                 .build();
                         publishReplyTo(store.syncChannel(), message)
                             .subscribe(new Action1<MessagePbf.Msg>() {

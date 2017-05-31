@@ -18,7 +18,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.db.GeoPackage;
 import com.boundlessgeo.spatialconnect.db.GeoPackageContents;
@@ -505,11 +504,6 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
     @Override
     public String syncChannel() {
         return String.format(Locale.US, "/store/%s", this.storeId);
-    }
-
-    @Override
-    public String syncReplyChannel() {
-        return String.format(Locale.US, "/store/%s-replyTo", SpatialConnect.getInstance().getDeviceIdentifier());
     }
 
     @Override

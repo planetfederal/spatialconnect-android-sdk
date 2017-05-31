@@ -196,7 +196,7 @@ public class MqttHandler implements MqttCallbackExtended {
                             .setContext("MOBILE")
                             .setAction(message.getAction())
                             .setPayload(message.getPayload())
-                            .setTo(message.getTo())
+                            .setTo(REPLY_TO_TOPIC)
                             .setCorrelationId(message.getCorrelationId())
                             .setJwt(message.getJwt())
                             .build();

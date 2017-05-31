@@ -19,7 +19,6 @@ package com.boundlessgeo.spatialconnect.stores;
 import android.content.Context;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
@@ -29,7 +28,6 @@ import com.boundlessgeo.spatialconnect.style.SCStyle;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import rx.Observable;
@@ -108,11 +106,6 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
     @Override
     public String syncChannel() {
         return "/store/form";
-    }
-
-    @Override
-    public String syncReplyChannel() {
-        return String.format(Locale.US, "/store/form/%s-replyTo", SpatialConnect.getInstance().getDeviceIdentifier());
     }
 
     @Override
