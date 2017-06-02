@@ -618,7 +618,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                                         if (payload.getBoolean("result")) {
                                             store.updateAuditTable(feature);
                                         } else {
-                                            Log.e(LOG_TAG, "Something went wrong sending to server: " + payload.getString("err"));
+                                            Log.e(LOG_TAG, "Something went wrong sending to server: " + payload.getString("error"));
                                         }
                                     } catch (JSONException je) {
                                         Log.e(LOG_TAG, "json parse error: " + je.getMessage());
