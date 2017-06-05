@@ -39,6 +39,9 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.Timestamp;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -195,7 +198,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 .setCorrelationId(Math.abs(correlationId))
                 .setJwt(getJwt())
                 .build();
-
         mqttHandler.publish(topic, newMessage, QoS.EXACTLY_ONCE.value());
         // filter message from reply to topic on the correlation id
         return listenOnTopic(MqttHandler.REPLY_TO_TOPIC)
@@ -607,8 +609,22 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                                 .setAction(Actions.DATASERVICE_CREATEFEATURE.value())
                                 .setPayload(payload)
                                 .build();
-                        publishExactlyOnce(store.syncChannel(), message);
-                        store.updateAuditTable(feature);
+                        publishReplyTo(store.syncChannel(), message)
+                            .subscribe(new Action1<MessagePbf.Msg>() {
+                                @Override
+                                public void call(MessagePbf.Msg message) {
+                                    try {
+                                        final JSONObject payload = new JSONObject(message.getPayload());
+                                        if (payload.getBoolean("result")) {
+                                            store.updateAuditTable(feature);
+                                        } else {
+                                            Log.e(LOG_TAG, "Something went wrong sending to server: " + payload.getString("error"));
+                                        }
+                                    } catch (JSONException je) {
+                                        Log.e(LOG_TAG, "json parse error: " + je.getMessage());
+                                    }
+                                }
+                            });
                     } catch (JsonProcessingException e) {
                         e.printStackTrace();
                     }
