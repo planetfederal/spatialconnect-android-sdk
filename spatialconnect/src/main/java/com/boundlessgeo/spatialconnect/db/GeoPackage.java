@@ -12,6 +12,7 @@ import com.squareup.sqlbrite.QueryObservable;
 
 import org.sqlite.database.SQLException;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -650,12 +651,12 @@ public class GeoPackage {
             });
     }
 
-    public void addFeatureSource(String layer, Map<String,String>  fields) {
+    private void addContentsTable(String layer, Map<String,String>  fields) {
+        Cursor cursor = null;
+        BriteDatabase.Transaction tx = db.newTransaction();
         if (!layerExists(layer)) {
             Log.d(LOG_TAG, "Adding layer " + layer + " to " + getName());
             final String tableName = layer;
-            Cursor cursor = null;
-            BriteDatabase.Transaction tx = newTransaction();
             try {
                 //first create the table
                 cursor = db.query(createTableSQL(layer, fields));
@@ -671,20 +672,78 @@ public class GeoPackage {
                 cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
                 cursor.moveToFirst(); // force query to execute
 
+                tx.markSuccessful();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                Log.w(LOG_TAG, "Could not create table b/c " + ex.getMessage());
+            }
+            finally {
+                tx.end();
+                refreshFeatureSources();
+                if (cursor != null) {
+                    cursor.close();
+                }
+            }
+        } else {
+            try {
+                cursor = db.query(String.format("PRAGMA table_info(%s)", layer));
+                ArrayList<String> existingCols = new ArrayList<>();
+                while (cursor.moveToNext()) {
+                    String columnName = SCSqliteHelper.getString(cursor, "name");
+                    existingCols.add(columnName);
+                }
+
+                Map<String,String> newSchemaCols = new HashMap<>();
+                newSchemaCols.putAll(fields);
+
+                for (String col: existingCols) {
+                    newSchemaCols.remove(col);
+                }
+
+                for (Map.Entry<String, String> col : newSchemaCols.entrySet())
+                {
+                    cursor = db.query(String.format("ALTER TABLE %s ADD COLUMN %s %s",
+                            layer, col.getKey(), col.getValue())
+                    );
+                    cursor.moveToFirst();
+                }
+                tx.markSuccessful();
+            } catch (Exception e) {
+                Log.e(LOG_TAG, "Error adding to existing layer: " + e.getMessage());
+            }
+            finally {
+                tx.end();
+                refreshFeatureSources();
+                if (cursor != null) {
+                    cursor.close();
+                }
+            }
+
+        }
+    }
+
+    private void addAuditTable(String layer, Map<String,String>  fields) {
+        Cursor cursor = null;
+        String auditTableName = layer + "_audit";
+        BriteDatabase.Transaction tx = db.newTransaction();
+        if (!layerExists(auditTableName)) {
+            Log.d(LOG_TAG, "Adding layer " + layer + " to " + getName());
+
+            try {
                 //create audit tables and add 2 columns
                 Map<String,String>  auditFields = new HashMap<>();
                 auditFields.putAll(fields);
                 auditFields.put(SENT_AUDIT_COL,"DATETIME DEFAULT NULL");
                 auditFields.put(RECEIVED_AUDIT_COL,"DATETIME");
-                cursor = db.query(createTableSQL(tableName + "_audit", auditFields));
+                cursor = db.query(createTableSQL(auditTableName, auditFields));
                 cursor.moveToFirst();
 
                 //then add audit table to gpkg contents
-                cursor = db.query(addAuditTableToGpkgContentsSQL(tableName + "_audit"));
+                cursor = db.query(addAuditTableToGpkgContentsSQL(auditTableName));
                 cursor.moveToFirst(); // force query to execute
 
                 //add geom column to audit table
-                cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName + "_audit"));
+                cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", auditTableName));
                 cursor.moveToFirst(); // force query to execute
 
                 //create audit table trigger
@@ -704,7 +763,47 @@ public class GeoPackage {
                     cursor.close();
                 }
             }
+        } else {
+            try {
+                cursor = db.query(String.format("PRAGMA table_info(%s)", auditTableName));
+                ArrayList<String> existingCols = new ArrayList<>();
+                while (cursor.moveToNext()) {
+                    String columnName = SCSqliteHelper.getString(cursor, "name");
+                    existingCols.add(columnName);
+                }
+
+                Map<String,String> newSchemaCols = new HashMap<>();
+                newSchemaCols.putAll(fields);
+
+                for (String col: existingCols) {
+                    newSchemaCols.remove(col);
+                }
+
+                for (Map.Entry<String, String> col : newSchemaCols.entrySet())
+                {
+                    cursor = db.query(String.format("ALTER TABLE %s ADD COLUMN %s %s",
+                            auditTableName, col.getKey(), col.getValue())
+                    );
+                    cursor.moveToFirst();
+                }
+                tx.markSuccessful();
+            } catch (Exception e) {
+                Log.e(LOG_TAG, "Error adding to existing audit table: " + e.getMessage());
+            }
+            finally {
+                tx.end();
+                refreshFeatureSources();
+                if (cursor != null) {
+                    cursor.close();
+                }
+            }
+
         }
+    }
+
+    public void addFeatureSource(String layer, Map<String,String>  fields) {
+        addContentsTable(layer, fields);
+        addAuditTable(layer, fields);
     }
 
     private String addToGpkgContentsSQL(String tableName) {
