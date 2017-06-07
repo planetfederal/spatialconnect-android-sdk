@@ -651,7 +651,8 @@ public class GeoPackage {
             });
     }
 
-    private void addContentsTable(String layer, Map<String,String>  fields) {
+    private boolean addContentsTable(String layer, Map<String,String>  fields) {
+        boolean tableCreated = false;
         Cursor cursor = null;
         BriteDatabase.Transaction tx = db.newTransaction();
         if (!layerExists(layer)) {
@@ -673,6 +674,7 @@ public class GeoPackage {
                 cursor.moveToFirst(); // force query to execute
 
                 tx.markSuccessful();
+                tableCreated = true;
             } catch (Exception ex) {
                 ex.printStackTrace();
                 Log.w(LOG_TAG, "Could not create table b/c " + ex.getMessage());
@@ -708,6 +710,7 @@ public class GeoPackage {
                     cursor.moveToFirst();
                 }
                 tx.markSuccessful();
+                tableCreated = true;
             } catch (Exception e) {
                 Log.e(LOG_TAG, "Error adding to existing layer: " + e.getMessage());
             }
@@ -718,8 +721,8 @@ public class GeoPackage {
                     cursor.close();
                 }
             }
-
         }
+        return tableCreated;
     }
 
     private void addAuditTable(String layer, Map<String,String>  fields) {
@@ -786,6 +789,18 @@ public class GeoPackage {
                     );
                     cursor.moveToFirst();
                 }
+
+                //drop existing trigger
+                StringBuilder triggerName = new StringBuilder();
+                triggerName.append(layer).append("_audit_insert ");
+                cursor = db.query(String.format("DROP TRIGGER %s", triggerName.toString()));
+                cursor.moveToFirst();
+
+                //re-create audit table trigger
+                fields.put("geom", "Geometry");
+                cursor = db.query(createAuditTableTriggersSQL(layer, fields));
+                cursor.moveToFirst();
+
                 tx.markSuccessful();
             } catch (Exception e) {
                 Log.e(LOG_TAG, "Error adding to existing audit table: " + e.getMessage());
@@ -802,8 +817,9 @@ public class GeoPackage {
     }
 
     public void addFeatureSource(String layer, Map<String,String>  fields) {
-        addContentsTable(layer, fields);
-        addAuditTable(layer, fields);
+        if (addContentsTable(layer, fields)) {
+            addAuditTable(layer, fields);
+        }
     }
 
     private String addToGpkgContentsSQL(String tableName) {
