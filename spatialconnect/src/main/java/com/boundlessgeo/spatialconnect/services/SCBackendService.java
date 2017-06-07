@@ -190,12 +190,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
             final MessagePbf.Msg message) {
 
         // set the correlation id and replyTo topic
-        int correlationId = (int) System.currentTimeMillis();
+        long correlationId = System.currentTimeMillis();
         final MessagePbf.Msg newMessage = MessagePbf.Msg.newBuilder()
                 .setAction(message.getAction())
                 .setPayload(message.getPayload())
                 .setTo(MqttHandler.REPLY_TO_TOPIC)
-                .setCorrelationId(Math.abs(correlationId))
+                .setCorrelationId(correlationId)
                 .setJwt(getJwt())
                 .build();
         mqttHandler.publish(topic, newMessage, QoS.EXACTLY_ONCE.value());

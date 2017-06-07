@@ -108,7 +108,7 @@ dependencies {
     }
     compile 'com.auth0:java-jwt:2.2.1'
     compile 'com.google.firebase:firebase-messaging:10.2.6'
-    compile files('libs/boundlessSchema-0.8.jar')
+    compile files('libs/boundlessSchema-0.9.jar')
 
     // testing dependencies
     androidTestCompile 'junit:junit:4.12'
