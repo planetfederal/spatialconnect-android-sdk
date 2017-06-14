@@ -202,10 +202,10 @@ public class SCGpkgFeatureSource {
             } catch (ParseException e) {
                 e.printStackTrace();
                 Log.e(LOG_TAG, "e: " + e.getMessage());
-                spatialFeature = new SCSpatialFeature();
+                spatialFeature = new SCGeometry();
             }
         } else {
-            spatialFeature = new SCSpatialFeature();
+            spatialFeature = new SCGeometry();
         }
 
         for (int i=0; i<rs.getColumnCount(); i++) {
