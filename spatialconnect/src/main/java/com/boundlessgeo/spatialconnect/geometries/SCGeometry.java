@@ -20,6 +20,7 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.vividsolutions.jts.geom.Geometry;
@@ -93,6 +94,13 @@ import java.io.File;
         this.geometryGeoJson = getGeometryGeoJson(this.geometry);
     }
 
+    @JsonCreator
+    public SCGeometry()
+    {
+        super();
+        this.exportType = "Feature";
+    }
+
     @JsonProperty("type")
     public String getExportType()
     {
@@ -116,6 +124,7 @@ import java.io.File;
     */
 
 
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     @JsonProperty("geometry")
     public Geometry getGeometry()
     {
