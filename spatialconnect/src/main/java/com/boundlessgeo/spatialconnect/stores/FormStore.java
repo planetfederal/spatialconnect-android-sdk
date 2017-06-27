@@ -17,13 +17,16 @@
 package com.boundlessgeo.spatialconnect.stores;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
+import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.style.SCStyle;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -127,10 +130,12 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
 
     private void addLayerByConfig(SCFormConfig config) {
         boolean fieldsValid = true;
+
         Map<String, String> typeDefs = new HashMap<>();
-        for (SCFormField field : config.getFields()) {
-            if (field.getKey() != null && field.getKey().length() > 0) {
-                typeDefs.put(field.getKey(), field.getColumnType());
+        for (JsonNode field : config.getFields()) {
+            String fieldKey = JsonUtilities.getString(field, SCFormField.FIELD_KEY);
+            if (!TextUtils.isEmpty(fieldKey)) {
+                typeDefs.put(fieldKey, SCFormField.getColumnType(field));
             } else {
                 fieldsValid = false;
                 break;
