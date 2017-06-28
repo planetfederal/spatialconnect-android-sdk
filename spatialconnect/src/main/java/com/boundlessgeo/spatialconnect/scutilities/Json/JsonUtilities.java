@@ -32,6 +32,15 @@ import java.util.Map;
 
 public class JsonUtilities
 {
+
+    public static String getString(JsonNode json, String name) {
+        return getString(json, name, null);
+    }
+
+    public static String getString(JsonNode json, String name, String fallback) {
+        return json.has(name) ? json.get(name).asText() : fallback;
+    }
+
     private final String TAG = "JsonUtilities";
 
     public JsonUtilities()

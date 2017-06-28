@@ -1,6 +1,7 @@
 package com.boundlessgeo.spatialconnect.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.List;
 
@@ -34,7 +35,7 @@ public class SCFormConfig {
      * List of the form fields that define this form.
      */
     @JsonProperty("fields")
-    private List<SCFormField> fields;
+    private List<JsonNode> fields;
 
     /**
      * Unique id of the team to which this form belongs.
@@ -56,11 +57,11 @@ public class SCFormConfig {
         this.id = id;
     }
 
-    public List<SCFormField> getFields() {
+    public List<JsonNode> getFields() {
         return fields;
     }
 
-    public void setFields(List<SCFormField> fields) {
+    public void setFields(List<JsonNode> fields) {
         this.fields = fields;
     }
 
