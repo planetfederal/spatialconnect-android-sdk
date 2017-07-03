@@ -107,7 +107,6 @@ dependencies {
         exclude group: 'io.jeo', module: 'proj4j'
     }
     compile 'com.auth0:java-jwt:2.2.1'
-    compile 'com.google.firebase:firebase-messaging:10.2.6'
     compile files('libs/boundlessSchema-0.9.jar')
 
     // testing dependencies
@@ -148,7 +147,5 @@ bintray {
         }
     }
 }
-
-apply plugin: 'com.google.gms.google-services'
 
 
