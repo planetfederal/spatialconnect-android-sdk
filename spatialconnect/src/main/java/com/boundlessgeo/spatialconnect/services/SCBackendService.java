@@ -22,7 +22,6 @@ import android.util.Log;
 import com.boundlessgeo.schema.Actions;
 import com.boundlessgeo.schema.MessagePbf;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.cloudMessaging.CloudMessagingService;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
@@ -429,8 +428,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     public SCNotification call(MessagePbf.Msg msg) {
                         return new SCNotification(msg);
                     }
-                })
-                .mergeWith(CloudMessagingService.getMulticast());
+                });
 
         listenOnTopic("/config/update").subscribe(new Action1<MessagePbf.Msg>() {
             @Override
@@ -509,8 +507,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     public SCNotification call(MessagePbf.Msg msg) {
                         return new SCNotification(msg);
                     }
-                })
-                .mergeWith(CloudMessagingService.getMulticast());
+                });
     }
 
     private void setupMqttConnectionListener() {

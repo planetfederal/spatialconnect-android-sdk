@@ -158,10 +158,6 @@ a useful, developer-friendly abstraction.
 
 As mentioned before, each `SCSpatialFeature` contains a `SCKeyTuple` containing the layer id, store id, and feature id.  When sending a `SCSpatialFeature` through the Javascript bridge, we Base64 encode each part of the tuple and use that for the GeoJSON Feature's id.  This will allow us to keep track of features even after they are edited by a Javascript mapping client like OpenLayers.
 
-### Background cloud messaging
-
-This library supports background cloud messaging using Firebase Cloud Messaging.  For cloud messaging functionality please contact us for implementation details for the google-services.json file.
-
 ### Examples
 
 See [https://github.com/boundlessgeo/spatialconnect-examples/](https://github.com/boundlessgeo/spatialconnect-examples/) for an example application using this SDK.
