@@ -120,9 +120,7 @@ public class SCGpkgFeatureSource {
         List<String> columnNames = new ArrayList<>(columns.keySet());
         Collections.sort(columnNames, ALPHABETICAL_ORDER);
         for (String columnName : columnNames) {
-            if (feature.getProperties().get(columnName) != null) {
-                sb.append(columnName + ",");
-            }
+            sb.append(columnName + ",");
         }
         sb.append(geomColumnName);
         return sb.toString();
@@ -140,13 +138,15 @@ public class SCGpkgFeatureSource {
         Collections.sort(columnNames, ALPHABETICAL_ORDER);
         boolean firstIteration = true;
         for (String columnName : columnNames) {
-            if (feature.getProperties().get(columnName) != null) {
-                if (!firstIteration) {
-                    sb.append(",");
-                }
-                sb.append(DatabaseUtils.sqlEscapeString(String.valueOf(feature.getProperties().get(columnName))));
-                firstIteration = false;
+            if (!firstIteration) {
+                sb.append(",");
             }
+            if (feature.getProperties().get(columnName) != null) {
+                sb.append(DatabaseUtils.sqlEscapeString(String.valueOf(feature.getProperties().get(columnName))));
+            } else {
+                sb.append("NULL");
+            }
+            firstIteration = false;
         }
         if (sb.toString().length() > 0) {
             sb.append(",");
