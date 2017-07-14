@@ -4,13 +4,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
-import android.util.Log;
 
 import com.boundlessgeo.schema.MessagePbf;
 import com.boundlessgeo.schema.Actions;
 import com.boundlessgeo.spaconapp.MainActivity;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
+import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
@@ -20,13 +20,16 @@ import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
+import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.WFSStore;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -44,8 +47,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Response;
-import rx.Subscriber;
 import rx.functions.Action1;
+import rx.functions.Func1;
 import rx.observers.TestSubscriber;
 import rx.schedulers.Schedulers;
 
@@ -150,26 +153,21 @@ public class IntegratedTests {
     @Test
     public void testMqttConnected() {
         SpatialConnect sc = SpatialConnect.getInstance();
+        TestSubscriber testSubscriber = new TestSubscriber();
+        // wait for connection to mqtt broker
         sc.getBackendService()
-                .connectedToBroker
-                .subscribeOn(Schedulers.io())
-                .subscribe(new Subscriber<Boolean>() {
-                    @Override
-                    public void onCompleted() {
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        e.printStackTrace();
-                        Log.e(LOG_TAG, "onError()\n" + e.getLocalizedMessage());
-                    }
-
-                    @Override
-                    public void onNext(Boolean connected) {
-                        assertTrue("Mqtt should be connected",
-                                connected);
-                    }
-                });
+            .connectedToBroker
+            .filter(new Func1<Boolean, Boolean>() {
+                @Override public Boolean call(Boolean connected) {
+                    return connected;
+                }
+            })
+            .take(1)
+            .timeout(5, TimeUnit.SECONDS)
+            .subscribe(testSubscriber);
+        testSubscriber.awaitTerminalEvent();
+        testSubscriber.assertCompleted();
+        testSubscriber.assertNoErrors();
     }
 
     @Test
@@ -216,28 +214,91 @@ public class IntegratedTests {
     }
 
     @Test
-    public void testZ_FormSubmission() {
+    public void test_FormSubmissionWithoutSpatialConnectBackend()
+        throws IOException, InterruptedException {
+        // add test form to the form store so we can submit it
+        SpatialConnect sc = SpatialConnect.getInstance();
+        final SCFormConfig formConfig = new SCFormConfig();
+        formConfig.setFormKey("test");
+        formConfig.setId("123");
+        List<JsonNode> fields = new ObjectMapper().readValue("[\n"
+            + "        {\n"
+            + "          \"id\":1,\n"
+            + "          \"type\":\"string\",\n"
+            + "          \"field_label\":\"Name\",\n"
+            + "          \"field_key\":\"name\","
+            + "          \"position\":0\n"
+            + "        }]", new TypeReference<List<JsonNode>>() { });
+        formConfig.setFields(fields);
+        sc.getDataService().getFormStore().registerFormByConfig(formConfig);
+
+        // wait for connection to mqtt broker
+        TestSubscriber testSubscriber = new TestSubscriber();
         sc.getBackendService()
-                .configReceived
-                .subscribeOn(Schedulers.io())
-                .subscribe(new Subscriber<Boolean>() {
-                    @Override
-                    public void onCompleted() {
-                    }
+            .connectedToBroker
+            .filter(new Func1<Boolean, Boolean>() {
+                @Override public Boolean call(Boolean connected) {
+                    return connected;
+                }
+            })
+            .take(1)
+            .timeout(5, TimeUnit.SECONDS)
+            .subscribe(testSubscriber);
+        testSubscriber.awaitTerminalEvent();
+        testSubscriber.assertNoErrors();
+        testSubscriber.assertCompleted();
 
-                    @Override
-                    public void onError(Throwable e) {
-                        e.printStackTrace();
-                        Log.e(LOG_TAG, "onError()\n" + e.getLocalizedMessage());
-                    }
+        // simulate form submission by creating a feature in the testFormStore
+        String nullIsland = "{\"type\":\"Feature\","
+            + "\"properties\":{\"name\": \"null island\"},"
+            + "\"geometry\":{\"type\":\"Point\",\"coordinates\":[0,0]}}";
+        SCSpatialFeature feature = new JsonUtilities().getSpatialDataTypeFromJson(nullIsland);
+        feature.setLayerId("test");
+        FormStore formStore = SpatialConnect.getInstance().getDataService().getFormStore();
+        TestSubscriber formSubscriber = new TestSubscriber();
+        formStore.create(feature).subscribe(formSubscriber);
+        formSubscriber.awaitTerminalEvent();
+        formSubscriber.assertNoErrors();
 
-                    @Override
-                    public void onNext(Boolean received) {
-                        if (received) {
-                            startFormSubmission();
-                        }
-                    }
-                });
+        // assert that feature was sent
+        TestSubscriber unSentFeatureSubscriber = new TestSubscriber();
+        sc.getDataService().getFormStore().unSent().subscribe(unSentFeatureSubscriber);
+        List<SCSpatialFeature> features = unSentFeatureSubscriber.getOnNextEvents();
+        assertTrue("Feature should be in unsent observable.",
+            features.get(0).getProperties().get("name").equals("null island"));
+        TestSubscriber sentFeatureSubscriber = new TestSubscriber();
+        MqttHandler.getInstance(testContext).subscribe(
+            sc.getDataService().getFormStore().syncChannel(), 2);
+        MqttHandler.getInstance(testContext).getMulticast()
+            .subscribeOn(Schedulers.io())
+            .subscribe(sentFeatureSubscriber);
+        assertTrue(sentFeatureSubscriber.awaitValueCount(1, 5, TimeUnit.SECONDS));
+        SCTuple tuple = (SCTuple) sentFeatureSubscriber.getOnNextEvents().get(0);
+        assertTrue("The action should be " + Actions.DATASERVICE_CREATEFEATURE.value(),
+            ((MessagePbf.Msg)tuple.second()).getAction()
+                .equals(Actions.DATASERVICE_CREATEFEATURE.value()));
+        assertTrue("The feature have the null island property",
+            ((MessagePbf.Msg)tuple.second()).getPayload().contains("null island"));
+    }
+
+    @Test
+    public void testZ_FormSubmission() {
+        TestSubscriber testSubscriber = new TestSubscriber();
+        // wait for connection to mqtt broker
+        sc.getBackendService()
+            .connectedToBroker
+            .filter(new Func1<Boolean, Boolean>() {
+                @Override public Boolean call(Boolean connected) {
+                    return connected;
+                }
+            })
+            .take(1)
+            .timeout(5, TimeUnit.SECONDS)
+            .subscribe(testSubscriber);
+        testSubscriber.awaitTerminalEvent();
+        testSubscriber.assertCompleted();
+        testSubscriber.assertNoErrors();
+        startFormSubmission();
     }
 
     private void startFormSubmission() {
