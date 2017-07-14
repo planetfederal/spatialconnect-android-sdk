@@ -26,12 +26,45 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 public class JsonUtilities
 {
+
+    public static int getInt(HashMap<String, Object> json, String name) {
+        return getInt(json, name, 0);
+    }
+
+    public static Integer getInt(Map json, String name, Integer fallback) {
+        // this cannot be a conditional expression (single-line if)
+        // https://docs.oracle.com/javase/specs/jls/se8/html/jls-15.html#jls-15.25
+        if ( hasKey(json, name) ) {
+            return toInt(json.get(name));
+        }
+        else {
+            return fallback;
+        }
+    }
+
+    public static <T> ArrayList<T> getArrayList(Map json, String name, Class<T> cls) {
+        return hasKey(json, name) ? toArrayList(json.get(name), cls) : null;
+    }
+
+    public static HashMap<String, Object> getHashMap(HashMap<String, Object> json, String name) {
+        return hasKey(json, name) ? toHashMap(json.get(name)) : null;
+    }
+
+    public static String getString(HashMap<String, Object> json, String name) {
+        return getString(json, name, null);
+    }
+
+    public static String getString(Map json, String name, String fallback) {
+        return hasKey(json, name) ? (String) json.get(name) : fallback;
+    }
 
     public static String getString(JsonNode json, String name) {
         return getString(json, name, null);
@@ -39,6 +72,22 @@ public class JsonUtilities
 
     public static String getString(JsonNode json, String name, String fallback) {
         return json.has(name) ? json.get(name).asText() : fallback;
+    }
+
+    public static boolean hasKey(Map json, String key) {
+        return json != null && json.get(key) != null;
+    }
+
+    private static HashMap<String, Object> toHashMap(Object object) {
+        return object instanceof HashMap ? (HashMap<String, Object>) object : null;
+    }
+
+    private static <T> ArrayList<T> toArrayList(Object array, Class<T> cls) {
+        return array instanceof ArrayList ? (ArrayList<T>) array : null;
+    }
+
+    private static int toInt(Object number) {
+        return ((Number) number).intValue();
     }
 
     private final String TAG = "JsonUtilities";

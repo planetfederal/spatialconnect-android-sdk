@@ -20,20 +20,15 @@ import java.util.List;
 
 public class SCQueryFilter
 {
-    //private List<SCPredicate> predicates;
     private SCPredicate predicate;
-    private List<String> layerIds;
+    private List<String> mLayerIds = new ArrayList<>();
     private String featureId;
 
     private int limit = 100;
 
-    public SCQueryFilter() {
-        layerIds = new ArrayList<>();
-    }
-
     public SCQueryFilter(SCPredicate scPredicate)
     {
-        this.layerIds = new ArrayList<>();
+        mLayerIds = new ArrayList<>();
         this.predicate = scPredicate;
     }
 
@@ -43,11 +38,15 @@ public class SCQueryFilter
     }
 
     public void addLayerId(String id) {
-        layerIds.add(id);
+        mLayerIds.add(id);
     }
 
     public List<String> getLayerIds() {
-        return this.layerIds;
+        return mLayerIds;
+    }
+
+    public void addLayerIds(List<String> layerIds) {
+        mLayerIds.addAll(layerIds);
     }
 
     public int getLimit() {
