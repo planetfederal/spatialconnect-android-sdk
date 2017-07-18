@@ -35,11 +35,15 @@ import java.util.Map;
 public class JsonUtilities
 {
 
+    public static boolean getBoolean(HashMap<String, Object> json, String name) {
+        return hasKey(json, name) && (boolean) json.get(name);
+    }
+
     public static int getInt(HashMap<String, Object> json, String name) {
         return getInt(json, name, 0);
     }
 
-    public static Integer getInt(Map json, String name, Integer fallback) {
+    public static Integer getInt(HashMap<String, Object> json, String name, Integer fallback) {
         // this cannot be a conditional expression (single-line if)
         // https://docs.oracle.com/javase/specs/jls/se8/html/jls-15.html#jls-15.25
         if ( hasKey(json, name) ) {
@@ -50,7 +54,7 @@ public class JsonUtilities
         }
     }
 
-    public static <T> ArrayList<T> getArrayList(Map json, String name, Class<T> cls) {
+    public static <T> ArrayList<T> getArrayList(HashMap<String, Object> json, String name, Class<T> cls) {
         return hasKey(json, name) ? toArrayList(json.get(name), cls) : null;
     }
 
@@ -62,7 +66,7 @@ public class JsonUtilities
         return getString(json, name, null);
     }
 
-    public static String getString(Map json, String name, String fallback) {
+    public static String getString(HashMap<String, Object> json, String name, String fallback) {
         return hasKey(json, name) ? (String) json.get(name) : fallback;
     }
 
@@ -74,7 +78,7 @@ public class JsonUtilities
         return json.has(name) ? json.get(name).asText() : fallback;
     }
 
-    public static boolean hasKey(Map json, String key) {
+    public static boolean hasKey(HashMap<String, Object> json, String key) {
         return json != null && json.get(key) != null;
     }
 

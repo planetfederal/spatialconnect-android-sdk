@@ -18,6 +18,7 @@ package com.boundlessgeo.spatialconnect.geometries;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
+import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -35,6 +36,7 @@ import java.util.UUID;
 
 public class SCSpatialFeature
 {
+
     /**
      * For a GeoPackage, the ID will follow the convention storeId.featureTableName.idOfRow
      */
@@ -54,118 +56,6 @@ public class SCSpatialFeature
         this.metadata.put("layerId", layerId);
         this.metadata.put("storeId", storeId);
     }
-
-//    public SCSpatialFeature(HashMap<String, Object> jsonMap) {
-//        // TODO
-//
-//        SCGeometryFactory factory = new SCGeometryFactory();
-//        SCSpatialFeature feature = new SCSpatialFeature();
-//
-//        String id = null;
-//        String created = null;
-//        String modified = null;
-//        Map<String, Object> properties = null;
-//
-//        try
-//        {
-//            ObjectMapper mapper = SCObjectMapper.getMapper();
-//            JsonNode node = mapper.readTree(json);
-//
-//            JsonNode idNode = node.get("id");
-//            if(idNode != null)
-//            {
-//                id = idNode.asText();
-//            }
-//
-//            JsonNode dateNode = node.get("created");
-//            if (dateNode != null)
-//            {
-//                created = dateNode.asText();
-//            }
-//
-//            dateNode = node.get("modified");
-//            if (dateNode != null)
-//            {
-//                modified = dateNode.asText();
-//            }
-//
-//            JsonNode geometryNode = node.get("geometry");
-//
-//            if (geometryNode != null) {
-//                SCGeometry scGeometry;
-//                String type = geometryNode.get("type").asText();
-//                String geomJson = geometryNode.toString();
-//
-//                switch (type.toLowerCase(Locale.US))
-//                {
-//                    case "point":
-//                        scGeometry = factory.getPointFromGeoJson(geomJson);
-//                        break;
-//                    case "linestring":
-//                        scGeometry = factory.getLineStringFromGeoJson(geomJson);
-//                        break;
-//                    case "polygon":
-//                        scGeometry = factory.getPolygonFromGeoJson(geomJson);
-//                        break;
-//                    case "multipoint":
-//                        scGeometry = factory.getMultiPointFromGeoJson(geomJson);
-//                        break;
-//                    case "multilinestring":
-//                        scGeometry = factory.getMultiLineStringFromGeoJson(geomJson);
-//                        break;
-//                    case "multipolygon":
-//                        scGeometry = factory.getMultiPolygonFromGeoJson(geomJson);
-//                        break;
-//                    default:
-//                        return null;
-//                }
-//                feature = scGeometry;
-//            }
-//
-//            JavaType javaType = mapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class);
-//
-//            JsonNode propertiesNode = node.get("properties");
-//            if (propertiesNode != null)
-//            {
-//                properties = mapper.readValue(propertiesNode.traverse(), javaType);
-//            }
-//
-//            if(id != null)
-//            {
-//                feature.setId(id);
-//            }
-//            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-//            if(created != null)
-//            {
-//                feature.setCreated(formatter.parse(created));
-//            }
-//            if(modified != null)
-//            {
-//                feature.setModified(formatter.parse(modified));
-//            }
-//            if(properties != null)
-//            {
-//                feature.setProperties(properties);
-//            }
-//            JsonNode layerIdNode = node.get("layerId");
-//            if(layerIdNode != null)
-//            {
-//                feature.setLayerId(layerIdNode.asText());
-//            }
-//            JsonNode storeIdNode = node.get("storeId");
-//            if(storeIdNode != null)
-//            {
-//                feature.setStoreId(storeIdNode.asText());
-//            }
-//        }
-//        catch (Exception ex)
-//        {
-//            //Log.e(TAG, "Error in getFeatureFromGeoJson(String)", ex);
-//            ex.printStackTrace();
-//        }
-//
-//        return feature;
-//    }
 
     public String getId()
     {
@@ -251,10 +141,10 @@ public class SCSpatialFeature
         return null;
     }
 
-    public  Map<String, Object> toMap() {
-        Map<String, Object> map = null;
+    public HashMap<String, Object> toMap() {
+        HashMap<String, Object> map = null;
         try {
-            map = SCObjectMapper.getMapper().convertValue(this,  Map.class);
+            map = SCObjectMapper.getMapper().convertValue(this,  HashMap.class);
             map.put("type", "Feature");
         } catch (Exception e) {
             Log.e(LOG_TAG, "error converting to map: " + e.getMessage());
@@ -263,11 +153,9 @@ public class SCSpatialFeature
         return map;
     }
 
-//    public HashMap<String, Object> toJSON() {
-//        HashMap<String, Object> json = new HashMap<>();
-//
-//        // TODO
-//
-//        return json;
-//    }
+    public HashMap<String, Object> toJSON() {
+        return toMap();
+
+        // TODO eventually should change this to write to a HashMap on it's own, without using objectmapper
+    }
 }

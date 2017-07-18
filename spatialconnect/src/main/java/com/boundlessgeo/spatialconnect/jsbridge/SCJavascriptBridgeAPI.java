@@ -9,12 +9,14 @@ import com.boundlessgeo.schema.Actions;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
+import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
 import com.boundlessgeo.spatialconnect.query.SCGeometryPredicateComparison;
 import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
+import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.services.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
@@ -24,6 +26,7 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.boundlessgeo.spatialconnect.stores.SCRasterStore;
 import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -45,7 +48,7 @@ public class SCJavascriptBridgeAPI {
         mSpatialConnect.initialize(context);
     }
 
-        /**
+    /**
      * Handles a message sent from Javascript.  Expects the message envelope to look like:
      * <code>{"type":<String>,"payload":<JSON Object>}</code>
      *
@@ -57,7 +60,7 @@ public class SCJavascriptBridgeAPI {
             return;
         }
 
-            // parse bridge message to determine command
+        // parse bridge message to determine command
         String type = JsonUtilities.getString(jsonMessage, "type");
         if (TextUtils.isEmpty(type)) {
             return;
@@ -65,63 +68,46 @@ public class SCJavascriptBridgeAPI {
         Actions command = Actions.fromAction(type);
 
         Log.d(TAG, "sdk handling: " + command + " :: " + jsonMessage);
-            if (command == Actions.START_ALL_SERVICES) {
-                handleStartAllServices();
-            }
-            else if (command == Actions.DATASERVICE_ACTIVESTORESLIST) {
-                handleActiveStoresList(subscriber);
-            }
-            else if (command == Actions.DATASERVICE_ACTIVESTOREBYID) {
-                handleActiveStoreById(JsonUtilities.getHashMap(jsonMessage, "payload"), subscriber);
-            }
-            else if (command == Actions.DATASERVICE_STORELIST) {
-                handleStoreList(subscriber);
-            }
-            else if (command == Actions.DATASERVICE_QUERY
-                    || command == Actions.DATASERVICE_SPATIALQUERY) {
-                handleQueryStoresByIds(JsonUtilities.getHashMap(jsonMessage, "payload"), subscriber);
+        if (command == Actions.START_ALL_SERVICES) {
+            handleStartAllServices();
+        } else if (command == Actions.DATASERVICE_ACTIVESTORESLIST) {
+            handleActiveStoresList(subscriber);
+        } else if (command == Actions.DATASERVICE_ACTIVESTOREBYID) {
+            handleActiveStoreById(JsonUtilities.getHashMap(jsonMessage, "payload"), subscriber);
+        } else if (command == Actions.DATASERVICE_STORELIST) {
+            handleStoreList(subscriber);
+        } else if (command == Actions.DATASERVICE_QUERY
+                || command == Actions.DATASERVICE_SPATIALQUERY) {
+            handleQueryStoresByIds(JsonUtilities.getHashMap(jsonMessage, "payload"), subscriber);
+        } else if (command == Actions.DATASERVICE_QUERYALL
+                || command == Actions.DATASERVICE_SPATIALQUERYALL) {
+            handleQueryAllStores(JsonUtilities.getHashMap(jsonMessage, "payload"), subscriber);
+        } else if (command == Actions.DATASERVICE_CREATEFEATURE) {
+            handleCreateFeature(JsonUtilities.getHashMap(jsonMessage, "payload"), subscriber);
+        } else if (command == Actions.DATASERVICE_UPDATEFEATURE) {
+            handleUpdateFeature(JsonUtilities.getHashMap(jsonMessage, "payload"), subscriber);
+        } else if (command == Actions.DATASERVICE_DELETEFEATURE) {
+            handleDeleteFeature(JsonUtilities.getString(jsonMessage, "payload"), subscriber);
+        } else if (command == Actions.DATASERVICE_FORMLIST) {
+            handleFormsList(subscriber);
+        } else if (command == Actions.SENSORSERVICE_GPS) {
+            handleSensorServiceGps(JsonUtilities.getInt(jsonMessage, "payload"), subscriber);
+        } else if (command == Actions.AUTHSERVICE_AUTHENTICATE) {
+            handleAuthenticate(JsonUtilities.getHashMap(jsonMessage, "payload"), subscriber);
+        } else if (command == Actions.AUTHSERVICE_LOGOUT) {
+            handleLogout(subscriber);
+        } else if (command == Actions.AUTHSERVICE_ACCESS_TOKEN) {
+            handleAccessToken(subscriber);
+        } else if (command == Actions.AUTHSERVICE_LOGIN_STATUS) {
+            handleLoginStatus(subscriber);
+        } else if (command == Actions.NOTIFICATIONS) {
+            handleNotificationSubscribe(subscriber);
+        } else if (command == Actions.BACKENDSERVICE_HTTP_URI) {
+            handleBackendServiceHTTPUri(subscriber);
+        } else if (command == Actions.BACKENDSERVICE_MQTT_CONNECTED) {
+            handleMqttConnectionStatus(subscriber);
         }
-        else if ( command == Actions.DATASERVICE_QUERYALL
-                    || command == Actions.DATASERVICE_SPATIALQUERYALL) {
-                handleQueryAllStores(JsonUtilities.getHashMap(jsonMessage, "payload"), subscriber);
-            }
-            else if (command == Actions.DATASERVICE_CREATEFEATURE) {
-                handleCreateFeature(JsonUtilities.getHashMap(jsonMessage, "payload"), subscriber);
-            }
-            else if (command == Actions.DATASERVICE_UPDATEFEATURE) {
-                handleUpdateFeature(JsonUtilities.getHashMap(jsonMessage, "payload"), subscriber);
-            }
-            else if (command == Actions.DATASERVICE_DELETEFEATURE) {
-                handleDeleteFeature(JsonUtilities.getString(jsonMessage, "payload"), subscriber);
-            }
-            else if (command == Actions.DATASERVICE_FORMLIST) {
-                handleFormsList(subscriber);
-            }
-            else if (command == Actions.SENSORSERVICE_GPS) {
-                handleSensorServiceGps(JsonUtilities.getInt(jsonMessage, "payload"), subscriber);
-            }
-            else if (command == Actions.AUTHSERVICE_AUTHENTICATE) {
-                handleAuthenticate(JsonUtilities.getHashMap(jsonMessage, "payload"), subscriber);
-            }
-            else if (command == Actions.AUTHSERVICE_LOGOUT) {
-                handleLogout(subscriber);
-            }
-            else if (command == Actions.AUTHSERVICE_ACCESS_TOKEN) {
-                handleAccessToken(subscriber);
-            }
-            else if (command == Actions.AUTHSERVICE_LOGIN_STATUS) {
-                handleLoginStatus(subscriber);
-            }
-            else if (command == Actions.NOTIFICATIONS) {
-                handleNotificationSubscribe(subscriber);
-            }
-            else if (command == Actions.BACKENDSERVICE_HTTP_URI) {
-                handleBackendServiceHTTPUri(subscriber);
-            }
-            else if (command == Actions.BACKENDSERVICE_MQTT_CONNECTED) {
-                handleMqttConnectionStatus(subscriber);
-            }
-        }
+    }
 
     /**
      * Handles the {@link Actions#START_ALL_SERVICES} command.
@@ -196,9 +182,8 @@ public class SCJavascriptBridgeAPI {
                             // base64 encode id and set it before sending across wire
                             String encodedId = feature.getKey().encodedCompositeKey();
                             feature.setId(encodedId);
-                            subscriber.onNext(feature.toJSON()); // TODO or new JSONObject(feature.toJson())
-                        }
-                        catch (UnsupportedEncodingException e) {
+                            subscriber.onNext(feature.toJSON());
+                        } catch (UnsupportedEncodingException e) {
                             subscriber.onError(e);
                         }
                     }
@@ -223,9 +208,8 @@ public class SCJavascriptBridgeAPI {
                             // base64 encode id and set it before sending across wire
                             String encodedId = feature.getKey().encodedCompositeKey();
                             feature.setId(encodedId);
-                            subscriber.onNext(feature.toJSON()); // TODO or new JSONObject(feature.toJson())
-                        }
-                        catch (UnsupportedEncodingException e) {
+                            subscriber.onNext(feature.toJSON());
+                        } catch (UnsupportedEncodingException e) {
                             subscriber.onError(e);
                         }
                     }
@@ -236,60 +220,70 @@ public class SCJavascriptBridgeAPI {
      * Handles the {@link Actions#DATASERVICE_CREATEFEATURE} command.
      */
     private void handleCreateFeature(HashMap<String, Object> payload, final Subscriber<Object> subscriber) {
-            SCSpatialFeature newFeature = new SCSpatialFeature(JsonUtilities.getHashMap(payload, "feature"));
-            // if no store was specified, use the default store
-            if (newFeature.getKey().getStoreId() == null || newFeature.getKey().getStoreId().isEmpty()) {
-                newFeature.setStoreId(newFeature.getKey().getStoreId());
-            }
-            SCDataStore store = mSpatialConnect.getDataService().getStoreByIdentifier(newFeature.getKey().getStoreId());
-            ((ISCSpatialStore) store).create(newFeature)
-                    .subscribeOn(Schedulers.io())
-                    .subscribe(
-                    new Action1<SCSpatialFeature>() {
-                @Override
-                public void call(SCSpatialFeature feature) {
-                    try {
-                        // base64 encode id and set it before sending across wire
-                        String encodedId = feature.getKey().encodedCompositeKey();
-                        feature.setId(encodedId);
-                        subscriber.onNext(feature.toJSON());
-                    }
-                    catch (UnsupportedEncodingException e) {
-                        subscriber.onError(e);
-                    }
-                    }
-                });
+        String featureString = null;
+        try {
+            featureString = SCObjectMapper.getMapper().writeValueAsString(JsonUtilities.getHashMap(payload, "feature"));
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        SCSpatialFeature newFeature = new SCGeometryFactory().getSpatialFeatureFromFeatureJson(featureString);
+        // if no store was specified, use the default store
+        if (newFeature.getKey().getStoreId() == null || newFeature.getKey().getStoreId().isEmpty()) {
+            newFeature.setStoreId(newFeature.getKey().getStoreId());
+        }
+        SCDataStore store = mSpatialConnect.getDataService().getStoreByIdentifier(newFeature.getKey().getStoreId());
+        ((ISCSpatialStore) store).create(newFeature)
+                .subscribeOn(Schedulers.io())
+                .subscribe(new Action1<SCSpatialFeature>() {
+                    @Override
+                    public void call(SCSpatialFeature feature) {
+                                try {
+                                    // base64 encode id and set it before sending across wire
+                                    String encodedId = feature.getKey().encodedCompositeKey();
+                                    feature.setId(encodedId);
+                                    subscriber.onNext(feature.toJSON());
+                                } catch (UnsupportedEncodingException e) {
+                                    subscriber.onError(e);
+                                }
+                            }
+                        });
     }
 
     /**
      * Handles the {@link Actions#DATASERVICE_UPDATEFEATURE} command.
      */
     private void handleUpdateFeature(HashMap<String, Object> payload, Subscriber<Object> subscriber) {
-        SCSpatialFeature feature = new SCSpatialFeature(JsonUtilities.getHashMap(payload, "feature"));
+        String featureString = null;
         try {
-        SCKeyTuple decodedTuple = new SCKeyTuple(feature.getId());
-        // update feature with decoded values
-        feature.setStoreId(decodedTuple.getStoreId());
-        feature.setLayerId(decodedTuple.getLayerId());
-        feature.setId(decodedTuple.getFeatureId());
+            featureString = SCObjectMapper.getMapper().writeValueAsString(JsonUtilities.getHashMap(payload, "feature"));
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+
+        SCSpatialFeature feature = new SCGeometryFactory().getSpatialFeatureFromFeatureJson(featureString);
+        try {
+            SCKeyTuple decodedTuple = new SCKeyTuple(feature.getId());
+            // update feature with decoded values
+            feature.setStoreId(decodedTuple.getStoreId());
+            feature.setLayerId(decodedTuple.getLayerId());
+            feature.setId(decodedTuple.getFeatureId());
         } catch (UnsupportedEncodingException e) {
             subscriber.onError(e);
         }
 
-            SCDataStore store = mSpatialConnect.getDataService().getStoreByIdentifier(feature.getKey().getStoreId());
-            ((ISCSpatialStore) store).update(feature).subscribeOn(Schedulers.io()).subscribe(subscriber);
+        SCDataStore store = mSpatialConnect.getDataService().getStoreByIdentifier(feature.getKey().getStoreId());
+        ((ISCSpatialStore) store).update(feature).subscribeOn(Schedulers.io()).subscribe(subscriber);
     }
 
     /**
      * Handles the {@link Actions#DATASERVICE_DELETEFEATURE} command.
      */
-    private void handleDeleteFeature(String payload, Subscriber subscriber) {
+    private void handleDeleteFeature(String payload, Subscriber<Object> subscriber) {
         try {
             SCKeyTuple featureKey = new SCKeyTuple(payload);
             SCDataStore store = mSpatialConnect.getDataService().getStoreByIdentifier(featureKey.getStoreId());
             ((ISCSpatialStore) store).delete(featureKey).subscribeOn(Schedulers.io()).subscribe(subscriber);
-        }
-        catch (UnsupportedEncodingException e) {
+        } catch (UnsupportedEncodingException e) {
             subscriber.onError(e);
         }
     }
@@ -304,7 +298,7 @@ public class SCJavascriptBridgeAPI {
                 .subscribe(new Action1<Boolean>() {
                     @Override
                     public void call(Boolean hasForms) {
-                        if (hasForms)  {
+                        if (hasForms) {
                             HashMap<String, Object> payload = new HashMap<>();
 
                             List<SCFormConfig> formConfigs =
@@ -494,7 +488,7 @@ public class SCJavascriptBridgeAPI {
 
         ArrayList<Double> coords = JsonUtilities.getArrayList(filterJSON, "$geocontains", Double.class);
         // if a bounding box was provided, use it
-        if (coords != null && coords.size() >= 3 ) {
+        if (coords != null && coords.size() >= 3) {
             bbox = new SCBoundingBox(coords.get(0), coords.get(1), coords.get(2), coords.get(3));
         }
         // otherwise use the world
