@@ -22,6 +22,9 @@ import java.util.Locale;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class SCRemoteConfig {
 
+    @JsonProperty("auth")
+    private String auth;
+
     @JsonProperty("http_protocol")
     private String httpProtocol;
 
@@ -86,6 +89,14 @@ public class SCRemoteConfig {
 
     public void setMqttPort(Integer mqttPort) {
         this.mqttPort = mqttPort;
+    }
+
+    public String getAuth() {
+        return auth;
+    }
+
+    public void setAuth(String auth) {
+        this.auth = auth;
     }
 
     public String getHttpUri() {

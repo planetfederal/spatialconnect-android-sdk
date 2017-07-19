@@ -228,7 +228,7 @@ public class SCGpkgFeatureSource {
     }
 
     public Observable<SCSpatialFeature> unSent() {
-
+        Log.d(LOG_TAG, "Fetching unsent features");
         final String sql = String.format("SELECT %s FROM %s WHERE sent IS NULL",
                 gpkg.getSelectColumnsString(this),
                 auditName);
