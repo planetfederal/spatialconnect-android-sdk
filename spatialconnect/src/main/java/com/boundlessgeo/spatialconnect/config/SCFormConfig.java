@@ -115,7 +115,6 @@ public class SCFormConfig {
         json.put("form_label", getFormLabel());
         json.put("version", getVersion());
         json.put("fields", getFields());
-        json.put("fields", getFields());
 
         return json;
     }
