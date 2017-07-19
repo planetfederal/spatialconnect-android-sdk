@@ -43,6 +43,35 @@ public class SCJavascriptBridgeAPI {
 
     private SpatialConnect mSpatialConnect;
 
+    /*
+     * main purpose of this wrapper is to standardize/centralize the behavior of calling onCompleted(),
+     * onError(), onNext(). This is functionally equivalent to implementing these methods in anonymous classes
+     * in each .subscribe() call
+     */
+    private class SubscriberWrapper<T> extends Subscriber<T> {
+
+        Subscriber<Object> mSubscriber;
+
+        SubscriberWrapper(Subscriber<Object> subscriber) {
+            mSubscriber = subscriber;
+        }
+
+        @Override
+        public void onCompleted() {
+            mSubscriber.onCompleted();
+        }
+
+        @Override
+        public void onError(Throwable e) {
+            mSubscriber.onError(e);
+        }
+
+        @Override
+        public void onNext(T o) {
+            mSubscriber.onNext(o);
+        }
+    }
+
     SCJavascriptBridgeAPI(Context context) {
         mSpatialConnect = SpatialConnect.getInstance();
         mSpatialConnect.initialize(context);
@@ -119,12 +148,12 @@ public class SCJavascriptBridgeAPI {
     /**
      * Handles the {@link Actions#DATASERVICE_ACTIVESTORESLIST} command.
      */
-    private void handleActiveStoresList(final Subscriber<Object> subscriber) {
+    private void handleActiveStoresList(Subscriber<Object> subscriber) {
         mSpatialConnect.getDataService()
                 .hasStores
-                .subscribe(new Action1<Boolean>() {
+                .subscribe(new SubscriberWrapper<Boolean>(subscriber) {
                     @Override
-                    public void call(Boolean hasStores) {
+                    public void onNext(Boolean hasStores){
                         if (hasStores) {
                             HashMap<String, Object> payload = new HashMap<>();
 
@@ -136,10 +165,10 @@ public class SCJavascriptBridgeAPI {
 
                             payload.put("stores", storesArray);
 
-                            subscriber.onNext(payload);
+                            mSubscriber.onNext(payload);
                         }
                     }
-                });
+                } );
     }
 
     /**
@@ -148,69 +177,73 @@ public class SCJavascriptBridgeAPI {
     private void handleActiveStoreById(HashMap<String, Object> payload, Subscriber<Object> subscriber) {
         String storeId = JsonUtilities.getString(payload, "storeId");
         SCDataStore store = mSpatialConnect.getDataService().getStoreByIdentifier(storeId);
-        subscriber.onNext(getStoreMap(store));
-        subscriber.onCompleted();
+        SubscriberWrapper<Object> wrapper = new SubscriberWrapper<>(subscriber);
+        wrapper.onNext(getStoreMap(store));
+        wrapper.onCompleted();
     }
 
     /**
      * Handles all the {@link Actions#DATASERVICE_STORELIST} commands.
      */
-    private void handleStoreList(final Subscriber<Object> subscriber) {
-        subscriber.onNext(getAllStoresPayload());
-
-        mSpatialConnect.getDataService().getStoreEvents().subscribe(new Action1<SCStoreStatusEvent>() {
+    private void handleStoreList(Subscriber<Object> subscriber) {
+        SubscriberWrapper<Object> wrapper = new SubscriberWrapper<Object>(subscriber) {
+            // this method used to/can receive a SCStoreStatusEvent, but doesnt actually report that value
             @Override
-            public void call(SCStoreStatusEvent scStoreStatusEvent) {
-                subscriber.onNext(getAllStoresPayload());
+            public void onNext(Object object) {
+                mSubscriber.onNext(getAllStoresPayload());
             }
-        });
+        };
+
+        wrapper.onNext(getAllStoresPayload());
+
+        mSpatialConnect.getDataService().getStoreEvents().subscribe(wrapper);
     }
 
     /**
      * Handles the {@link Actions#DATASERVICE_QUERYALL} and
      * {@link Actions#DATASERVICE_SPATIALQUERYALL} commands.
      */
-    private void handleQueryAllStores(HashMap<String, Object> payload, final Subscriber<Object> subscriber) {
+    private void handleQueryAllStores(HashMap<String, Object> payload, Subscriber<Object> subscriber) {
         SCQueryFilter filter = getFilter(JsonUtilities.getHashMap(payload, "filter"));
 
         mSpatialConnect.getDataService().queryAllStores(filter)
-                .subscribeOn(Schedulers.io())
-                .subscribe(new Action1<SCSpatialFeature>() {
-                    @Override
-                    public void call(SCSpatialFeature feature) {
-                        try {
-                            // base64 encode id and set it before sending across wire
-                            String encodedId = feature.getKey().encodedCompositeKey();
-                            feature.setId(encodedId);
-                            subscriber.onNext(feature.toJSON());
-                        } catch (UnsupportedEncodingException e) {
-                            subscriber.onError(e);
-                        }
-                    }
-                });
+                       .subscribeOn(Schedulers.io())
+                       .subscribe(new SubscriberWrapper<SCSpatialFeature>(subscriber) {
+                           @Override
+                           public void onNext(SCSpatialFeature feature) {
+                               try {
+                                   // base64 encode id and set it before sending across wire
+                                   String encodedId = feature.getKey().encodedCompositeKey();
+                                   feature.setId(encodedId);
+                                   mSubscriber.onNext(feature.toJSON());
+                               } catch (UnsupportedEncodingException e) {
+                                   mSubscriber.onError(e);
+                               }
+                           }
+                       });
     }
 
     /**
      * Handles the {@link Actions#DATASERVICE_QUERY} and
      * {@link Actions#DATASERVICE_SPATIALQUERY} commands.
      */
-    private void handleQueryStoresByIds(HashMap<String, Object> payload, final Subscriber<Object> subscriber) {
+    private void handleQueryStoresByIds(HashMap<String, Object> payload, Subscriber<Object> subscriber) {
         SCQueryFilter filter = getFilter(JsonUtilities.getHashMap(payload, "filter"));
 
         ArrayList<String> storeIds = JsonUtilities.getArrayList(payload, "storeId", String.class);
 
         mSpatialConnect.getDataService().queryStoresByIds(storeIds, filter)
                 .subscribeOn(Schedulers.io())
-                .subscribe(new Action1<SCSpatialFeature>() {
+                .subscribe(new SubscriberWrapper<SCSpatialFeature>(subscriber) {
                     @Override
-                    public void call(SCSpatialFeature feature) {
+                    public void onNext(SCSpatialFeature feature) {
                         try {
                             // base64 encode id and set it before sending across wire
                             String encodedId = feature.getKey().encodedCompositeKey();
                             feature.setId(encodedId);
-                            subscriber.onNext(feature.toJSON());
+                            mSubscriber.onNext(feature.toJSON());
                         } catch (UnsupportedEncodingException e) {
-                            subscriber.onError(e);
+                            mSubscriber.onError(e);
                         }
                     }
                 });
@@ -219,7 +252,7 @@ public class SCJavascriptBridgeAPI {
     /**
      * Handles the {@link Actions#DATASERVICE_CREATEFEATURE} command.
      */
-    private void handleCreateFeature(HashMap<String, Object> payload, final Subscriber<Object> subscriber) {
+    private void handleCreateFeature(HashMap<String, Object> payload, Subscriber<Object> subscriber) {
         String featureString = null;
         try {
             featureString = SCObjectMapper.getMapper().writeValueAsString(JsonUtilities.getHashMap(payload, "feature"));
@@ -234,16 +267,16 @@ public class SCJavascriptBridgeAPI {
         SCDataStore store = mSpatialConnect.getDataService().getStoreByIdentifier(newFeature.getKey().getStoreId());
         ((ISCSpatialStore) store).create(newFeature)
                 .subscribeOn(Schedulers.io())
-                .subscribe(new Action1<SCSpatialFeature>() {
+                .subscribe(new SubscriberWrapper<SCSpatialFeature>(subscriber) {
                     @Override
-                    public void call(SCSpatialFeature feature) {
+                    public void onNext(SCSpatialFeature feature) {
                                 try {
                                     // base64 encode id and set it before sending across wire
                                     String encodedId = feature.getKey().encodedCompositeKey();
                                     feature.setId(encodedId);
-                                    subscriber.onNext(feature.toJSON());
+                                    mSubscriber.onNext(feature.toJSON());
                                 } catch (UnsupportedEncodingException e) {
-                                    subscriber.onError(e);
+                                    mSubscriber.onError(e);
                                 }
                             }
                         });
@@ -260,6 +293,8 @@ public class SCJavascriptBridgeAPI {
             e.printStackTrace();
         }
 
+        SubscriberWrapper wrapper = new SubscriberWrapper(subscriber);
+
         SCSpatialFeature feature = new SCGeometryFactory().getSpatialFeatureFromFeatureJson(featureString);
         try {
             SCKeyTuple decodedTuple = new SCKeyTuple(feature.getId());
@@ -268,36 +303,38 @@ public class SCJavascriptBridgeAPI {
             feature.setLayerId(decodedTuple.getLayerId());
             feature.setId(decodedTuple.getFeatureId());
         } catch (UnsupportedEncodingException e) {
-            subscriber.onError(e);
+            wrapper.onError(e);
         }
 
         SCDataStore store = mSpatialConnect.getDataService().getStoreByIdentifier(feature.getKey().getStoreId());
-        ((ISCSpatialStore) store).update(feature).subscribeOn(Schedulers.io()).subscribe(subscriber);
+        ((ISCSpatialStore) store).update(feature).subscribeOn(Schedulers.io()).subscribe(wrapper);
     }
 
     /**
      * Handles the {@link Actions#DATASERVICE_DELETEFEATURE} command.
      */
     private void handleDeleteFeature(String payload, Subscriber<Object> subscriber) {
+        SubscriberWrapper wrapper = new SubscriberWrapper(subscriber);
+
         try {
             SCKeyTuple featureKey = new SCKeyTuple(payload);
             SCDataStore store = mSpatialConnect.getDataService().getStoreByIdentifier(featureKey.getStoreId());
-            ((ISCSpatialStore) store).delete(featureKey).subscribeOn(Schedulers.io()).subscribe(subscriber);
+            ((ISCSpatialStore) store).delete(featureKey).subscribeOn(Schedulers.io()).subscribe(wrapper);
         } catch (UnsupportedEncodingException e) {
-            subscriber.onError(e);
+            wrapper.onError(e);
         }
     }
 
     /**
      * Handles the {@link Actions#DATASERVICE_FORMLIST} command.
      */
-    private void handleFormsList(final Subscriber<Object> subscriber) {
+    private void handleFormsList(Subscriber<Object> subscriber) {
         mSpatialConnect.getDataService()
                 .getFormStore()
                 .hasForms
-                .subscribe(new Action1<Boolean>() {
+                .subscribe(new SubscriberWrapper<Boolean>(subscriber) {
                     @Override
-                    public void call(Boolean hasForms) {
+                    public void onNext(Boolean hasForms) {
                         if (hasForms) {
                             HashMap<String, Object> payload = new HashMap<>();
 
@@ -310,7 +347,7 @@ public class SCJavascriptBridgeAPI {
 
                             payload.put("forms", formsArray);
 
-                            subscriber.onNext(payload);
+                            this.mSubscriber.onNext(payload);
                         }
                     }
                 });
@@ -320,22 +357,22 @@ public class SCJavascriptBridgeAPI {
     /**
      * Handles all the {@link Actions#SENSORSERVICE_GPS} commands.
      */
-    private void handleSensorServiceGps(int payload, final Subscriber<Object> subscriber) {
+    private void handleSensorServiceGps(int payload, Subscriber<Object> subscriber) {
         SCSensorService sensorService = mSpatialConnect.getSensorService();
         if (payload == 1) {
             sensorService.enableGPS();
             sensorService.getLastKnownLocation()
                     .subscribeOn(Schedulers.newThread())
-                    .subscribe(new Action1<Location>() {
+                    .subscribe(new SubscriberWrapper<Location>(subscriber) {
                         @Override
-                        public void call(Location location) {
+                        public void onNext(Location location) {
                             HashMap<String, Object> payload = new HashMap<>();
 
                             payload.put("latitude", location.getLatitude());
                             payload.put("longitude", location.getLongitude());
                             payload.put("altitude", location.getAltitude());
 
-                            subscriber.onNext(payload);
+                            this.mSubscriber.onNext(payload);
                         }
                     });
         }
@@ -344,26 +381,27 @@ public class SCJavascriptBridgeAPI {
         }
     }
 
-    private void handleAuthenticate(HashMap<String, Object> payload, final Subscriber<Object> subscriber) {
+    private void handleAuthenticate(HashMap<String, Object> payload, Subscriber<Object> subscriber) {
         String email = JsonUtilities.getString(payload, "email");
         String password = JsonUtilities.getString(payload, "password");
         SCAuthService authService = SpatialConnect.getInstance().getAuthService();
         authService.authenticate(email, password);
-        subscriber.onCompleted();
+        (new SubscriberWrapper(subscriber)).onCompleted();
     }
 
-    private void handleLogout(Subscriber subscriber) {
+    private void handleLogout(Subscriber<Object> subscriber) {
         SpatialConnect.getInstance().getAuthService().logout();
-        subscriber.onCompleted();
+        (new SubscriberWrapper(subscriber)).onCompleted();
     }
 
     private void handleAccessToken(Subscriber<Object> subscriber) {
         SCAuthService authService = SpatialConnect.getInstance().getAuthService();
         String accessToken = authService.getAccessToken();
+        SubscriberWrapper<Object> wrapper = new SubscriberWrapper<>(subscriber);
         if (accessToken != null) {
-            subscriber.onNext(accessToken);
+            wrapper.onNext(accessToken);
         }
-        subscriber.onCompleted();
+        wrapper.onCompleted();
     }
 
     /**
@@ -371,37 +409,32 @@ public class SCJavascriptBridgeAPI {
      */
     private void handleLoginStatus(final Subscriber<Object> subscriber) {
         mSpatialConnect.serviceRunning(SCAuthService.serviceId())
-                .subscribe(new Action1<SCServiceStatusEvent>() {
+                .subscribe(new SubscriberWrapper<SCServiceStatusEvent>(subscriber) {
                     @Override
-                    public void call(SCServiceStatusEvent scServiceStatusEvent) {
+                    public void onNext(SCServiceStatusEvent scServiceStatusEvent) {
                         SCAuthService authService = SpatialConnect.getInstance().getAuthService();
-                        authService.getLoginStatus().subscribe(new Action1<Integer>() {
-                            @Override
-                            public void call(Integer status) {
-                                subscriber.onNext(status);
-                            }
-                        });
+                        authService.getLoginStatus().subscribe(new SubscriberWrapper<Integer>(subscriber));
                     }
                 });
     }
 
     private void handleNotificationSubscribe(final Subscriber<Object> subscriber) {
         SCSensorService sensorService = SpatialConnect.getInstance().getSensorService();
-        sensorService.isConnected().subscribe(new Action1<Boolean>() {
+        sensorService.isConnected().subscribe(new SubscriberWrapper<Boolean>(subscriber) {
             @Override
-            public void call(Boolean connected) {
+            public void onNext(Boolean connected) {
                 if (connected) {
                     final SpatialConnect sc = SpatialConnect.getInstance();
                     sc.serviceRunning(SCBackendService.serviceId())
-                            .subscribe(new Action1<SCServiceStatusEvent>() {
+                            .subscribe(new SubscriberWrapper<SCServiceStatusEvent>(subscriber) {
                                 @Override
-                                public void call(SCServiceStatusEvent scServiceStatusEvent) {
+                                public void onNext(SCServiceStatusEvent scServiceStatusEvent) {
                                     sc.getBackendService()
                                             .getNotifications()
-                                            .subscribe(new Action1<SCNotification>() {
+                                            .subscribe(new SubscriberWrapper<SCNotification>(subscriber) {
                                                 @Override
-                                                public void call(SCNotification scNotification) {
-                                                    subscriber.onNext(scNotification.toJSON());
+                                                public void onNext(SCNotification scNotification) {
+                                                    this.mSubscriber.onNext(scNotification.toJSON());
                                                 }
                                             });
                                 }
@@ -415,15 +448,15 @@ public class SCJavascriptBridgeAPI {
     /**
      * Handles the {@link Actions#BACKENDSERVICE_HTTP_URI} command.
      */
-    private void handleBackendServiceHTTPUri(final Subscriber<Object> subscriber) {
+    private void handleBackendServiceHTTPUri(Subscriber<Object> subscriber) {
         mSpatialConnect.serviceRunning(SCBackendService.serviceId())
-                .subscribe(new Action1<SCServiceStatusEvent>() {
+                .subscribe(new SubscriberWrapper<SCServiceStatusEvent>(subscriber) {
                     @Override
-                    public void call(SCServiceStatusEvent scServiceStatusEvent) {
+                    public void onNext(SCServiceStatusEvent scServiceStatusEvent) {
                         HashMap<String, Object> payload = new HashMap<>();
                         payload.put("backendUri", mSpatialConnect.getBackendService().backendUri + "/api/");
 
-                        subscriber.onNext(payload);
+                        this.mSubscriber.onNext(payload);
                     }
                 });
 
@@ -432,27 +465,26 @@ public class SCJavascriptBridgeAPI {
     /**
      * Handles the {@link Actions#BACKENDSERVICE_MQTT_CONNECTED} command.
      */
-    private void handleMqttConnectionStatus(final Subscriber<Object> subscriber) {
+    private void handleMqttConnectionStatus(Subscriber<Object> subscriber) {
+        SubscriberWrapper<Boolean> wrapper = new SubscriberWrapper<Boolean>(subscriber) {
+            @Override
+            public void onNext(Boolean connected) {
+                HashMap<String, Object> payload = new HashMap<>();
+                payload.put("connected", connected);
+
+                this.mSubscriber.onNext(payload);
+            }
+        };
+
         SpatialConnect sc = SpatialConnect.getInstance();
         SCBackendService backendService = sc.getBackendService();
         if (backendService != null) {
             backendService
                     .connectedToBroker
                     .subscribeOn(Schedulers.io())
-                    .subscribe(new Action1<Boolean>() {
-                        @Override
-                        public void call(Boolean connected) {
-                            HashMap<String, Object> payload = new HashMap<>();
-                            payload.put("connected", connected);
-
-                            subscriber.onNext(payload);
-                        }
-                    });
+                    .subscribe(wrapper);
         } else {
-            HashMap<String, Object> payload = new HashMap<>();
-            payload.put("connected", false);
-
-            subscriber.onNext(payload);
+            wrapper.onNext(false);
         }
     }
 
