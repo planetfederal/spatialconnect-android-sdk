@@ -35,6 +35,8 @@ import com.github.rtoshiro.secure.SecureSharedPreferences;
 import java.util.UUID;
 
 import rx.Observable;
+import rx.functions.Action0;
+import rx.functions.Action1;
 import rx.functions.Func1;
 
 /**
@@ -222,6 +224,23 @@ public class SpatialConnect {
         } else {
             Log.d(LOG_TAG, "SCAuthService Already Connected");
         }
+    }
+
+    public void updateDeviceToken(final String token) {
+
+        serviceRunning(SCBackendService.serviceId()).subscribe(
+                new Action1<SCServiceStatusEvent>() {
+                    @Override
+                    public void call(SCServiceStatusEvent scServiceStatusEvent) {}
+                }, new Action1<Throwable>() {
+                    @Override
+                    public void call(Throwable t) {}
+                }, new Action0() {
+                    @Override
+                    public void call() {
+                        backendService.updateDeviceToken(token);
+                    }
+                });
     }
 
     public SCDataService getDataService() {
