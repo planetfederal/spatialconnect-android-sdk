@@ -16,11 +16,13 @@
 package com.boundlessgeo.spatialconnect.services;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
+import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
@@ -103,13 +105,16 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     public void loadConfig(SCConfig config) {
         loadForms(config.getForms());
         loadDataStores(config.getStores());
-        if (config.getRemote() != null) {
-            if (config.getRemote().getAuth().equals("no-auth")) {
+
+        SCRemoteConfig remoteConfig = config.getRemote();
+        if (remoteConfig != null) {
+            String auth = remoteConfig.getAuth();
+            if ( !TextUtils.isEmpty(auth) && auth.equals("no-auth")) {
                 sc.connectAuth(new NoAuth());
             } else {
-                sc.connectAuth(new SCServerAuthMethod(context, config.getRemote().getHttpUri()));
+                sc.connectAuth(new SCServerAuthMethod(context, remoteConfig.getHttpUri()));
             }
-            sc.connectBackend(config.getRemote());
+            sc.connectBackend(remoteConfig);
         }
     }
 
