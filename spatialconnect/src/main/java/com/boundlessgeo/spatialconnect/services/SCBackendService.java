@@ -90,8 +90,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     /**
-     * Initialize the backend service with a {@code SCRemoteConfig} to setup connections to the SpatialConnect backend
-     * including the REST API and the MQTT broker.
+     * Initialize the backend service with a {@code SCRemoteConfig} to setup connections to the
+     * SpatialConnect backend including the REST API and the MQTT broker.
      *
      * @param config
      */
@@ -99,9 +99,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         if (backendUri == null) {
             backendUri = String.format(
                     "%s://%s:%s",
-                    config.getHttpProtocol(),
-                    config.getHttpHost(),
-                    config.getHttpPort().toString()
+                    config.getHttpProtocol() == null ? "http" : config.getHttpProtocol(),
+                    config.getHttpHost() == null ? "localhost" : config.getHttpHost(),
+                    config.getHttpPort() == null ? "8085" : config.getHttpPort().toString()
             );
         }
         mqttHandler.initialize(config);
@@ -272,7 +272,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 SCSensorService.serviceId(), SCDataService.serviceId());
     }
 
-    private void connect() {
+    private void connectToMqttBroker() {
         mqttHandler.connect();
         connectedToBroker
                 .filter(new Func1<Boolean, Boolean>() {
@@ -286,6 +286,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     @Override
                     public void call(Boolean aBoolean) {
                         setupSubscriptions();
+                        registerAndFetchConfig();
+                        listenForSyncEvents();
                     }
                 });
     }
@@ -299,54 +301,16 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void authListener() {
-        Log.d(LOG_TAG, "waiting on auth to get remote from server");
-
-        Observable<Integer> authed = authService.getLoginStatus()
-                .filter(new Func1<Integer, Boolean>() {
-                    @Override
-                    public Boolean call(Integer integer) {
-                        SCAuthService.SCAuthStatus status =
-                                SCAuthService.SCAuthStatus.fromValue(integer);
-                        return status == SCAuthService.SCAuthStatus.AUTHENTICATED;
-                    }
-                }).take(1);
-
-        Observable<Integer> failedAuth = authService.getLoginStatus()
-                .filter(new Func1<Integer, Boolean>() {
-                    @Override
-                    public Boolean call(Integer integer) {
-                        SCAuthService.SCAuthStatus status =
-                                SCAuthService.SCAuthStatus.fromValue(integer);
-                        return status == SCAuthService.SCAuthStatus.AUTHENTICATION_FAILED;
-                    }
-                }).take(1);
-
-        authed.subscribe(new Action1<Integer>() {
+        Log.d(LOG_TAG, "waiting for authentication before connecting to mqtt broker");
+        authService.getLoginStatus().subscribe(new Action1<Integer>() {
             @Override
-            public void call(Integer integer) {
-                connect();
-                connectedToBroker
-                    .filter(new Func1<Boolean, Boolean>() {
-                        @Override
-                        public Boolean call(Boolean connected) {
-                            return connected;
-                        }
-                    })
-                    .take(1)
-                    .subscribe(new Action1<Boolean>() {
-                        @Override
-                        public void call(Boolean aBoolean) {
-                            registerAndFetchConfig();
-                            listenForSyncEvents();
-                        }
-                    });
-            }
-        });
-
-        failedAuth.subscribe(new Action1<Integer>() {
-            @Override
-            public void call(Integer integer) {
-                loadCachedConfig();
+            public void call(Integer status) {
+                if (status == SCAuthService.SCAuthStatus.AUTHENTICATED.value()) {
+                    connectToMqttBroker();
+                }
+                if (status == SCAuthService.SCAuthStatus.AUTHENTICATION_FAILED.value()) {
+                    loadCachedConfig();
+                }
             }
         });
     }
@@ -511,6 +475,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void setupMqttConnectionListener() {
+        Log.d(LOG_TAG, "setting up mqtt connection listener");
         MqttHandler.clientConnected.subscribe(new Action1<Boolean>() {
             @Override
             public void call(Boolean clientConnected) {
@@ -584,6 +549,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void syncStore(final ISyncableStore store) {
+        Log.d(LOG_TAG, "Syncing store channel " + store.syncChannel());
         store.unSent().subscribe(new Action1<SCSpatialFeature>() {
             @Override
             public void call(final SCSpatialFeature scSpatialFeature) {
@@ -593,29 +559,37 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void send(final SCSpatialFeature feature) {
-        connectedToBroker.take(1).flatMap(new Func1<Boolean, Observable<Boolean>>() {
-            @Override
-            public Observable<Boolean> call(Boolean connected) {
-                if (connected) {
-                    final ISyncableStore store = (ISyncableStore)dataService.getStoreByIdentifier(feature.getStoreId());
+        connectedToBroker
+            .filter(new Func1<Boolean, Boolean>() {
+                @Override public Boolean call(Boolean connected) {
+                    return connected;
+                }
+            })
+            .subscribe(new Action1<Boolean>() {
+                @Override public void call(Boolean connected) {
+                    Log.d(LOG_TAG, "Sending feature to mqtt broker " + feature.toJson());
+                    final ISyncableStore store =
+                        (ISyncableStore) dataService.getStoreByIdentifier(feature.getStoreId());
                     Map<String, Object> featurePayload = store.generateSendPayload(feature);
                     String payload;
                     try {
                         payload = getMapper().writeValueAsString(featurePayload);
                         MessagePbf.Msg message = MessagePbf.Msg.newBuilder()
-                                .setAction(Actions.DATASERVICE_CREATEFEATURE.value())
-                                .setPayload(payload)
-                                .build();
+                            .setAction(Actions.DATASERVICE_CREATEFEATURE.value())
+                            .setPayload(payload)
+                            .build();
                         publishReplyTo(store.syncChannel(), message)
                             .subscribe(new Action1<MessagePbf.Msg>() {
-                                @Override
-                                public void call(MessagePbf.Msg message) {
+                                @Override public void call(MessagePbf.Msg message) {
                                     try {
                                         final JSONObject payload = new JSONObject(message.getPayload());
                                         if (payload.getBoolean("result")) {
+                                            Log.d(LOG_TAG, "update audit table to remove sent feature");
                                             store.updateAuditTable(feature);
                                         } else {
-                                            Log.e(LOG_TAG, "Something went wrong sending to server: " + payload.getString("error"));
+                                            Log.e(LOG_TAG,
+                                                "Something went wrong sending to server: " + payload
+                                                    .getString("error"));
                                         }
                                     } catch (JSONException je) {
                                         Log.e(LOG_TAG, "json parse error: " + je.getMessage());
@@ -626,9 +600,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         e.printStackTrace();
                     }
                 }
-                return Observable.empty();
-            }
-        }).subscribe();
+            });
     }
 
     public static String serviceId() {

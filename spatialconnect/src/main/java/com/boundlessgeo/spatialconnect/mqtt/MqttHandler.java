@@ -127,8 +127,10 @@ public class MqttHandler implements MqttCallbackExtended {
                         MqttConnectOptions options = new MqttConnectOptions();
                         options.setCleanSession(false);
                         options.setAutomaticReconnect(true);
-                        options.setUserName(accessToken);
-                        options.setPassword("anypass".toCharArray());
+                        if (accessToken != null) {
+                            options.setUserName(accessToken);
+                            options.setPassword("anypass".toCharArray());
+                        }
                         if (isSecure) {
                             options.setSocketFactory(
                                     new SCSocketFactory(context.getResources().openRawResource(R.raw.ca))

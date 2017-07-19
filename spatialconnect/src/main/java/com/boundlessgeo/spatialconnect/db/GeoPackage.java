@@ -635,7 +635,6 @@ public class GeoPackage {
     }
 
     public Observable<SCSpatialFeature> unSent() {
-
         return getFeatureTables()
             .flatMap(new Func1<List<SCGpkgFeatureSource>, Observable<SCGpkgFeatureSource>>() {
                 @Override

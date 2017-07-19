@@ -41,7 +41,7 @@ public class SCServerAuthMethod implements ISCAuth {
     private String serverUrl;
 
 
-    public SCServerAuthMethod(Context context, String serverUrl ) {
+    public SCServerAuthMethod(Context context, String serverUrl) {
         this.context = context;
         this.settings = new SecureSharedPreferences(context);
         this.serverUrl = serverUrl;
