@@ -253,7 +253,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     public void updateDeviceToken(final String token) {
-        Log.e(LOG_TAG, "Got tokent waiting on AUTH TO HAPPEN......");
         Observable<Integer> authed = authService.getLoginStatus()
                 .filter(new Func1<Integer, Boolean>() {
                     @Override
@@ -279,7 +278,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         .subscribe(new Action1<Boolean>() {
                             @Override
                             public void call(Boolean aBoolean) {
-                                Log.e(LOG_TAG, "Authed pushed token");
                                 SpatialConnect sc = SpatialConnect.getInstance();
                                 MessagePbf.Msg registerConfigMsg = MessagePbf.Msg.newBuilder()
                                         .setAction(Actions.DEVICE_INFO.value())
