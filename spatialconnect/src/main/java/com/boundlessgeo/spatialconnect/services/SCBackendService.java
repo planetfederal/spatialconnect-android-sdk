@@ -69,6 +69,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private SCConfigService configService;
     private SCSensorService sensorService;
     private SCDataService dataService;
+    private String deviceToken;
 
     /**
      * Behavior Observable emitting True when the SpatialConnect SCConfig has been received
@@ -251,6 +252,49 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         setupSubscriptions();
     }
 
+    public void updateDeviceToken(final String token) {
+        Observable<Integer> authed = authService.getLoginStatus()
+                .filter(new Func1<Integer, Boolean>() {
+                    @Override
+                    public Boolean call(Integer integer) {
+                        SCAuthService.SCAuthStatus status =
+                                SCAuthService.SCAuthStatus.fromValue(integer);
+                        return status == SCAuthService.SCAuthStatus.AUTHENTICATED;
+                    }
+                }).take(1);
+
+        authed.subscribe(new Action1<Integer>() {
+            @Override
+            public void call(Integer integer) {
+                //wait on config received to ensure the initial device registration is done
+                configReceived
+                        .filter(new Func1<Boolean, Boolean>() {
+                            @Override
+                            public Boolean call(Boolean received) {
+                                return received;
+                            }
+                        })
+                        .take(1)
+                        .subscribe(new Action1<Boolean>() {
+                            @Override
+                            public void call(Boolean aBoolean) {
+                                SpatialConnect sc = SpatialConnect.getInstance();
+                                MessagePbf.Msg registerConfigMsg = MessagePbf.Msg.newBuilder()
+                                        .setAction(Actions.DEVICE_INFO.value())
+                                        .setPayload(
+                                                String.format("{\"identifier\": \"%s\", \"device_info\": %s, \"name\": \"mobile:%s\"}",
+                                                        sc.getDeviceIdentifier(),
+                                                        buildDeviceInfo(token),
+                                                        authService.getUsername())
+                                        )
+                                        .build();
+                                publishExactlyOnce("/device/info", registerConfigMsg);
+                            }
+                        });
+            }
+        });
+    }
+
     @Override
     public boolean start(Map<String, SCService> deps) {
         authService = (SCAuthService)deps.get(SCAuthService.serviceId());
@@ -377,7 +421,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 .setPayload(
                         String.format("{\"identifier\": \"%s\", \"device_info\": %s, \"name\": \"mobile:%s\"}",
                                 sc.getDeviceIdentifier(),
-                                getAndroidVersion(),
+                                buildDeviceInfo(),
                                 authService.getUsername())
                 )
                 .build();
@@ -492,11 +536,15 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 .build();
     }
 
-    private String getAndroidVersion() {
+    private String buildDeviceInfo() {
+        return buildDeviceInfo("");
+    }
+
+    private String buildDeviceInfo(String token) {
         String release = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
         String os =  String.format("Android SDK: %s (%s)", sdkVersion, release);
-        return String.format("{\"os\": \"%s\"}", os);
+        return String.format("{\"os\": \"%s\", \"token\": \"%s\"}", os, token);
     }
 
     private void listenForSyncEvents() {
