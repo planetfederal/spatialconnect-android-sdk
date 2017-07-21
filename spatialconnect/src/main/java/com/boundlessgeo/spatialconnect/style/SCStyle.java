@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2015-2017 Boundless, http://boundlessgeo.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,9 +20,11 @@ import android.util.Log;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
+import java.util.HashMap;
+
 public class SCStyle {
 
-    private String LOG_TAG = SCStyle.class.getSimpleName();
+    private static final String LOG_TAG = SCStyle.class.getSimpleName();
     private String fillColor = null;
     private float fillOpacity = 0;
     private String strokeColor = null;
@@ -130,5 +132,17 @@ public class SCStyle {
         if (style.getIconColor() != null) {
             this.iconColor = style.getIconColor();
         }
+    }
+
+    public HashMap<String, Object> toJSON() {
+        HashMap<String, Object> json = new HashMap<>();
+
+        json.put("fillColor", getFillColor());
+        json.put("fillOpacity", getFillOpacity());
+        json.put("strokeColor", getStrokeColor());
+        json.put("strokeOpacity", getStrokeOpacity());
+        json.put("iconColor", getIconColor());
+
+        return json;
     }
 }

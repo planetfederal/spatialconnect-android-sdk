@@ -5,6 +5,8 @@ import android.text.TextUtils;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.fasterxml.jackson.databind.JsonNode;
 
+import java.util.HashMap;
+
 public class SCFormField {
 
     public static final String FIELD_KEY = "field_key";
@@ -13,7 +15,7 @@ public class SCFormField {
 
     private static final String IS_INTEGER = "is_integer";
 
-    public static String getColumnType(JsonNode field) {
+    public static String getColumnType(HashMap<String, Object> field) {
         String type = JsonUtilities.getString(field, TYPE);
 
         if (TextUtils.isEmpty(type)) {
@@ -24,7 +26,7 @@ public class SCFormField {
             case "string":
                 return "TEXT";
             case "number":
-                return field.get(IS_INTEGER) != null && field.get(IS_INTEGER).asBoolean() ?
+                return JsonUtilities.getBoolean(field, IS_INTEGER) ?
                         "INTEGER" : "REAL";
             case "boolean":
                 return "INTEGER";

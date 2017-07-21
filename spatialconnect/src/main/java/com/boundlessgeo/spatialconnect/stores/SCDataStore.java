@@ -157,6 +157,25 @@ public abstract class SCDataStore {
         return storeMap;
     }
 
+    public HashMap<String, Object> toJSON() {
+        HashMap<String, Object> json = new HashMap<>();
+
+        json.put("storeId", getStoreId());
+        json.put("name", getName());
+        json.put("type", getType());
+        json.put("version", getVersion());
+        json.put("key", getKey());
+        json.put("status", getStatus().ordinal());
+        json.put("downloadProgress", getDownloadProgress());
+
+        SCStyle style = getStyle();
+        if (style != null) {
+            json.put("style", style.toJSON());
+        }
+
+        return json;
+    }
+
     @Override
     public String toString() {
         return storeId + "." + name;

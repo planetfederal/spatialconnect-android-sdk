@@ -18,18 +18,25 @@ package com.boundlessgeo.spatialconnect.geometries;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
+import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
 public class SCSpatialFeature
 {
+
     /**
      * For a GeoPackage, the ID will follow the convention storeId.featureTableName.idOfRow
      */
@@ -134,15 +141,21 @@ public class SCSpatialFeature
         return null;
     }
 
-    public  Map<String, Object> toMap() {
-        Map<String, Object> map = null;
+    public HashMap<String, Object> toMap() {
+        HashMap<String, Object> map = null;
         try {
-            map = SCObjectMapper.getMapper().convertValue(this,  Map.class);
+            map = SCObjectMapper.getMapper().convertValue(this,  HashMap.class);
             map.put("type", "Feature");
         } catch (Exception e) {
             Log.e(LOG_TAG, "error converting to map: " + e.getMessage());
         }
 
         return map;
+    }
+
+    public HashMap<String, Object> toJSON() {
+        return toMap();
+
+        // TODO eventually should change this to write to a HashMap on it's own, without using objectmapper
     }
 }

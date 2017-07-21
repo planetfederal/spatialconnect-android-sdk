@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2015-2017 Boundless, http://boundlessgeo.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,8 @@ import com.boundlessgeo.schema.MessagePbf;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.HashMap;
 
 public class SCNotification {
 
@@ -43,19 +45,16 @@ public class SCNotification {
         }
     }
 
-    public JSONObject toJson() {
-        JSONObject obj = new JSONObject();
-        try {
-            obj.put("to" , to);
-            obj.put("title", title);
-            obj.put("body", body);
-            obj.put("payload", payload);
-            obj.put("priority", priority);
-        }
-        catch (JSONException e) {
-            Log.e("SCNotification", "Could not transform notification into json", e);
-        }
-        return obj;
+    public HashMap<String, Object> toJSON() {
+        HashMap<String, Object> json = new HashMap<>();
+
+        json.put("to" , to);
+        json.put("title", title);
+        json.put("body", body);
+        json.put("payload", payload);
+        json.put("priority", priority);
+
+        return json;
     }
 
 }
