@@ -621,6 +621,9 @@ public class GeoPackage {
         return db.query(sql, args);
     }
 
+    public void execute(String sql) {
+        db.execute(sql);
+    }
 
     public BriteDatabase.Transaction newTransaction() {
          return db.newTransaction();

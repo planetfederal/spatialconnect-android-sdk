@@ -496,9 +496,9 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
     }
 
     @Override
-    public void updateAuditTable(SCSpatialFeature scSpatialFeature) {
+    public Observable updateAuditTable(SCSpatialFeature scSpatialFeature) {
         SCGpkgFeatureSource fs = gpkg.getFeatureSourceByName(scSpatialFeature.getLayerId());
-        fs.updateAuditTable(scSpatialFeature);
+        return fs.updateAuditTable(scSpatialFeature);
     }
 
     @Override
