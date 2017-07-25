@@ -89,6 +89,8 @@ public class GeoPackage {
             db = new SCSqliteHelper(context, name).db();
             if (initializeSpatialMetadata() && validateGeoPackageSchema()) {
 
+                db.execute("ANALYZE");
+
                 for (SCGpkgFeatureSource source: getFeatureSources().values()) {
                     initializeFeatureSource(source);
                 }
