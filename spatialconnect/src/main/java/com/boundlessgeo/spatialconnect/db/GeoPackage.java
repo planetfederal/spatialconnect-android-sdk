@@ -88,7 +88,11 @@ public class GeoPackage {
         try {
             db = new SCSqliteHelper(context, name).db();
             if (initializeSpatialMetadata() && validateGeoPackageSchema()) {
-                initializeFeatureSources();
+
+                for (SCGpkgFeatureSource source: getFeatureSources().values()) {
+                    initializeFeatureSource(source);
+                }
+
                 getTileSources();
                 initializeAuditTables();
                 isValid = true;
@@ -139,26 +143,23 @@ public class GeoPackage {
     }
 
     /**
-     * This method will check each feature table and ensure that r_tree indexes are setup (populated and configured to
+     * This method will check a feature source and ensure that r_tree indexes are setup (populated and configured to
      * update with triggers) or create them if needed.
      */
-    private void initializeFeatureSources() {
-        for (SCGpkgFeatureSource source: getFeatureSources().values()) {
-            // check if the spatial index tables exist for this feature table
-            Cursor cursor = db.query(
-                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",
-                    new String[]{"rtree_" + source.getTableName() + "_" + source.getGeomColumnName()}
-            );
-            try {
-                if (cursor.moveToFirst()) {
-                    if (cursor.getInt(0) == 0) {
-                        cursor.close();  // close the cursor before executing the query to create the index
-                        createSpatialIndex(source.getTableName(), source.getGeomColumnName(), source.getPrimaryKeyName());
-                    }
-                }
-            }
-            finally {
-                cursor.close();
+    private void initializeFeatureSource(SCGpkgFeatureSource fSource) {
+        // check if the spatial index tables exist for this feature table
+        Cursor cursor = db.query("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?",
+                                 "rtree_" + fSource.getTableName() + "_" +
+                                 fSource.getGeomColumnName());
+
+        if ( cursor != null && cursor.moveToFirst() ) {
+            boolean noSpatialIndex = cursor.getInt(0) == 0;
+            cursor.close();
+
+            if ( noSpatialIndex ) {
+                cursor.close();  // close the cursor before executing the query to create the index
+                createSpatialIndex(fSource.getTableName(), fSource.getGeomColumnName(),
+                                   fSource.getPrimaryKeyName());
             }
         }
     }
@@ -818,6 +819,7 @@ public class GeoPackage {
     public void addFeatureSource(String layer, Map<String,String>  fields) {
         if (addContentsTable(layer, fields)) {
             addAuditTable(layer, fields);
+            initializeFeatureSource(getFeatureSourceByName(layer));
         }
     }
 
