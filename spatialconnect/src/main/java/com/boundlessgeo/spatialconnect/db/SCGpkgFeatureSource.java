@@ -241,39 +241,27 @@ public class SCGpkgFeatureSource {
         });
     }
 
-    public void updateAuditTable(SCSpatialFeature feature) {
-        Cursor cursor = null;
+    public Observable updateAuditTable(SCSpatialFeature feature) {
+        // todo should probably be changed to use sqldb.update(contentValues) type methods
         try {
-            String query =
-                    String.format(Locale.US, "UPDATE %s SET sent = datetime() WHERE %s = %s",
-                            this.auditName, this.primaryKeyName, feature.getId());
-            cursor = gpkg.query(query);
-            cursor.moveToFirst();
-        } catch (Exception ex) {
+            gpkg.execute(String.format(Locale.US, "UPDATE %s SET sent = datetime() WHERE %s = %s",
+                                       this.auditName, this.primaryKeyName, feature.getId()));
+            return Observable.empty();
+        } catch ( Exception ex ) {
             Log.e(LOG_TAG, "Something went wrong updating audit table: " + ex.getMessage());
-        }
-        finally {
-            if (cursor != null) {
-                cursor.close();
-            }
+            return Observable.error(ex);
         }
     }
 
-    public void updateAuditTableFromLatest(SCSpatialFeature feature) {
-        Cursor cursor = null;
+    public Observable updateAuditTableFromLatest(SCSpatialFeature feature) {
+        // todo should probably be changed to use sqldb.update(contentValues) type methods
         try {
-            String query =
-                    String.format(Locale.US, "UPDATE %s SET sent = datetime() WHERE %s <= %s AND SENT IS NULL",
-                            this.auditName, this.primaryKeyName, feature.getId());
-            cursor = gpkg.query(query);
-            cursor.moveToFirst();
-        } catch (Exception ex) {
+            gpkg.execute(String.format(Locale.US, "UPDATE %s SET sent = datetime() WHERE %s <= %s AND SENT IS NULL",
+                                       this.auditName, this.primaryKeyName, feature.getId()));
+            return Observable.empty();
+        } catch ( Exception ex ) {
             Log.e(LOG_TAG, "Something went wrong updating audit table: " + ex.getMessage());
-        }
-        finally {
-            if (cursor != null) {
-                cursor.close();
-            }
+            return Observable.error(ex);
         }
     }
 

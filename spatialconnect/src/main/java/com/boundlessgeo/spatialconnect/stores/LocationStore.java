@@ -126,10 +126,10 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
     }
 
     @Override
-    public void updateAuditTable(SCSpatialFeature scSpatialFeature) {
+    public Observable updateAuditTable(SCSpatialFeature scSpatialFeature) {
         SCGpkgFeatureSource fs = gpkg.getFeatureSourceByName(scSpatialFeature.getLayerId());
         //since only taking last location, update all others before scSpatialFeature
-        fs.updateAuditTableFromLatest(scSpatialFeature);
+        return fs.updateAuditTableFromLatest(scSpatialFeature);
     }
 
     private void listenForLocationUpdate() {

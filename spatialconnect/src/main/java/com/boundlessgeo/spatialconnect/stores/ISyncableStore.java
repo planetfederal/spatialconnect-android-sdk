@@ -22,7 +22,7 @@ import java.util.Map;
 import rx.Observable;
 
 public interface ISyncableStore {
-    void updateAuditTable(SCSpatialFeature scSpatialFeature);
+    Observable updateAuditTable(SCSpatialFeature scSpatialFeature);
     Map<String, Object> generateSendPayload(SCSpatialFeature scSpatialFeature);
     Observable<SCSpatialFeature> unSent();
     String syncChannel();
