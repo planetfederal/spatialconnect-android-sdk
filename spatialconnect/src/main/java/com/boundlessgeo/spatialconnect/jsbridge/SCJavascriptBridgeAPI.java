@@ -7,7 +7,7 @@ import android.util.Log;
 
 import com.boundlessgeo.schema.Actions;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
-import com.boundlessgeo.spatialconnect.config.SCFormConfig;
+import com.boundlessgeo.spatialconnect.config.SCLayerConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCGeometryFactory;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -25,7 +25,6 @@ import com.boundlessgeo.spatialconnect.stores.ISCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.boundlessgeo.spatialconnect.stores.SCRasterStore;
-import com.boundlessgeo.spatialconnect.stores.SCStoreStatusEvent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.io.UnsupportedEncodingException;
@@ -34,7 +33,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import rx.Subscriber;
-import rx.functions.Action1;
 import rx.schedulers.Schedulers;
 
 public class SCJavascriptBridgeAPI {
@@ -338,10 +336,10 @@ public class SCJavascriptBridgeAPI {
                         if (hasForms) {
                             HashMap<String, Object> payload = new HashMap<>();
 
-                            List<SCFormConfig> formConfigs =
+                            List<SCLayerConfig> formConfigs =
                                     mSpatialConnect.getDataService().getFormStore().getFormConfigs();
                             ArrayList<HashMap<String, Object>> formsArray = new ArrayList<>();
-                            for (SCFormConfig config : formConfigs) {
+                            for (SCLayerConfig config : formConfigs) {
                                 formsArray.add(config.toJSON());
                             }
 

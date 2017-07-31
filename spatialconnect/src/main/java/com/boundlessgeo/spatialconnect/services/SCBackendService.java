@@ -23,7 +23,7 @@ import com.boundlessgeo.schema.Actions;
 import com.boundlessgeo.schema.MessagePbf;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
-import com.boundlessgeo.spatialconnect.config.SCFormConfig;
+import com.boundlessgeo.spatialconnect.config.SCLayerConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -61,6 +61,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private static final String LOG_TAG = SCBackendService.class.getSimpleName();
     private static final String SERVICE_NAME = "SC_BACKEND_SERVICE";
+    private final String COMMANDS_TOPIC = "commands";
+    private final String QUERY_TOPIC = "query";
     private Context context;
     private MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
@@ -329,7 +331,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 .subscribe(new Action1<Boolean>() {
                     @Override
                     public void call(Boolean aBoolean) {
-                        setupSubscriptions();
                         registerAndFetchConfig();
                         listenForSyncEvents();
                     }
@@ -402,9 +403,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private void fetchConfig() {
         Log.d(LOG_TAG, "fetching config from mqtt config topic");
         MessagePbf.Msg getConfigMsg = MessagePbf.Msg.newBuilder()
-                .setAction(Actions.CONFIG_FULL.value()).build();
+                .setAction(Actions.FETCH_LAYERS.value()).build();
 
-        publishReplyTo("/config", getConfigMsg)
+        publishReplyTo(QUERY_TOPIC, getConfigMsg)
                 .subscribe(new Action1<MessagePbf.Msg>() {
                     @Override
                     public void call(MessagePbf.Msg message) {
@@ -425,7 +426,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                                 authService.getUsername())
                 )
                 .build();
-        publishExactlyOnce("/config/register", registerConfigMsg);
+        publishExactlyOnce(COMMANDS_TOPIC, registerConfigMsg);
     }
 
     private void setupSubscriptions() {
@@ -476,8 +477,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         break;
                     case CONFIG_ADD_FORM:
                         try {
-                            SCFormConfig config = getMapper()
-                                    .readValue(msg.getPayload(), SCFormConfig.class);
+                            SCLayerConfig config = getMapper()
+                                    .readValue(msg.getPayload(), SCLayerConfig.class);
                             cachedConfig.addForm(config);
                             dataService.getFormStore().registerFormByConfig(config);
                         } catch (IOException e) {
@@ -486,8 +487,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         break;
                     case CONFIG_UPDATE_FORM:
                         try {
-                            SCFormConfig config = getMapper()
-                                    .readValue(msg.getPayload(), SCFormConfig.class);
+                            SCLayerConfig config = getMapper()
+                                    .readValue(msg.getPayload(), SCLayerConfig.class);
                             cachedConfig.updateForm(config);
                             dataService.getFormStore().updateFormByConfig(config);
                         } catch (IOException e) {

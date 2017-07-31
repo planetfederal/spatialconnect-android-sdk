@@ -27,6 +27,9 @@ public class SCConfig {
     @JsonProperty("forms")
     private List<SCFormConfig> forms;
 
+    @JsonProperty("layers")
+    private List<SCLayerConfig> layers;
+
     @JsonProperty("remote")
     private SCRemoteConfig remote;
 
@@ -47,6 +50,14 @@ public class SCConfig {
 
     public void setFormConfigs(List<SCFormConfig> forms) {
         this.forms = forms;
+    }
+
+    public List<SCLayerConfig> getLayers() {
+        return layers;
+    }
+
+    public void setLayersConfigs(List<SCLayerConfig> layers) {
+        this.layers = layers;
     }
 
     public SCRemoteConfig getRemote() {
@@ -79,14 +90,14 @@ public class SCConfig {
         }
     }
 
-    public void addForm(SCFormConfig formConfig) {
-        forms.add(formConfig);
+    public void addForm(SCLayerConfig formConfig) {
+        layers.add(formConfig);
     }
 
-    public void updateForm(SCFormConfig formConfig) {
-        for (int i = 0; i < forms.size(); i++) {
-            if (forms.get(i).getFormKey().equalsIgnoreCase(formConfig.getFormKey())) {
-                forms.add(i, formConfig);
+    public void updateForm(SCLayerConfig formConfig) {
+        for (int i = 0; i < layers.size(); i++) {
+            if (layers.get(i).getLayerKey().equalsIgnoreCase(formConfig.getLayerKey())) {
+                layers.add(i, formConfig);
                 break;
             }
         }

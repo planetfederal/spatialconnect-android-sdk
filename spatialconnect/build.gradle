@@ -107,7 +107,7 @@ dependencies {
         exclude group: 'io.jeo', module: 'proj4j'
     }
     compile 'com.auth0:java-jwt:2.2.1'
-    compile files('libs/boundlessSchema-0.10.jar')
+    compile files('libs/boundlessSchema-0.11.jar')
 
     // testing dependencies
     androidTestCompile 'junit:junit:4.12'
