@@ -20,13 +20,12 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
+import com.boundlessgeo.spatialconnect.config.SCLayerConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.style.SCStyle;
-import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,7 +39,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
 
     private final String LOG_TAG = FormStore.class.getSimpleName();
     public static final String NAME = "FORM_STORE";
-    private Map<String, SCFormConfig> storeForms = new HashMap<>();
+    private Map<String, SCLayerConfig> storeForms = new HashMap<>();
     private Map<String, String> formIds = new HashMap<>();
     public BehaviorSubject<Boolean> hasForms = BehaviorSubject.create(false);
 
@@ -59,22 +58,22 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         super(context, scStoreConfig, style);
     }
 
-    public void registerFormByConfig(SCFormConfig formConfig) {
+    public void registerFormByConfig(SCLayerConfig formConfig) {
         addLayerByConfig(formConfig);
     }
 
-    public void updateFormByConfig(SCFormConfig formConfig) {
+    public void updateFormByConfig(SCLayerConfig formConfig) {
         addLayerByConfig(formConfig);
     }
 
-    public void unregisterFormByConfig(SCFormConfig formConfig) {
-        storeForms.remove(formConfig.getFormKey());
-        formIds.remove(formConfig.getFormKey());
+    public void unregisterFormByConfig(SCLayerConfig formConfig) {
+        storeForms.remove(formConfig.getLayerKey());
+        formIds.remove(formConfig.getLayerKey());
         hasForms.onNext(storeForms.size() > 0);
     }
 
     public void unregisterFormByKey(String key) {
-        SCFormConfig config = storeForms.get(key);
+        SCLayerConfig config = storeForms.get(key);
         unregisterFormByConfig(config);
     }
 
@@ -83,9 +82,9 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         deleteLayer(layerName);
     }
 
-    public List<SCFormConfig> getFormConfigs() {
-        List<SCFormConfig> configList = new ArrayList<>();
-        for (SCFormConfig c : storeForms.values()) {
+    public List<SCLayerConfig> getFormConfigs() {
+        List<SCLayerConfig> configList = new ArrayList<>();
+        for (SCLayerConfig c : storeForms.values()) {
             configList.add(c);
         }
 
@@ -115,10 +114,10 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
     public Map<String, Object> generateSendPayload(SCSpatialFeature scSpatialFeature) {
         HashMap<String, Object> formSubmissionPayload = new HashMap<>();
         Integer formId;
-        SCFormConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
+        SCLayerConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
         formId = Integer.parseInt(c.getId());
         if (formId != null) {
-            formSubmissionPayload.put("form_id", formId);
+            formSubmissionPayload.put("layer_id", formId);
             formSubmissionPayload.put("feature", scSpatialFeature);
         }
         else {
@@ -128,11 +127,11 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         return formSubmissionPayload;
     }
 
-    private void addLayerByConfig(SCFormConfig config) {
+    private void addLayerByConfig(SCLayerConfig config) {
         boolean fieldsValid = true;
 
         Map<String, String> typeDefs = new HashMap<>();
-        for (HashMap<String, Object> field : config.getFields()) {
+        for (HashMap<String, Object> field : config.getSchema().getFields()) {
             String fieldKey = JsonUtilities.getString(field, SCFormField.FIELD_KEY);
             if (!TextUtils.isEmpty(fieldKey)) {
                 typeDefs.put(fieldKey, SCFormField.getColumnType(field));
@@ -143,9 +142,9 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         }
 
         if (fieldsValid) {
-            storeForms.put(config.getFormKey(), config);
-            formIds.put(config.getFormKey(), config.getId());
-            final String tableName = config.getFormKey();
+            storeForms.put(config.getLayerKey(), config);
+            formIds.put(config.getLayerKey(), config.getId());
+            final String tableName = config.getLayerKey();
             super.addLayer(tableName, typeDefs);
             hasForms.onNext(storeForms.size() > 0);
         }

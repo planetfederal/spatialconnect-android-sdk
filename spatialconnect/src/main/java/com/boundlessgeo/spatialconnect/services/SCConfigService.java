@@ -21,7 +21,7 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
-import com.boundlessgeo.spatialconnect.config.SCFormConfig;
+import com.boundlessgeo.spatialconnect.config.SCLayerConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
@@ -103,7 +103,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
      * @param config {@link SCConfig} Config object to be loaded
      */
     public void loadConfig(SCConfig config) {
-        loadForms(config.getForms());
+        loadLayers(config.getLayers());
         loadDataStores(config.getStores());
 
         SCRemoteConfig remoteConfig = config.getRemote();
@@ -122,7 +122,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
      * Add form to SpatialConnect using a Form Config object
      * @param c {@link SCConfig} Config object to be loaded
      */
-    public void addForm(SCFormConfig c) {
+    public void addForm(SCLayerConfig c) {
         dataService.getFormStore().registerFormByConfig(c);
     }
 
@@ -130,7 +130,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
      * Remove form from SpatialConnect using a config
      * @param c {@link SCConfig} Config object to be loaded
      */
-    public void removeForm(SCFormConfig c) {
+    public void removeForm(SCLayerConfig c) {
         dataService.getFormStore().unregisterFormByConfig(c);
     }
 
@@ -207,14 +207,19 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     }
 
     /* Registers all the forms specified in each config file */
-    private void loadForms(List<SCFormConfig> formConfigs) {
-        if (formConfigs != null) {
-            Log.d(LOG_TAG, "Loading "+ formConfigs.size() +" form configs");
-            for (SCFormConfig formConfig : formConfigs) {
-                Log.d(LOG_TAG, "Creating table for form " + formConfig.getFormKey());
-                FormStore store = sc.getDataService().getFormStore();
-                if (store != null) {
-                    store.registerFormByConfig(formConfig);
+    private void loadLayers(List<SCLayerConfig> layerConfigs) {
+        if (layerConfigs != null) {
+            Log.d(LOG_TAG, "Loading "+ layerConfigs.size() +" form configs");
+            for (SCLayerConfig layerConfig : layerConfigs) {
+                if (layerConfig.getSchema() != null) {
+                    Log.d(LOG_TAG, "Creating table for form " + layerConfig.getLayerKey());
+                    FormStore store = sc.getDataService().getFormStore();
+                    if (store != null) {
+                        store.registerFormByConfig(layerConfig);
+                    }
+                } else {
+                    // TODO handle non schema layers
+                    //right now do nothing
                 }
             }
         }

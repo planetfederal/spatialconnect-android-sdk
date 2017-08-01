@@ -5,12 +5,12 @@ import android.content.Context;
 import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
 
-import com.boundlessgeo.schema.MessagePbf;
 import com.boundlessgeo.schema.Actions;
+import com.boundlessgeo.schema.MessagePbf;
 import com.boundlessgeo.spaconapp.MainActivity;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
-import com.boundlessgeo.spatialconnect.config.SCFormConfig;
+import com.boundlessgeo.spatialconnect.config.SCLayerConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
@@ -28,8 +28,8 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.WFSStore;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -218,8 +218,8 @@ public class IntegratedTests {
         throws IOException, InterruptedException {
         // add test form to the form store so we can submit it
         SpatialConnect sc = SpatialConnect.getInstance();
-        final SCFormConfig formConfig = new SCFormConfig();
-        formConfig.setFormKey("test");
+        final SCLayerConfig formConfig = new SCLayerConfig();
+        formConfig.setLayerKey("test");
         formConfig.setId("123");
         List<JsonNode> fields = new ObjectMapper().readValue("[\n"
             + "        {\n"
@@ -229,7 +229,7 @@ public class IntegratedTests {
             + "          \"field_key\":\"name\","
             + "          \"position\":0\n"
             + "        }]", new TypeReference<List<JsonNode>>() { });
-        formConfig.setFields(fields);
+        //formConfig.setFields(fields);
         sc.getDataService().getFormStore().registerFormByConfig(formConfig);
 
         // wait for connection to mqtt broker
