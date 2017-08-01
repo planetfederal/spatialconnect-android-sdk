@@ -61,8 +61,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private static final String LOG_TAG = SCBackendService.class.getSimpleName();
     private static final String SERVICE_NAME = "SC_BACKEND_SERVICE";
-    private final String COMMANDS_TOPIC = "commands";
+    private final String COMMAND_TOPIC = "command";
     private final String QUERY_TOPIC = "query";
+    private final String NOTIFY_TOPIC = "notify";
     private Context context;
     private MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
@@ -426,12 +427,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                                 authService.getUsername())
                 )
                 .build();
-        publishExactlyOnce(COMMANDS_TOPIC, registerConfigMsg);
+        publishExactlyOnce(COMMAND_TOPIC, registerConfigMsg);
     }
 
     private void setupSubscriptions() {
-        notifications = listenOnTopic("/notify")
-                .mergeWith(listenOnTopic(String.format("/notify/%s", SpatialConnect.getInstance().getDeviceIdentifier())))
+        notifications = listenOnTopic(NOTIFY_TOPIC)
+                .mergeWith(listenOnTopic(String.format(NOTIFY_TOPIC + "%s", SpatialConnect.getInstance().getDeviceIdentifier())))
                 .map(new Func1<MessagePbf.Msg, SCNotification>() {
                     @Override
                     public SCNotification call(MessagePbf.Msg msg) {
@@ -439,7 +440,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     }
                 });
 
-        listenOnTopic("/config/update").subscribe(new Action1<MessagePbf.Msg>() {
+        listenOnTopic(NOTIFY_TOPIC).subscribe(new Action1<MessagePbf.Msg>() {
             @Override
             public void call(MessagePbf.Msg msg) {
                 Log.d("FormStore","action: " + msg.getAction());
@@ -479,7 +480,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         try {
                             SCLayerConfig config = getMapper()
                                     .readValue(msg.getPayload(), SCLayerConfig.class);
-                            cachedConfig.addForm(config);
+                            cachedConfig.addLayer(config);
                             dataService.getFormStore().registerFormByConfig(config);
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -489,7 +490,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         try {
                             SCLayerConfig config = getMapper()
                                     .readValue(msg.getPayload(), SCLayerConfig.class);
-                            cachedConfig.updateForm(config);
+                            cachedConfig.updateLayer(config);
                             dataService.getFormStore().updateFormByConfig(config);
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -498,7 +499,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     case CONFIG_REMOVE_FORM:
                         String formKey = utilities.getMapFromJson(msg.getPayload())
                                 .get("form_key").toString();
-                        cachedConfig.removeForm(formKey);
+                        cachedConfig.removeLayer(formKey);
                         dataService.getFormStore().unregisterFormByKey(formKey);
                         break;
                 }
@@ -627,7 +628,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                             .setAction(Actions.DATASERVICE_CREATEFEATURE.value())
                             .setPayload(payload)
                             .build();
-                        publishReplyTo(store.syncChannel(), message)
+                        publishReplyTo(COMMAND_TOPIC, message)
                             .subscribe(new Action1<MessagePbf.Msg>() {
                                 @Override public void call(MessagePbf.Msg message) {
                                     try {

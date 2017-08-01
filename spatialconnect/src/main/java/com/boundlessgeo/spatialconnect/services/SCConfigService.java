@@ -103,7 +103,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
      * @param config {@link SCConfig} Config object to be loaded
      */
     public void loadConfig(SCConfig config) {
-        loadForms(config.getLayers());
+        loadLayers(config.getLayers());
         loadDataStores(config.getStores());
 
         SCRemoteConfig remoteConfig = config.getRemote();
@@ -207,7 +207,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     }
 
     /* Registers all the forms specified in each config file */
-    private void loadForms(List<SCLayerConfig> layerConfigs) {
+    private void loadLayers(List<SCLayerConfig> layerConfigs) {
         if (layerConfigs != null) {
             Log.d(LOG_TAG, "Loading "+ layerConfigs.size() +" form configs");
             for (SCLayerConfig layerConfig : layerConfigs) {
