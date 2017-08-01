@@ -211,10 +211,15 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
         if (layerConfigs != null) {
             Log.d(LOG_TAG, "Loading "+ layerConfigs.size() +" form configs");
             for (SCLayerConfig layerConfig : layerConfigs) {
-                Log.d(LOG_TAG, "Creating table for form " + layerConfig.getLayerKey());
-                FormStore store = sc.getDataService().getFormStore();
-                if (store != null) {
-                    store.registerFormByConfig(layerConfig);
+                if (layerConfig.getSchema() != null) {
+                    Log.d(LOG_TAG, "Creating table for form " + layerConfig.getLayerKey());
+                    FormStore store = sc.getDataService().getFormStore();
+                    if (store != null) {
+                        store.registerFormByConfig(layerConfig);
+                    }
+                } else {
+                    // TODO handle non schema layers
+                    //right now do nothing
                 }
             }
         }

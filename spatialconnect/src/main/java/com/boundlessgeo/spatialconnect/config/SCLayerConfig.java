@@ -60,14 +60,6 @@ public class SCLayerConfig {
         this.id = id;
     }
 
-    public List<HashMap<String, Object>> getFields() {
-        return schema.getFields();
-    }
-
-    public void setFields(List<HashMap<String, Object>> fields) {
-        this.schema.setFields(fields);
-    }
-
     public SCLayerSchema getSchema() {
         return schema;
     }

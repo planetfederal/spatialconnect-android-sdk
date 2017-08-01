@@ -131,7 +131,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         boolean fieldsValid = true;
 
         Map<String, String> typeDefs = new HashMap<>();
-        for (HashMap<String, Object> field : config.getFields()) {
+        for (HashMap<String, Object> field : config.getSchema().getFields()) {
             String fieldKey = JsonUtilities.getString(field, SCFormField.FIELD_KEY);
             if (!TextUtils.isEmpty(fieldKey)) {
                 typeDefs.put(fieldKey, SCFormField.getColumnType(field));
