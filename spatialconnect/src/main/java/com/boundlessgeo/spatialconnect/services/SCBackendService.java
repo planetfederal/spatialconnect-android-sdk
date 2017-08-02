@@ -625,7 +625,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     try {
                         payload = getMapper().writeValueAsString(featurePayload);
                         MessagePbf.Msg message = MessagePbf.Msg.newBuilder()
-                            .setAction(Actions.DATASERVICE_CREATEFEATURE.value())
+                            .setAction(Actions.CREATE_FEATURE.value())
                             .setPayload(payload)
                             .build();
                         publishReplyTo(COMMAND_TOPIC, message)
