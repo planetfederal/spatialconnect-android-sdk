@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 public class SCLayerConfig {
 
@@ -11,7 +12,7 @@ public class SCLayerConfig {
      * Unique id of the form.
      */
     @JsonProperty("id")
-    private String id;
+    private UUID id;
 
     /**
      * Immutable name of the form.
@@ -52,11 +53,11 @@ public class SCLayerConfig {
     @JsonProperty("metadata")
     private LayerMetadata metadata;
 
-    public String getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
