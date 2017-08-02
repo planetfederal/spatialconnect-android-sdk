@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.UUID;
 import rx.Observable;
 import rx.subjects.BehaviorSubject;
 
@@ -113,9 +114,8 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
     @Override
     public Map<String, Object> generateSendPayload(SCSpatialFeature scSpatialFeature) {
         HashMap<String, Object> formSubmissionPayload = new HashMap<>();
-        Integer formId;
         SCLayerConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
-        formId = Integer.parseInt(c.getId());
+        UUID formId = c.getId();
         if (formId != null) {
             formSubmissionPayload.put("layer_id", formId);
             formSubmissionPayload.put("feature", scSpatialFeature);
@@ -143,7 +143,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
 
         if (fieldsValid) {
             storeForms.put(config.getLayerKey(), config);
-            formIds.put(config.getLayerKey(), config.getId());
+            formIds.put(config.getLayerKey(), config.getId().toString());
             final String tableName = config.getLayerKey();
             super.addLayer(tableName, typeDefs);
             hasForms.onNext(storeForms.size() > 0);
