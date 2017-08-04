@@ -580,7 +580,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         });
 
         Observable<Object> sync = onlineSync.mergeWith(storeEditSync);
-        sync.subscribeOn(Schedulers.newThread()).subscribe(new Action1<Object>() {
+        sync.subscribeOn(Schedulers.io()).subscribe(new Action1<Object>() {
             @Override
             public void call(Object object) {
 
