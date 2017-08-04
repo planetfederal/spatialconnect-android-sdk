@@ -548,107 +548,120 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void listenForSyncEvents() {
-
         Observable<SCDataStore> syncableStores = dataService.getISyncableStores();
 
-        Observable<Boolean>  storeEditSync = syncableStores
-                .flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
+        Observable<Object> storeEditSync =
+                syncableStores.flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
                     @Override
                     public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
                         return scDataStore.storeEdited;
                     }
-                }).map(new Func1<SCSpatialFeature, Boolean>() {
+                }).flatMap(new Func1<SCSpatialFeature, Observable<?>>() {
                     @Override
-                    public Boolean call(SCSpatialFeature feature) {
-                        final ISyncableStore store = (ISyncableStore) dataService.getStoreByIdentifier(feature.getStoreId());
-                        syncStore(store);
-                        return null;
+                    public Observable call(SCSpatialFeature feature) {
+                        final ISyncableStore store = (ISyncableStore) dataService
+                                .getStoreByIdentifier(feature.getStoreId());
+                        return syncStore(store);
                     }
                 });
 
         //sync all stores when connection to broker is true
-        Observable<Boolean> onlineSync = connectedToBroker
-                .filter(new Func1<Boolean, Boolean>() {
-                    @Override
-                    public Boolean call(Boolean sync) {
-                        return sync;
-                    }
-                }).map(new Func1<Boolean, Boolean>() {
-                    @Override
-                    public Boolean call(Boolean sync) {
-                        syncStores();
-                        return sync;
-                    }
-                });
-
-        Observable<Boolean> sync = onlineSync.mergeWith(storeEditSync);
-        sync.subscribeOn(Schedulers.newThread()).subscribe();
-    }
-
-    private void syncStores() {
-
-        dataService.getISyncableStores()
-                .subscribe(new Action1<SCDataStore>() {
-                    @Override
-                    public void call(SCDataStore scDataStore) {
-                        syncStore((ISyncableStore) scDataStore);
-                    }
-                });
-    }
-
-    private void syncStore(final ISyncableStore store) {
-        Log.d(LOG_TAG, "Syncing store channel " + store.syncChannel());
-        store.unSent().subscribe(new Action1<SCSpatialFeature>() {
+        Observable<Object> onlineSync = connectedToBroker.filter(new Func1<Boolean, Boolean>() {
             @Override
-            public void call(final SCSpatialFeature scSpatialFeature) {
-                send(scSpatialFeature);
+            public Boolean call(Boolean sync) {
+                return sync;
+            }
+            // for each connected State true (sync is true), sync the stores
+        }).flatMap(new Func1<Boolean, Observable<?>>() {
+            @Override
+            public Observable call(Boolean sync) {
+                return syncStores();
+            }
+        });
+
+        Observable<Object> sync = onlineSync.mergeWith(storeEditSync);
+        sync.subscribeOn(Schedulers.newThread()).subscribe(new Action1<Object>() {
+            @Override
+            public void call(Object object) {
+
+            }
+        }, new Action1<Throwable>() {
+            @Override
+            public void call(Throwable throwable) {
+                Log.e(LOG_TAG, throwable.getLocalizedMessage());
             }
         });
     }
 
-    private void send(final SCSpatialFeature feature) {
-        connectedToBroker
-            .filter(new Func1<Boolean, Boolean>() {
-                @Override public Boolean call(Boolean connected) {
-                    return connected;
-                }
-            })
-            .subscribe(new Action1<Boolean>() {
-                @Override public void call(Boolean connected) {
-                    Log.d(LOG_TAG, "Sending feature to mqtt broker " + feature.toJson());
-                    final ISyncableStore store =
+    private Observable syncStores() {
+        return dataService.getISyncableStores().flatMap(new Func1<SCDataStore, Observable<?>>() {
+            @Override
+            public Observable call(SCDataStore scDataStore) {
+                return syncStore((ISyncableStore) scDataStore);
+            }
+        });
+    }
+
+    private Observable syncStore(final ISyncableStore store) {
+        Log.d(LOG_TAG, "Syncing store channel " + store.syncChannel());
+
+        return store.unSent().flatMap(new Func1<SCSpatialFeature, Observable<?>>() {
+            @Override
+            public Observable call(final SCSpatialFeature scSpatialFeature) {
+                return send(scSpatialFeature);
+            }
+        });
+    }
+
+    private Observable send(final SCSpatialFeature feature) {
+        return connectedToBroker.filter(new Func1<Boolean, Boolean>() {
+            @Override
+            public Boolean call(Boolean connected) {
+                return connected;
+            }
+        }).flatMap(new Func1<Boolean, Observable<?>>() {
+            @Override
+            public Observable call(Boolean connected) {
+                Log.d(LOG_TAG, "Sending feature to mqtt broker " + feature.toJson());
+                final ISyncableStore store =
                         (ISyncableStore) dataService.getStoreByIdentifier(feature.getStoreId());
-                    Map<String, Object> featurePayload = store.generateSendPayload(feature);
-                    String payload;
-                    try {
-                        payload = getMapper().writeValueAsString(featurePayload);
-                        MessagePbf.Msg message = MessagePbf.Msg.newBuilder()
-                            .setAction(Actions.DATASERVICE_CREATEFEATURE.value())
-                            .setPayload(payload)
-                            .build();
-                        publishReplyTo(store.syncChannel(), message)
-                            .subscribe(new Action1<MessagePbf.Msg>() {
-                                @Override public void call(MessagePbf.Msg message) {
+                Map<String, Object> featurePayload = store.generateSendPayload(feature);
+                String payload;
+                try {
+                    payload = getMapper().writeValueAsString(featurePayload);
+                    MessagePbf.Msg message = MessagePbf.Msg.newBuilder().setAction(
+                            Actions.DATASERVICE_CREATEFEATURE.value()).setPayload(payload).build();
+                    return publishReplyTo(store.syncChannel(), message)
+                            .flatMap(new Func1<MessagePbf.Msg, Observable<?>>() {
+                                @Override
+                                public Observable call(MessagePbf.Msg message) {
                                     try {
-                                        final JSONObject payload = new JSONObject(message.getPayload());
-                                        if (payload.getBoolean("result")) {
-                                            Log.d(LOG_TAG, "update audit table to remove sent feature");
+                                        final JSONObject payload =
+                                                new JSONObject(message.getPayload());
+                                        if ( payload.getBoolean("result") ) {
+                                            Log.d(LOG_TAG,
+                                                  "update audit table to remove sent feature");
                                             store.updateAuditTable(feature);
-                                        } else {
-                                            Log.e(LOG_TAG,
-                                                "Something went wrong sending to server: " + payload
-                                                    .getString("error"));
+                                            return Observable.empty();
                                         }
-                                    } catch (JSONException je) {
+                                        else {
+                                            String error = payload.getString("error");
+                                            Log.e(LOG_TAG,
+                                                  "Something went wrong sending to server: " +
+                                                  error);
+                                            return Observable.error(new Throwable(error));
+                                        }
+                                    } catch ( JSONException je ) {
                                         Log.e(LOG_TAG, "json parse error: " + je.getMessage());
+                                        return Observable.error(je);
                                     }
                                 }
                             });
-                    } catch (JsonProcessingException e) {
-                        e.printStackTrace();
-                    }
+                } catch ( JsonProcessingException e ) {
+                    return Observable.error(e);
                 }
-            });
+            }
+        });
     }
 
     public static String serviceId() {
