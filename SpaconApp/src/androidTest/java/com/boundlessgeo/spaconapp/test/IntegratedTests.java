@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Response;
@@ -220,7 +221,7 @@ public class IntegratedTests {
         SpatialConnect sc = SpatialConnect.getInstance();
         final SCLayerConfig formConfig = new SCLayerConfig();
         formConfig.setLayerKey("test");
-        formConfig.setId("123");
+        formConfig.setId(UUID.randomUUID());
         List<JsonNode> fields = new ObjectMapper().readValue("[\n"
             + "        {\n"
             + "          \"id\":1,\n"
