@@ -41,6 +41,7 @@ import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.subjects.BehaviorSubject;
+import rx.subjects.PublishSubject;
 
 /**
  * The SCSensorService provides access to various sensors inputs that can be captured by the mobile device.  This
@@ -55,6 +56,7 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
     private boolean gpsListenerStarted;
     private final String LOG_TAG = SCSensorService.class.getSimpleName();
     private BehaviorSubject<Boolean> isConnected = BehaviorSubject.create(false);
+    private PublishSubject<Boolean> isEnabled = PublishSubject.create();
     private int accuracy;
     private float distance;
     private Observable<SCPoint> lastKnown;
@@ -90,6 +92,10 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
         return isConnected;
     }
 
+    public PublishSubject<Boolean> isEnabled() {
+        return isEnabled;
+    }
+
     /**
      * Sets location accuracy for location updates
      * @param accuracy Criteria.ACCURACY_COARSE, Criteria.ACCURACY_FINE, Criteria.ACCURACY_HIGH
@@ -108,7 +114,7 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
         SpatialConnect sc = SpatialConnect.getInstance();
         SCCache cache = sc.getCache();
         cache.setValue(true, GPS_ENABLED);
-        final LocationStore locationStore = sc.getDataService().getLocationStore();
+        isEnabled.onNext(true);
 
         if (locationHelper.isGPSPermissionGranted()) {
             if (!gpsListenerStarted) {
@@ -123,6 +129,7 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
             Log.i(LOG_TAG, "GPS permission has not been granted");
         }
 
+        final LocationStore locationStore = sc.getDataService().getLocationStore();
         lastKnown.flatMap(new Func1<SCPoint, Observable<SCSpatialFeature>>() {
             @Override
             public Observable<SCSpatialFeature> call(SCPoint scPoint) {
@@ -137,9 +144,12 @@ public class SCSensorService extends SCService implements SCServiceLifecycle{
     public void disableGPS() {
         locationHelper.disableGps();
         gpsListenerStarted = false;
+
         SpatialConnect sc = SpatialConnect.getInstance();
         SCCache cache = sc.getCache();
         cache.setValue(false, GPS_ENABLED);
+
+        isEnabled.onNext(false);
     }
 
     /**
