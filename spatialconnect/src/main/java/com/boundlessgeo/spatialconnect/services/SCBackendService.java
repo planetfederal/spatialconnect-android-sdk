@@ -404,7 +404,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private void fetchConfig() {
         Log.d(LOG_TAG, "fetching config from mqtt config topic");
         MessagePbf.Msg getConfigMsg = MessagePbf.Msg.newBuilder()
-                .setAction(Actions.FETCH_LAYERS.value()).build();
+            .setAction(Actions.API_FETCH_LAYERS.value()).build();
 
         publishReplyTo(QUERY_TOPIC, getConfigMsg)
                 .subscribe(new Action1<MessagePbf.Msg>() {
@@ -632,7 +632,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 try {
                     payload = getMapper().writeValueAsString(featurePayload);
                     MessagePbf.Msg message = MessagePbf.Msg.newBuilder().setAction(
-                            Actions.CREATE_FEATURE.value())
+                            Actions.API_CREATE_FEATURE.value())
                             .setPayload(payload)
                             .build();
                     return publishReplyTo(COMMAND_TOPIC, message)
