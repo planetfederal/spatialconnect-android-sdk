@@ -5,12 +5,12 @@ import android.content.Context;
 import android.support.test.rule.ActivityTestRule;
 import android.support.test.runner.AndroidJUnit4;
 
-import com.boundlessgeo.schema.MessagePbf;
 import com.boundlessgeo.schema.Actions;
+import com.boundlessgeo.schema.MessagePbf;
 import com.boundlessgeo.spaconapp.MainActivity;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
-import com.boundlessgeo.spatialconnect.config.SCFormConfig;
+import com.boundlessgeo.spatialconnect.config.SCLayerConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCBoundingBox;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.mqtt.MqttHandler;
@@ -28,8 +28,8 @@ import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.WFSStore;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Response;
@@ -218,9 +219,9 @@ public class IntegratedTests {
         throws IOException, InterruptedException {
         // add test form to the form store so we can submit it
         SpatialConnect sc = SpatialConnect.getInstance();
-        final SCFormConfig formConfig = new SCFormConfig();
-        formConfig.setFormKey("test");
-        formConfig.setId("123");
+        final SCLayerConfig formConfig = new SCLayerConfig();
+        formConfig.setLayerKey("test");
+        formConfig.setId(UUID.randomUUID());
         List<JsonNode> fields = new ObjectMapper().readValue("[\n"
             + "        {\n"
             + "          \"id\":1,\n"
@@ -229,7 +230,7 @@ public class IntegratedTests {
             + "          \"field_key\":\"name\","
             + "          \"position\":0\n"
             + "        }]", new TypeReference<List<JsonNode>>() { });
-        formConfig.setFields(fields);
+        //formConfig.setFields(fields);
         sc.getDataService().getFormStore().registerFormByConfig(formConfig);
 
         // wait for connection to mqtt broker

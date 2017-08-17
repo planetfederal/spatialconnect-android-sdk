@@ -23,7 +23,7 @@ import com.boundlessgeo.schema.Actions;
 import com.boundlessgeo.schema.MessagePbf;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCConfig;
-import com.boundlessgeo.spatialconnect.config.SCFormConfig;
+import com.boundlessgeo.spatialconnect.config.SCLayerConfig;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
@@ -61,6 +61,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     private static final String LOG_TAG = SCBackendService.class.getSimpleName();
     private static final String SERVICE_NAME = "SC_BACKEND_SERVICE";
+    private final String COMMAND_TOPIC = "command";
+    private final String QUERY_TOPIC = "query";
+    private final String NOTIFY_TOPIC = "notify";
     private Context context;
     private MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
@@ -329,7 +332,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 .subscribe(new Action1<Boolean>() {
                     @Override
                     public void call(Boolean aBoolean) {
-                        setupSubscriptions();
                         registerAndFetchConfig();
                         listenForSyncEvents();
                     }
@@ -402,9 +404,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private void fetchConfig() {
         Log.d(LOG_TAG, "fetching config from mqtt config topic");
         MessagePbf.Msg getConfigMsg = MessagePbf.Msg.newBuilder()
-                .setAction(Actions.CONFIG_FULL.value()).build();
+            .setAction(Actions.API_FETCH_LAYERS.value()).build();
 
-        publishReplyTo("/config", getConfigMsg)
+        publishReplyTo(QUERY_TOPIC, getConfigMsg)
                 .subscribe(new Action1<MessagePbf.Msg>() {
                     @Override
                     public void call(MessagePbf.Msg message) {
@@ -425,12 +427,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                                 authService.getUsername())
                 )
                 .build();
-        publishExactlyOnce("/config/register", registerConfigMsg);
+        publishExactlyOnce(COMMAND_TOPIC, registerConfigMsg);
     }
 
     private void setupSubscriptions() {
-        notifications = listenOnTopic("/notify")
-                .mergeWith(listenOnTopic(String.format("/notify/%s", SpatialConnect.getInstance().getDeviceIdentifier())))
+        notifications = listenOnTopic(NOTIFY_TOPIC)
+                .mergeWith(listenOnTopic(String.format(NOTIFY_TOPIC + "%s", SpatialConnect.getInstance().getDeviceIdentifier())))
                 .map(new Func1<MessagePbf.Msg, SCNotification>() {
                     @Override
                     public SCNotification call(MessagePbf.Msg msg) {
@@ -438,7 +440,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     }
                 });
 
-        listenOnTopic("/config/update").subscribe(new Action1<MessagePbf.Msg>() {
+        listenOnTopic(NOTIFY_TOPIC).subscribe(new Action1<MessagePbf.Msg>() {
             @Override
             public void call(MessagePbf.Msg msg) {
                 Log.d("FormStore","action: " + msg.getAction());
@@ -476,9 +478,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         break;
                     case CONFIG_ADD_FORM:
                         try {
-                            SCFormConfig config = getMapper()
-                                    .readValue(msg.getPayload(), SCFormConfig.class);
-                            cachedConfig.addForm(config);
+                            SCLayerConfig config = getMapper()
+                                    .readValue(msg.getPayload(), SCLayerConfig.class);
+                            cachedConfig.addLayer(config);
                             dataService.getFormStore().registerFormByConfig(config);
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -486,9 +488,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                         break;
                     case CONFIG_UPDATE_FORM:
                         try {
-                            SCFormConfig config = getMapper()
-                                    .readValue(msg.getPayload(), SCFormConfig.class);
-                            cachedConfig.updateForm(config);
+                            SCLayerConfig config = getMapper()
+                                    .readValue(msg.getPayload(), SCLayerConfig.class);
+                            cachedConfig.updateLayer(config);
                             dataService.getFormStore().updateFormByConfig(config);
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -497,7 +499,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                     case CONFIG_REMOVE_FORM:
                         String formKey = utilities.getMapFromJson(msg.getPayload())
                                 .get("form_key").toString();
-                        cachedConfig.removeForm(formKey);
+                        cachedConfig.removeLayer(formKey);
                         dataService.getFormStore().unregisterFormByKey(formKey);
                         break;
                 }
@@ -634,8 +636,10 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 try {
                     String payload = getMapper().writeValueAsString(featurePayload);
                     MessagePbf.Msg message = MessagePbf.Msg.newBuilder().setAction(
-                            Actions.DATASERVICE_CREATEFEATURE.value()).setPayload(payload).build();
-                    return publishReplyTo(store.syncChannel(), message)
+                            Actions.API_CREATE_FEATURE.value())
+                            .setPayload(payload)
+                            .build();
+                    return publishReplyTo(COMMAND_TOPIC, message)
                             .flatMap(new Func1<MessagePbf.Msg, Observable<?>>() {
                                 @Override
                                 public Observable call(MessagePbf.Msg message) {
@@ -644,15 +648,15 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                                                 new JSONObject(message.getPayload());
                                         if ( payload.getBoolean("result") ) {
                                             Log.d(LOG_TAG,
-                                                  "update audit table to remove sent feature");
+                                                    "update audit table to remove sent feature");
                                             store.updateAuditTable(feature);
                                             return Observable.empty();
                                         }
                                         else {
                                             String error = payload.getString("error");
                                             Log.e(LOG_TAG,
-                                                  "Something went wrong sending to server: " +
-                                                  error);
+                                                    "Something went wrong sending to server: " +
+                                                            error);
                                             return Observable.error(new Throwable(error));
                                         }
                                     } catch ( JSONException je ) {

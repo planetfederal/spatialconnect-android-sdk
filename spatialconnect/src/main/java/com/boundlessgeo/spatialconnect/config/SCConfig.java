@@ -24,8 +24,8 @@ public class SCConfig {
     @JsonProperty("stores")
     private List<SCStoreConfig> stores;
 
-    @JsonProperty("forms")
-    private List<SCFormConfig> forms;
+    @JsonProperty("layers")
+    private List<SCLayerConfig> layers;
 
     @JsonProperty("remote")
     private SCRemoteConfig remote;
@@ -41,12 +41,13 @@ public class SCConfig {
         this.stores = configs;
     }
 
-    public List<SCFormConfig> getForms() {
-        return forms;
+
+    public List<SCLayerConfig> getLayers() {
+        return layers;
     }
 
-    public void setFormConfigs(List<SCFormConfig> forms) {
-        this.forms = forms;
+    public void setLayersConfigs(List<SCLayerConfig> layers) {
+        this.layers = layers;
     }
 
     public SCRemoteConfig getRemote() {
@@ -79,23 +80,23 @@ public class SCConfig {
         }
     }
 
-    public void addForm(SCFormConfig formConfig) {
-        forms.add(formConfig);
+    public void addLayer(SCLayerConfig layerConfig) {
+        layers.add(layerConfig);
     }
 
-    public void updateForm(SCFormConfig formConfig) {
-        for (int i = 0; i < forms.size(); i++) {
-            if (forms.get(i).getFormKey().equalsIgnoreCase(formConfig.getFormKey())) {
-                forms.add(i, formConfig);
+    public void updateLayer(SCLayerConfig layerConfig) {
+        for (int i = 0; i < layers.size(); i++) {
+            if (layers.get(i).getLayerKey().equalsIgnoreCase(layerConfig.getLayerKey())) {
+                layers.add(i, layerConfig);
                 break;
             }
         }
     }
 
-    public void removeForm(String id) {
-        for (int i = 0; i < forms.size(); i++) {
-            if (forms.get(i).getFormKey().equalsIgnoreCase(id)) {
-                forms.remove(i);
+    public void removeLayer(String id) {
+        for (int i = 0; i < layers.size(); i++) {
+            if (layers.get(i).getLayerKey().equalsIgnoreCase(id)) {
+                layers.remove(i);
                 break;
             }
         }
