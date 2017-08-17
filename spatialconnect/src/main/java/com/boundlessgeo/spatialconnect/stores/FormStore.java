@@ -114,10 +114,11 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
     @Override
     public Map<String, Object> generateSendPayload(SCSpatialFeature scSpatialFeature) {
         HashMap<String, Object> formSubmissionPayload = new HashMap<>();
-        SCLayerConfig c = storeForms.get(scSpatialFeature.getKey().getLayerId());
-        UUID formId = c.getId();
-        if (formId != null) {
-            formSubmissionPayload.put("layer_id", formId);
+
+        SCLayerConfig config = storeForms.get(scSpatialFeature.getKey().getLayerId());
+        UUID layerId = config != null ? config.getId(): null;
+        if (layerId != null) {
+            formSubmissionPayload.put("layer_id", layerId);
             formSubmissionPayload.put("feature", scSpatialFeature);
         }
         else {

@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import rx.Subscriber;
+import rx.functions.Func1;
 import rx.schedulers.Schedulers;
 
 public class SCJavascriptBridgeAPI {
@@ -50,7 +51,8 @@ public class SCJavascriptBridgeAPI {
 
         Subscriber<Object> mSubscriber;
 
-        SubscriberWrapper(Subscriber<Object> subscriber) {
+        SubscriberWrapper(Subscriber subscriber) {
+            //noinspection unchecked
             mSubscriber = subscriber;
         }
 
@@ -355,26 +357,40 @@ public class SCJavascriptBridgeAPI {
     /**
      * Handles all the {@link Actions#SENSORSERVICE_GPS} commands.
      */
-    private void handleSensorServiceGps(int payload, Subscriber<Object> subscriber) {
+    private void handleSensorServiceGps(int payload, final Subscriber<Object> subscriber) {
         SCSensorService sensorService = mSpatialConnect.getSensorService();
-        if (payload == 1) {
+        if ( payload == 1 ) {
+            Subscriber<Location> locationSubscriber = new SubscriberWrapper<Location>(subscriber) {
+                @Override
+                public void onNext(Location location) {
+                    HashMap<String, Object> payload = new HashMap<>();
+
+                    payload.put("latitude", location.getLatitude());
+                    payload.put("longitude", location.getLongitude());
+                    payload.put("altitude", location.getAltitude());
+
+                    this.mSubscriber.onNext(payload);
+                }
+            };
+
             sensorService.enableGPS();
-            sensorService.getLastKnownLocation()
-                    .subscribeOn(Schedulers.newThread())
-                    .subscribe(new SubscriberWrapper<Location>(subscriber) {
-                        @Override
-                        public void onNext(Location location) {
-                            HashMap<String, Object> payload = new HashMap<>();
+            sensorService.getLastKnownLocation().subscribeOn(Schedulers.newThread())
+                         .subscribe(locationSubscriber);
 
-                            payload.put("latitude", location.getLatitude());
-                            payload.put("longitude", location.getLongitude());
-                            payload.put("altitude", location.getAltitude());
-
-                            this.mSubscriber.onNext(payload);
-                        }
-                    });
+            sensorService.isEnabled().filter(new Func1<Boolean, Boolean>() {
+                @Override
+                public Boolean call(Boolean enabled) {
+                    return !enabled;
+                }
+            }).subscribe(new SubscriberWrapper<Boolean>(locationSubscriber) {
+                @Override
+                public void onNext(Boolean disabled) {
+                    mSubscriber.unsubscribe();
+                    unsubscribe();
+                }
+            });
         }
-        if (payload == 0) {
+        else if ( payload == 0 ) {
             sensorService.disableGPS();
         }
     }

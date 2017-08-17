@@ -625,12 +625,16 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
             @Override
             public Observable call(Boolean connected) {
                 Log.d(LOG_TAG, "Sending feature to mqtt broker " + feature.toJson());
+
                 final ISyncableStore store =
                         (ISyncableStore) dataService.getStoreByIdentifier(feature.getStoreId());
                 Map<String, Object> featurePayload = store.generateSendPayload(feature);
-                String payload;
+                if ( featurePayload == null || featurePayload.isEmpty() ) {
+                    return Observable.empty();
+                }
+
                 try {
-                    payload = getMapper().writeValueAsString(featurePayload);
+                    String payload = getMapper().writeValueAsString(featurePayload);
                     MessagePbf.Msg message = MessagePbf.Msg.newBuilder().setAction(
                             Actions.API_CREATE_FEATURE.value())
                             .setPayload(payload)
