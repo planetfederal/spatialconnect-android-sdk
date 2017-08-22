@@ -371,7 +371,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 if (connected) {
                     authListener();
                 } else {
-                    Log.d(LOG_TAG, "No internet get cached remote config");
                     connectedToBroker.onNext(false);
                 }
             }
@@ -401,7 +400,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     private void fetchConfig() {
-        //load latest config from backend
         Log.d(LOG_TAG, "fetching config from mqtt config topic");
         MessagePbf.Msg getConfigMsg = MessagePbf.Msg.newBuilder()
                 .setAction(Actions.CONFIG_FULL.value()).build();
