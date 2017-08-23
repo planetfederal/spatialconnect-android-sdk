@@ -3,7 +3,6 @@ package com.boundlessgeo.spatialconnect.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.UUID;
 
 public class SCLayerConfig {
@@ -32,11 +31,6 @@ public class SCLayerConfig {
     @JsonProperty("version")
     private String version;
 
-    /**
-     * List of the form fields that define this form.
-     */
-    @JsonProperty("fields")
-    private List<HashMap<String, Object>> fields;
 
     @JsonProperty("schema")
     private SCLayerSchema schema;
@@ -116,7 +110,7 @@ public class SCLayerConfig {
         json.put("layer_key", getLayerKey());  // same as layer name
         json.put("layer_label", getLayerLabel());
         json.put("version", getVersion());
-        json.put("fields", schema.getFields());
+        json.put("schema", schema.getFields());
 
         return json;
     }
