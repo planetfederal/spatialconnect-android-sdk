@@ -304,7 +304,13 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         configService = (SCConfigService) deps.get(SCConfigService.serviceId());
         sensorService = (SCSensorService) deps.get(SCSensorService.serviceId());
         dataService = (SCDataService) deps.get(SCDataService.serviceId());
+
+        //load the config from cache if any is present
+        loadCachedConfig();
+
+        //connect to backend and grab the latest config
         listenForNetworkConnection();
+
         return super.start(deps);
     }
 
@@ -354,9 +360,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 if (status == SCAuthService.SCAuthStatus.AUTHENTICATED.value()) {
                     connectToMqttBroker();
                 }
-                if (status == SCAuthService.SCAuthStatus.AUTHENTICATION_FAILED.value()) {
-                    loadCachedConfig();
-                }
             }
         });
     }
@@ -370,10 +373,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 if (connected) {
                     authListener();
                 } else {
-                    //load config from cache
-                    Log.d(LOG_TAG, "No internet get cached remote config");
                     connectedToBroker.onNext(false);
-                    loadCachedConfig();
                 }
             }
         });
