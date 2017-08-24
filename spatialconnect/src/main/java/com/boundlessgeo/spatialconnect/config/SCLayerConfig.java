@@ -106,11 +106,14 @@ public class SCLayerConfig {
     public HashMap<String, Object> toJSON() {
         HashMap<String, Object> json = new HashMap<>();
 
+        HashMap<String, Object> fields = new HashMap<>();
+        fields.put("fields", schema.getFields());
+        
         json.put("id", getId());
         json.put("layer_key", getLayerKey());  // same as layer name
         json.put("layer_label", getLayerLabel());
         json.put("version", getVersion());
-        json.put("schema", schema.getFields());
+        json.put("schema", fields);
 
         return json;
     }
