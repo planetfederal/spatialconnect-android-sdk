@@ -22,6 +22,10 @@ import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.GeometryFactory;
 
+/**
+ * Represents a function that takes a feature and responds with a logical true or false value
+ * based on the filter criteria.
+ */
 public class SCPredicate {
     private SCBoundingBox filterBbox;
     private String key;

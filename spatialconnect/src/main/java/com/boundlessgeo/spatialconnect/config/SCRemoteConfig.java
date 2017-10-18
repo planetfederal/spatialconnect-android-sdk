@@ -19,6 +19,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Locale;
 
+/**
+ * Represents a JSON object describing the configuration for a specific backend (aka remote).  For
+ * the spatialconnect-server or Boundless API backend, we should include configuration for the MQTT
+ * broker.  For the Boundless Exchange backend, we only need to specify the auth and http
+ * configuration.
+ */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class SCRemoteConfig {
 

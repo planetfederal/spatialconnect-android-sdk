@@ -14,6 +14,9 @@
  */
 package com.boundlessgeo.spatialconnect.services.authService;
 
+/**
+ * Authentication implementation that requires no authentication
+ */
 public class NoAuth implements ISCAuth {
 
   @Override public boolean authFromCache() {

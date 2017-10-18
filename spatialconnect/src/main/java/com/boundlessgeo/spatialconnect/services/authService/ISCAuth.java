@@ -16,6 +16,9 @@
 
 package com.boundlessgeo.spatialconnect.services.authService;
 
+/**
+ * Defines the interface for authentication implementations.
+ */
 public interface ISCAuth {
     boolean authFromCache();
     boolean authenticate(String username, String pwd);

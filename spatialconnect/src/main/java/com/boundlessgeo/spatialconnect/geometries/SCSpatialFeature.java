@@ -34,6 +34,13 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * SCSpatialFeature is the primary domain object of SpatialConnect and you can think of it as
+ * a row in a database.
+ * The word "spatial" in this context does not imply a geometry, instead it is meant to be thought
+ * of as a dimension in some n-dimensional space.  If a SCSpatialFeature has a geometry, then it
+ * should be a {@link SCGeometry}.
+ */
 public class SCSpatialFeature
 {
 

@@ -18,6 +18,10 @@ import android.util.Base64;
 
 import java.io.UnsupportedEncodingException;
 
+/**
+ * The SCKeyTuple class uniquely identifies a feature in SpatialConnect using the store, layer,
+ * and feature id.
+ */
 public class SCKeyTuple {
     private String storeId;
     private String layerId;

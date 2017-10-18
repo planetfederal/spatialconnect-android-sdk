@@ -30,6 +30,10 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
+/**
+ * Custom SSLSocketFactory that can be used to connect to MQTT brokers using certificates signed
+ * by a custom certificate authority.
+ */
 public class SCSocketFactory extends SSLSocketFactory {
 
   private TrustManagerFactory tmf;
