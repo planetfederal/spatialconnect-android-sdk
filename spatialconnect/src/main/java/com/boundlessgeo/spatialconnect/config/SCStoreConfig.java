@@ -15,6 +15,7 @@
 package com.boundlessgeo.spatialconnect.config;
 
 
+import com.boundlessgeo.spatialconnect.stores.ISCSpatialStore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -23,7 +24,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 
 /**
- * Represents a JSON object describing a SCSpatialStore.
+ * Represents a JSON object describing an implemenation of {@link ISCSpatialStore}.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class SCStoreConfig

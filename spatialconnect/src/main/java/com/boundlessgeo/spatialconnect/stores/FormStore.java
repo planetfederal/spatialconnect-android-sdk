@@ -36,6 +36,9 @@ import java.util.Map;
 import rx.Observable;
 import rx.subjects.BehaviorSubject;
 
+/**
+ * A store that persists/queries form submissions to/from a GeoPackage
+ */
 public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDataStoreLifeCycle {
 
     private final String LOG_TAG = FormStore.class.getSimpleName();

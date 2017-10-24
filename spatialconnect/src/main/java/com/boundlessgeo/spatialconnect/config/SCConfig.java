@@ -19,6 +19,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
+/**
+ * The <code>SCConfig</code> class represents the JSON configuration for SpatialConnect.
+ * It is used to bootstrap the application in a modular way so the SDK can be configured to
+ * communicate with multiple backends (aka remotes) including Boundless Exchange,
+ * spatialconnect-server, the Boundless API, or none at all.
+ */
 public class SCConfig {
 
     @JsonProperty("stores")

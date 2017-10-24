@@ -7,6 +7,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+/**
+ * The <code>SCFormConfig</code> class represents the JSON configuration for a form in the context
+ * of spatialconnect-server.  It defines the schema used by
+ * <a href="https://github.com/boundlessgeo/spatialconnect-form-schema/">spatialconnect-form-schema
+ * </a> to render a form on the presentation layer.  It is also used by the
+ * {@link com.boundlessgeo.spatialconnect.stores.FormStore} to create a GeoPackage vector feature
+ * table.
+ */
 public class SCFormConfig {
 
     /**

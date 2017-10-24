@@ -24,6 +24,9 @@ import java.util.Map;
 
 import rx.subjects.BehaviorSubject;
 
+/**
+ * Service that uses an implementation of ISCAuth to authenticate the user.
+ */
 public class SCAuthService extends SCService implements SCServiceLifecycle {
 
     public enum SCAuthStatus {

@@ -22,6 +22,11 @@ import com.vividsolutions.jts.geom.Envelope;
 
 import java.io.File;
 
+/**
+ * Represents the minimum bounding box around a geometry represented as an array of coordinate
+ * pairs: [lower-left x coordinate, lower-left y coordinate, upper-right x coordinate,
+ * upper-right y coordinate]
+ */
 public class SCBoundingBox
 {
     private Double[] bbox = new Double[4];

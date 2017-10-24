@@ -25,6 +25,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Represents a GeoJSON FeatureCollection object.
+ */
 @JsonPropertyOrder({"type", "id", "created", "modified", "features", "properties"})
 public class SCGeometryCollection extends SCSpatialFeature
 {

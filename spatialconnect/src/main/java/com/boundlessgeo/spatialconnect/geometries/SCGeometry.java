@@ -35,7 +35,9 @@ import com.vividsolutions.jts.geom.Polygon;
 
 import java.io.File;
 
-
+/**
+ * Represents a feature that has a geometry and can be represented as GeoJSON
+ */
 @JsonPropertyOrder({"type", "id", "created", "modified", "bbox", "geometry", "properties"})
  public class SCGeometry extends SCSpatialFeature
 {

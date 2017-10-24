@@ -42,6 +42,9 @@ import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
 
+/**
+ * Store that saves the device locations in a GeoPackage vector feature table.
+ */
 public class LocationStore extends GeoPackageStore implements ISCSpatialStore, SCDataStoreLifeCycle {
 
     private static final String LOG_TAG = LocationStore.class.getSimpleName();
