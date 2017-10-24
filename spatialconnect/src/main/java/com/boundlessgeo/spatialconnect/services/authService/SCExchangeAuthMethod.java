@@ -74,12 +74,12 @@ public class SCExchangeAuthMethod implements ISCAuth {
 
     @Override
     public String xAccessToken() {
-        return null;
+        return settings.getString(ACCESS_TOKEN, null);
     }
 
     @Override
     public String username() {
-        return null;
+        return settings.getString(USERNAME, null);
     }
 
     private boolean auth(final String username, final String pwd) {
