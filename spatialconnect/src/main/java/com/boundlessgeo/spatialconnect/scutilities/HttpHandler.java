@@ -39,6 +39,7 @@ public class HttpHandler {
     private static HttpHandler instance;
     private static OkHttpClient client;
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+    public static final MediaType XML = MediaType.parse("application/x-www-form-urlencoded");
 
 
     public static HttpHandler getInstance() {
@@ -170,6 +171,25 @@ public class HttpHandler {
                 .post(body)
                 .build();
         Response response = client.newCall(request).execute();
+
+        return response;
+    }
+
+    public Response postBlocking(final String url, final String json, final String auth, MediaType mediaType) throws Exception {
+        Response response =null;
+        RequestBody body = RequestBody.create(mediaType, json);
+        try {
+            Request request = new Request.Builder()
+                    .url(url)
+                    .header("Authorization", auth)
+                    .header("Accept","application/json, application/xml, text/plain, text/html, *.*")
+                    .post(body)
+                    .build();
+            response = client.newCall(request).execute();
+        } catch (Exception ee) {
+            Log.e(LOG_TAG, "exchange error auth", ee);
+            Log.e(LOG_TAG, ee.getMessage());
+        }
 
         return response;
     }

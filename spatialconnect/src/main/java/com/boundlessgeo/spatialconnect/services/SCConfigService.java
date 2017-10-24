@@ -26,6 +26,7 @@ import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.scutilities.Storage.SCFileUtilities;
+import com.boundlessgeo.spatialconnect.services.authService.ExchangeAuth;
 import com.boundlessgeo.spatialconnect.services.authService.NoAuth;
 import com.boundlessgeo.spatialconnect.services.authService.SCServerAuthMethod;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
@@ -105,12 +106,14 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     public void loadConfig(SCConfig config) {
         loadForms(config.getForms());
         loadDataStores(config.getStores());
-
         SCRemoteConfig remoteConfig = config.getRemote();
         if (remoteConfig != null) {
             String auth = remoteConfig.getAuth();
+
             if ( !TextUtils.isEmpty(auth) && auth.equals("no-auth")) {
                 sc.connectAuth(new NoAuth());
+            } else if ( !TextUtils.isEmpty(auth) && auth.equals("exchange")) {
+                sc.connectAuth(new ExchangeAuth(context, remoteConfig.getHttpUri(), remoteConfig.getClientId()));
             } else {
                 sc.connectAuth(new SCServerAuthMethod(context, remoteConfig.getHttpUri()));
             }

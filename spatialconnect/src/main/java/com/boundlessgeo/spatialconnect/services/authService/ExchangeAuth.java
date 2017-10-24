@@ -1,5 +1,5 @@
 /**
- * Copyright 2017 Boundless http://boundlessgeo.com
+ * Copyright 2017 Boundless, http://boundlessgeo.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10,13 +10,12 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License
+ * See the License for the specific language governing permissions and limitations under the License
  */
-
 package com.boundlessgeo.spatialconnect.services.authService;
 
 import android.content.Context;
+import android.util.Base64;
 import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
@@ -29,22 +28,22 @@ import java.util.Locale;
 
 import okhttp3.Response;
 
-public class SCServerAuthMethod implements ISCAuth {
+public class ExchangeAuth implements ISCAuth {
 
-    private static String LOG_TAG = SCServerAuthMethod.class.getSimpleName();
-    private static final String JSON_WEB_TOKEN = "x-access-token";
+    private static String LOG_TAG = ExchangeAuth.class.getSimpleName();
     private static final String USERNAME = "username";
     private static final String PWD = "pwd";
-    private Context context;
-    private String jsonWebToken;
+    private static final String ACCESS_TOKEN = "accessToken";
     private SecureSharedPreferences settings;
     private String serverUrl;
+    private Context context;
+    private String clientId;
 
-
-    public SCServerAuthMethod(Context context, String serverUrl) {
+    public ExchangeAuth(Context context, String serverUrl, String clientId) {
         this.context = context;
         this.settings = new SecureSharedPreferences(context);
         this.serverUrl = serverUrl;
+        this.clientId = clientId;
     }
 
     @Override
@@ -65,6 +64,7 @@ public class SCServerAuthMethod implements ISCAuth {
 
     @Override
     public boolean refreshToken(String token) {
+        //TODO: implement
         return false;
     }
 
@@ -75,45 +75,40 @@ public class SCServerAuthMethod implements ISCAuth {
 
     @Override
     public String xAccessToken() {
-        return settings.getString(JSON_WEB_TOKEN, null);
+        return null;
     }
 
     @Override
     public String username() {
-        SecureSharedPreferences settings = new SecureSharedPreferences(context);
-        return settings.getString(USERNAME, null);
+        return null;
     }
 
     private boolean auth(final String username, final String pwd) {
         boolean authed = false;
         try {
-            final String theUrl = String.format(Locale.US, "%s/api/authenticate", serverUrl);
+            final String theUrl = String.format(Locale.US, "%s/o/token/", serverUrl);
+            final String oauthCreds = String.format(Locale.US, "%s:", clientId);
+            final String base64Encoded = Base64.encodeToString(oauthCreds.getBytes("UTF-8"), Base64.NO_WRAP);
+            final String authHeader = String.format(Locale.US, "Basic %s", base64Encoded);
             Response response = HttpHandler.getInstance()
-                    .postBlocking(theUrl, String.format("{\"email\": \"%s\", \"password\":\"%s\"}", username, pwd));
+                    .postBlocking(theUrl,
+                            String.format("grant_type=password&username=%s&password=%s",
+                                    username, pwd), authHeader, HttpHandler.XML);
 
             if (response.isSuccessful()) {
-                jsonWebToken = new JSONObject(response.body().string())
-                        .getJSONObject("result").getString("token");
-                if (jsonWebToken != null) {
-                    saveAccessToken(jsonWebToken);
-                    saveCredentials(username, pwd);
-                    authed = true;
-                }
+                JSONObject responseJson = new JSONObject(response.body().string());
+                saveAccessToken(responseJson.getString("access_token"));
+                saveCredentials(username, pwd);
+                authed = true;
             } else {
                 logout();
             }
         } catch (JSONException e) {
-            Log.e(LOG_TAG,"JSON error trying to auth: " + e.getMessage());
+            Log.e(LOG_TAG,"JSON error trying to auth with exchange: " + e.getMessage());
         } catch (Exception e) {
-            Log.e(LOG_TAG,"Error trying to auth: " + e.getMessage());
+            Log.e(LOG_TAG,"Error trying to auth with exchange: " + e.getMessage());
         }
         return authed;
-    }
-
-    private void saveAccessToken(String accessToken) {
-        SecureSharedPreferences.Editor editor = settings.edit();
-        editor.putString(JSON_WEB_TOKEN, accessToken);
-        editor.commit();
     }
 
     private void saveCredentials(String username, String password) {
@@ -126,6 +121,12 @@ public class SCServerAuthMethod implements ISCAuth {
     private String getPassword() {
         SecureSharedPreferences settings = new SecureSharedPreferences(context);
         return settings.getString(PWD, null);
+    }
+
+    private void saveAccessToken(String accessToken) {
+        SecureSharedPreferences.Editor editor = settings.edit();
+        editor.putString(ACCESS_TOKEN, accessToken);
+        editor.commit();
     }
 
     private void removeCredentials() {
