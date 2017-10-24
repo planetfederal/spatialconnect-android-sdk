@@ -28,9 +28,9 @@ import java.util.Locale;
 
 import okhttp3.Response;
 
-public class ExchangeAuth implements ISCAuth {
+public class SCExchangeAuthMethod implements ISCAuth {
 
-    private static String LOG_TAG = ExchangeAuth.class.getSimpleName();
+    private static String LOG_TAG = SCExchangeAuthMethod.class.getSimpleName();
     private static final String USERNAME = "username";
     private static final String PWD = "pwd";
     private static final String ACCESS_TOKEN = "accessToken";
@@ -39,7 +39,7 @@ public class ExchangeAuth implements ISCAuth {
     private Context context;
     private String clientId;
 
-    public ExchangeAuth(Context context, String serverUrl, String clientId) {
+    public SCExchangeAuthMethod(Context context, String serverUrl, String clientId) {
         this.context = context;
         this.settings = new SecureSharedPreferences(context);
         this.serverUrl = serverUrl;
