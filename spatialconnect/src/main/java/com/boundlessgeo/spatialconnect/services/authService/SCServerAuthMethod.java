@@ -64,7 +64,7 @@ public class SCServerAuthMethod implements ISCAuth {
     }
 
     @Override
-    public boolean refreshToken(String token) {
+    public boolean refreshToken() {
         return false;
     }
 

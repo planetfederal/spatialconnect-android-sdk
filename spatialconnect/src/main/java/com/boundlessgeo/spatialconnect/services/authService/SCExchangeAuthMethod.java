@@ -63,9 +63,8 @@ public class SCExchangeAuthMethod implements ISCAuth {
     }
 
     @Override
-    public boolean refreshToken(String token) {
-        //TODO: implement
-        return false;
+    public boolean refreshToken() {
+        return refresh();
     }
 
     @Override
@@ -111,6 +110,33 @@ public class SCExchangeAuthMethod implements ISCAuth {
         return authed;
     }
 
+    private boolean refresh() {
+        boolean authed = false;
+        try {
+            final String theUrl = String.format(Locale.US, "%s/o/token/", serverUrl);
+            final String oauthCreds = String.format(Locale.US, "%s:", clientId);
+            final String base64Encoded = Base64.encodeToString(oauthCreds.getBytes("UTF-8"), Base64.NO_WRAP);
+            final String authHeader = String.format(Locale.US, "Basic %s", base64Encoded);
+            Response response = HttpHandler.getInstance()
+                    .postBlocking(theUrl,
+                            String.format("grant_type=refresh_token&refresh_token=%s",
+                                    getAccessToken()), authHeader, HttpHandler.XML);
+
+            if (response.isSuccessful()) {
+                JSONObject responseJson = new JSONObject(response.body().string());
+                saveAccessToken(responseJson.getString("access_token"));
+                authed = true;
+            } else {
+                logout();
+            }
+        } catch (JSONException e) {
+            Log.e(LOG_TAG,"JSON error trying to refresh token with exchange: " + e.getMessage());
+        } catch (Exception e) {
+            Log.e(LOG_TAG,"Error trying to refresh token with exchange: " + e.getMessage());
+        }
+        return authed;
+    }
+
     private void saveCredentials(String username, String password) {
         SecureSharedPreferences.Editor editor = settings.edit();
         editor.putString(USERNAME, username);
@@ -127,6 +153,11 @@ public class SCExchangeAuthMethod implements ISCAuth {
         SecureSharedPreferences.Editor editor = settings.edit();
         editor.putString(ACCESS_TOKEN, accessToken);
         editor.commit();
+    }
+
+    private String getAccessToken() {
+        SecureSharedPreferences settings = new SecureSharedPreferences(context);
+        return settings.getString(ACCESS_TOKEN, null);
     }
 
     private void removeCredentials() {

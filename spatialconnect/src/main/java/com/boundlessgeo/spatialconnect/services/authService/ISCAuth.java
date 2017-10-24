@@ -22,7 +22,7 @@ package com.boundlessgeo.spatialconnect.services.authService;
 public interface ISCAuth {
     boolean authFromCache();
     boolean authenticate(String username, String pwd);
-    boolean refreshToken(String token);
+    boolean refreshToken();
     void logout();
     String xAccessToken();
     String username();
