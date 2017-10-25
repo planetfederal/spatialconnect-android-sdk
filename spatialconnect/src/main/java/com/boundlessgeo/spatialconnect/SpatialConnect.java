@@ -47,7 +47,7 @@ import rx.functions.Func1;
 public class SpatialConnect {
 
     private final String LOG_TAG = SpatialConnect.class.getSimpleName();
-    private SCServiceGraph serviceGraph = new SCServiceGraph();;
+    private SCServiceGraph serviceGraph = new SCServiceGraph();
     private SCDataService dataService;
     private SCSensorService sensorService;
     private SCConfigService configService;
