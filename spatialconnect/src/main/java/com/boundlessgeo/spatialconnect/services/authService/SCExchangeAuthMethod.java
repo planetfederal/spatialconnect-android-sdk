@@ -144,7 +144,7 @@ public class SCExchangeAuthMethod implements ISCAuth {
                             String.format("grant_type=refresh_token&refresh_token=%s",
                                     cache.getStringValue(REFRESH_TOKEN)), authHeader, HttpHandler.XML);
 
-            JSONObject responseJson = new JSONObject(response.body().string());;
+            JSONObject responseJson = new JSONObject(response.body().string());
             if (response.isSuccessful()) {
                 cache.setValue(responseJson.getString("refresh_token"), REFRESH_TOKEN);
                 cache.setValue(responseJson.getInt("expires_in"), TOKEN_EXPIRATION);
