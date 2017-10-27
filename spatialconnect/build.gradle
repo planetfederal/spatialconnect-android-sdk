@@ -108,6 +108,7 @@ dependencies {
     }
     compile 'com.auth0:java-jwt:2.2.1'
     compile files('libs/boundlessSchema-0.10.jar')
+    compile 'joda-time:joda-time:2.9.9'
 
     // testing dependencies
     androidTestCompile 'junit:junit:4.12'

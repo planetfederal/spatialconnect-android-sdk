@@ -18,9 +18,13 @@ import android.content.Context;
 import android.util.Base64;
 import android.util.Log;
 
+import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
+import com.boundlessgeo.spatialconnect.scutilities.SCCache;
 import com.github.rtoshiro.secure.SecureSharedPreferences;
 
+import org.joda.time.DateTime;
+import org.joda.time.Seconds;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -33,7 +37,11 @@ public class SCExchangeAuthMethod implements ISCAuth {
     private static String LOG_TAG = SCExchangeAuthMethod.class.getSimpleName();
     private static final String USERNAME = "username";
     private static final String PWD = "pwd";
-    private static final String ACCESS_TOKEN = "accessToken";
+    private static final String TOKEN = "token";
+    private static final String REFRESH_TOKEN = "r_token";
+    private static final String TOKEN_EXPIRATION = "t_expire";
+    private static final String TOKEN_TIMESTAMP = "t_timestamp";
+
     private SecureSharedPreferences settings;
     private String serverUrl;
     private Context context;
@@ -51,7 +59,20 @@ public class SCExchangeAuthMethod implements ISCAuth {
         String u = username();
         String p = getPassword();
         if (u != null && p != null) {
-            return authenticate(u,p);
+            SCCache cache = SpatialConnect.getInstance().getCache();
+            int expire = cache.getIntValue(TOKEN_EXPIRATION);
+            DateTime tokenTimestamp = new DateTime(cache.getStringValue(TOKEN_TIMESTAMP));
+            DateTime tokenExpiration = tokenTimestamp.plusSeconds(expire);
+            DateTime currentTimestamp = new DateTime();
+            Seconds secondsBeforeExpiration = Seconds.secondsBetween(currentTimestamp, tokenExpiration);
+
+            // current timestamp is later than token expiration or less than an 1 hour
+            // before the token expires refresh token.
+            if (currentTimestamp.isAfter(tokenExpiration) || secondsBeforeExpiration.getSeconds() < 3600) {
+                return refreshToken();
+            } else {
+                return true;
+            }
         } else {
             return false;
         }
@@ -63,18 +84,13 @@ public class SCExchangeAuthMethod implements ISCAuth {
     }
 
     @Override
-    public boolean refreshToken() {
-        return refresh();
-    }
-
-    @Override
     public void logout() {
         removeCredentials();
     }
 
     @Override
     public String xAccessToken() {
-        return settings.getString(ACCESS_TOKEN, null);
+        return settings.getString(TOKEN, null);
     }
 
     @Override
@@ -96,8 +112,13 @@ public class SCExchangeAuthMethod implements ISCAuth {
 
             if (response.isSuccessful()) {
                 JSONObject responseJson = new JSONObject(response.body().string());
-                saveAccessToken(responseJson.getString("access_token"));
                 saveCredentials(username, pwd);
+
+                SCCache cache = SpatialConnect.getInstance().getCache();
+                cache.setValue(responseJson.getString("refresh_token"), REFRESH_TOKEN);
+                cache.setValue(responseJson.getInt("expires_in"), TOKEN_EXPIRATION);
+                cache.setValue(new DateTime().toString(), TOKEN_TIMESTAMP);
+
                 authed = true;
             } else {
                 logout();
@@ -110,9 +131,10 @@ public class SCExchangeAuthMethod implements ISCAuth {
         return authed;
     }
 
-    private boolean refresh() {
+    private boolean refreshToken() {
         boolean authed = false;
         try {
+            SCCache cache = SpatialConnect.getInstance().getCache();
             final String theUrl = String.format(Locale.US, "%s/o/token/", serverUrl);
             final String oauthCreds = String.format(Locale.US, "%s:", clientId);
             final String base64Encoded = Base64.encodeToString(oauthCreds.getBytes("UTF-8"), Base64.NO_WRAP);
@@ -120,13 +142,18 @@ public class SCExchangeAuthMethod implements ISCAuth {
             Response response = HttpHandler.getInstance()
                     .postBlocking(theUrl,
                             String.format("grant_type=refresh_token&refresh_token=%s",
-                                    getAccessToken()), authHeader, HttpHandler.XML);
+                                    cache.getStringValue(REFRESH_TOKEN)), authHeader, HttpHandler.XML);
 
+            JSONObject responseJson = new JSONObject(response.body().string());;
             if (response.isSuccessful()) {
-                JSONObject responseJson = new JSONObject(response.body().string());
-                saveAccessToken(responseJson.getString("access_token"));
+                cache.setValue(responseJson.getString("refresh_token"), REFRESH_TOKEN);
+                cache.setValue(responseJson.getInt("expires_in"), TOKEN_EXPIRATION);
+                cache.setValue(new DateTime(), TOKEN_TIMESTAMP);
                 authed = true;
             } else {
+                if (responseJson.getString("error") != null) {
+                    Log.e(LOG_TAG, "Error attempting to refresh token");
+                }
                 logout();
             }
         } catch (JSONException e) {
@@ -147,17 +174,6 @@ public class SCExchangeAuthMethod implements ISCAuth {
     private String getPassword() {
         SecureSharedPreferences settings = new SecureSharedPreferences(context);
         return settings.getString(PWD, null);
-    }
-
-    private void saveAccessToken(String accessToken) {
-        SecureSharedPreferences.Editor editor = settings.edit();
-        editor.putString(ACCESS_TOKEN, accessToken);
-        editor.commit();
-    }
-
-    private String getAccessToken() {
-        SecureSharedPreferences settings = new SecureSharedPreferences(context);
-        return settings.getString(ACCESS_TOKEN, null);
     }
 
     private void removeCredentials() {

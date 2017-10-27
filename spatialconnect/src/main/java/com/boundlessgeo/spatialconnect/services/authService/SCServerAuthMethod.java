@@ -64,11 +64,6 @@ public class SCServerAuthMethod implements ISCAuth {
     }
 
     @Override
-    public boolean refreshToken() {
-        return false;
-    }
-
-    @Override
     public void logout() {
         removeCredentials();
     }

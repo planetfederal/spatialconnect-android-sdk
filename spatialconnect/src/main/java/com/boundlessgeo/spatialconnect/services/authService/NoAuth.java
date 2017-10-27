@@ -29,11 +29,6 @@ public class NoAuth implements ISCAuth {
     return true;
   }
 
-  @Override
-  public boolean refreshToken() {
-    return true;
-  }
-
   @Override public void logout() {
   }
 
