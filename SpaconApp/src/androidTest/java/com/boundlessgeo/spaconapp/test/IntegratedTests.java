@@ -229,7 +229,7 @@ public class IntegratedTests {
             + "          \"field_key\":\"name\","
             + "          \"position\":0\n"
             + "        }]", new TypeReference<List<JsonNode>>() { });
-        formConfig.setFields(fields);
+        //formConfig.setFields(fields);
         sc.getDataService().getFormStore().registerFormByConfig(formConfig);
 
         // wait for connection to mqtt broker

@@ -75,7 +75,6 @@ public class SCServerAuthMethod implements ISCAuth {
 
     @Override
     public String username() {
-        SecureSharedPreferences settings = new SecureSharedPreferences(context);
         return settings.getString(USERNAME, null);
     }
 

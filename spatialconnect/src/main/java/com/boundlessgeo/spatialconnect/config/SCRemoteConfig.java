@@ -49,6 +49,9 @@ public class SCRemoteConfig {
     @JsonProperty("mqtt_port")
     private Integer mqttPort;
 
+    @JsonProperty("client_id")
+    private String clientId;
+
     public String getHttpProtocol() {
         return httpProtocol;
     }
@@ -103,6 +106,14 @@ public class SCRemoteConfig {
 
     public void setAuth(String auth) {
         this.auth = auth;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 
     public String getHttpUri() {

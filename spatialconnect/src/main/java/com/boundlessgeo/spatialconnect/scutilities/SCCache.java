@@ -35,6 +35,9 @@ public class SCCache {
             if (value instanceof String) {
                 mEditor.putString(key, (String) value).apply();
             }
+            if (value instanceof Integer) {
+                mEditor.putInt(key, (int) value).apply();
+            }
         } catch (Exception e) {
             Log.e(LOG_TAG, e.getMessage());
         }
@@ -42,6 +45,10 @@ public class SCCache {
 
     public String getStringValue(String key) {
         return mPrefs.getString(key, null);
+    }
+
+    public int getIntValue(String key) {
+        return mPrefs.getInt(key, 0);
     }
 }
 
