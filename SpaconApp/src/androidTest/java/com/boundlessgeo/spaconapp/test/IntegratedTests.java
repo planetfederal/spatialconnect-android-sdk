@@ -21,15 +21,14 @@ import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
+import com.boundlessgeo.spatialconnect.services.backendService.SCBackendService;
+import com.boundlessgeo.spatialconnect.services.backendService.SCSpaconBackend;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
 import com.boundlessgeo.spatialconnect.stores.WFSStore;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -42,6 +41,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -102,7 +103,6 @@ public class IntegratedTests {
             sc.getConfigService().addConfigFilePath(remoteConfigFile.getAbsolutePath());
             sc.startAllServices();
             sc.getAuthService().authenticate("admin@something.com", "admin");
-            //waitForStoreToStart(WFS_STORE_ID);
 
         } catch (IOException ex) {
             System.exit(0);
@@ -115,7 +115,7 @@ public class IntegratedTests {
 
     @Test
     public void testMqttNetworkServiceCanPublishAndSubscribe() {
-        SCBackendService networkService = sc.getBackendService();
+        SCBackendService backendService = sc.getBackendService();
         MessagePbf.Msg.Builder builder =  MessagePbf.Msg.newBuilder();
         builder.setAction(Actions.START_ALL_SERVICES.value())
                 .setPayload("{\"testing\": true}")
@@ -123,7 +123,7 @@ public class IntegratedTests {
                 .build();
         MessagePbf.Msg message = builder.build();
         TestSubscriber<MessagePbf.Msg> testSubscriber = new TestSubscriber();
-        networkService.publishReplyTo("/ping", message)
+        ((SCSpaconBackend)backendService.getSCBackend()).publishReplyTo("/ping", message)
                 .take(1)
                 .timeout(15, TimeUnit.SECONDS)
                 .subscribe(testSubscriber);
@@ -155,7 +155,7 @@ public class IntegratedTests {
         SpatialConnect sc = SpatialConnect.getInstance();
         TestSubscriber testSubscriber = new TestSubscriber();
         // wait for connection to mqtt broker
-        sc.getBackendService()
+        ((SCSpaconBackend)sc.getBackendService().getSCBackend())
             .connectedToBroker
             .filter(new Func1<Boolean, Boolean>() {
                 @Override public Boolean call(Boolean connected) {
@@ -221,20 +221,20 @@ public class IntegratedTests {
         final SCFormConfig formConfig = new SCFormConfig();
         formConfig.setFormKey("test");
         formConfig.setId("123");
-        List<JsonNode> fields = new ObjectMapper().readValue("[\n"
-            + "        {\n"
-            + "          \"id\":1,\n"
-            + "          \"type\":\"string\",\n"
-            + "          \"field_label\":\"Name\",\n"
-            + "          \"field_key\":\"name\","
-            + "          \"position\":0\n"
-            + "        }]", new TypeReference<List<JsonNode>>() { });
-        //formConfig.setFields(fields);
+        List<HashMap<String, Object>> fields = new ArrayList<>(1);
+        HashMap formField = new HashMap();
+        formField.put("id", 1);
+        formField.put("type", "string");
+        formField.put("field_label", "Name");
+        formField.put("field_key", "name");
+        formField.put("position", 0);
+        fields.add(formField);
+        formConfig.setFields(fields);
         sc.getDataService().getFormStore().registerFormByConfig(formConfig);
 
         // wait for connection to mqtt broker
         TestSubscriber testSubscriber = new TestSubscriber();
-        sc.getBackendService()
+        ((SCSpaconBackend)sc.getBackendService().getSCBackend())
             .connectedToBroker
             .filter(new Func1<Boolean, Boolean>() {
                 @Override public Boolean call(Boolean connected) {
@@ -285,7 +285,7 @@ public class IntegratedTests {
     public void testZ_FormSubmission() {
         TestSubscriber testSubscriber = new TestSubscriber();
         // wait for connection to mqtt broker
-        sc.getBackendService()
+        ((SCSpaconBackend)sc.getBackendService().getSCBackend())
             .connectedToBroker
             .filter(new Func1<Boolean, Boolean>() {
                 @Override public Boolean call(Boolean connected) {

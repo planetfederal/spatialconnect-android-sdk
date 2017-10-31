@@ -14,9 +14,9 @@ import java.util.HashMap;
 public class SCFormField {
 
     public static final String FIELD_KEY = "field_key";
-
-    private static final String TYPE = "type";
-
+    public static final String FIELD_LABEL = "field_label";
+    public static final String TYPE = "type";
+    public static final String POSITION = "position";
     private static final String IS_INTEGER = "is_integer";
 
     private SCFormField() { /** utility classes should not have a default constructor **/ }

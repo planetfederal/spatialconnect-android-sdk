@@ -114,13 +114,14 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
 
     @Override
     public boolean start(Map<String, SCService> deps) {
+        boolean started = super.start(deps);
         boolean authed = authMethod.authFromCache();
         if (authed) {
             loginStatus.onNext(SCAuthStatus.AUTHENTICATED.value());
         } else {
             loginStatus.onNext(SCAuthStatus.NOT_AUTHENTICATED.value());
         }
-        return super.start(deps);
+        return started;
     }
 
     @Override
@@ -135,5 +136,14 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
 
     public static String serviceId() {
         return SERVICE_NAME;
+    }
+
+    /**
+     * Returns the implementation of ISCAuth used by the SCAuthService.
+     *
+     * @return an implementation of ISCAuth
+     */
+    public ISCAuth getAuthMethod() {
+        return authMethod;
     }
 }

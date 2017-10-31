@@ -17,7 +17,8 @@ import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
+import com.boundlessgeo.spatialconnect.services.backendService.SCBackendService;
+import com.boundlessgeo.spatialconnect.services.backendService.SCSpaconBackend;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
 import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
@@ -468,8 +469,7 @@ public class SCJavascriptBridgeAPI {
                     @Override
                     public void onNext(SCServiceStatusEvent scServiceStatusEvent) {
                         HashMap<String, Object> payload = new HashMap<>();
-                        payload.put("backendUri", mSpatialConnect.getBackendService().backendUri);
-
+                        payload.put("backendUri", mSpatialConnect.getBackendService().getBackendUri());
                         this.mSubscriber.onNext(payload);
                     }
                 });
@@ -493,7 +493,7 @@ public class SCJavascriptBridgeAPI {
         SpatialConnect sc = SpatialConnect.getInstance();
         SCBackendService backendService = sc.getBackendService();
         if (backendService != null) {
-            backendService
+            ((SCSpaconBackend)backendService.getSCBackend())
                     .connectedToBroker
                     .subscribeOn(Schedulers.io())
                     .subscribe(wrapper);

@@ -430,11 +430,11 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
      */
     @Override
     public boolean start(Map<String, SCService> deps) {
-        Log.d(LOG_TAG, "Starting SCDataService. Starting all registered data stores.");
-        sensorService = (SCSensorService)deps.get(SCSensorService.serviceId());
+        boolean started = super.start(deps);
+        sensorService = (SCSensorService) deps.get(SCSensorService.serviceId());
         startAllStores();
         setupSubscriptions();
-        return super.start(deps);
+        return started;
     }
 
     @Override
@@ -456,6 +456,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
     }
 
     private void startAllStores() {
+        Log.d(LOG_TAG, "Starting all registered data stores.");
         for (SCDataStore store : getStoreList()) {
             startStore(store);
         }

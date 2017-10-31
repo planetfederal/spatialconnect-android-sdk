@@ -1,0 +1,9 @@
+{
+  "remote": {
+    "auth": "exchange",
+    "client_id": "farpoint",
+    "http_protocol": "https",
+    "http_host": "exchange-farpoint.boundlessgeo.io",
+    "http_port": 443
+  }
+}
