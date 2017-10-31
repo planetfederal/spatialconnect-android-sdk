@@ -21,7 +21,7 @@ import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
 import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
+import com.boundlessgeo.spatialconnect.services.SCMqttBackendService;
 import com.boundlessgeo.spatialconnect.stores.FormStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStoreStatus;
@@ -115,7 +115,7 @@ public class IntegratedTests {
 
     @Test
     public void testMqttNetworkServiceCanPublishAndSubscribe() {
-        SCBackendService networkService = sc.getBackendService();
+        SCMqttBackendService mqttBackendService = (SCMqttBackendService) sc.getBackendService();
         MessagePbf.Msg.Builder builder =  MessagePbf.Msg.newBuilder();
         builder.setAction(Actions.START_ALL_SERVICES.value())
                 .setPayload("{\"testing\": true}")
@@ -123,7 +123,7 @@ public class IntegratedTests {
                 .build();
         MessagePbf.Msg message = builder.build();
         TestSubscriber<MessagePbf.Msg> testSubscriber = new TestSubscriber();
-        networkService.publishReplyTo("/ping", message)
+        mqttBackendService.publishReplyTo("/ping", message)
                 .take(1)
                 .timeout(15, TimeUnit.SECONDS)
                 .subscribe(testSubscriber);
@@ -155,7 +155,7 @@ public class IntegratedTests {
         SpatialConnect sc = SpatialConnect.getInstance();
         TestSubscriber testSubscriber = new TestSubscriber();
         // wait for connection to mqtt broker
-        sc.getBackendService()
+        ((SCMqttBackendService)sc.getBackendService())
             .connectedToBroker
             .filter(new Func1<Boolean, Boolean>() {
                 @Override public Boolean call(Boolean connected) {
@@ -234,7 +234,7 @@ public class IntegratedTests {
 
         // wait for connection to mqtt broker
         TestSubscriber testSubscriber = new TestSubscriber();
-        sc.getBackendService()
+        ((SCMqttBackendService)sc.getBackendService())
             .connectedToBroker
             .filter(new Func1<Boolean, Boolean>() {
                 @Override public Boolean call(Boolean connected) {
@@ -285,7 +285,7 @@ public class IntegratedTests {
     public void testZ_FormSubmission() {
         TestSubscriber testSubscriber = new TestSubscriber();
         // wait for connection to mqtt broker
-        sc.getBackendService()
+        ((SCMqttBackendService)sc.getBackendService())
             .connectedToBroker
             .filter(new Func1<Boolean, Boolean>() {
                 @Override public Boolean call(Boolean connected) {

@@ -102,7 +102,7 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
                 scFilter.getLayerIds() :
                 defaultLayers;
 
-        // TODO: when implmenting version 2.0.0, "maxFeatures" has been changed to "count"
+        // TODO: when implementing version 2.0.0, "maxFeatures" has been changed to "count"
         // see: http://docs.geoserver.org/latest/en/user/services/wfs/reference.html#getfeature
         String getFeatureUrl = String.format(Locale.US, "%s?service=WFS&version=%s&request=GetFeature&typeName=%s" +
                         "&outputFormat=application/json&srsname=EPSG:4326&maxFeatures=%d",

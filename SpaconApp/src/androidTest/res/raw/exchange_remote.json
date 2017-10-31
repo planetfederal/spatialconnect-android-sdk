@@ -1,0 +1,9 @@
+{
+  "remote": {
+    "auth": "exchange",
+    "client_id": "farpoint",
+    "http_protocol": "http",
+    "http_host": "localhost",
+    "http_port": 8000
+  }
+}

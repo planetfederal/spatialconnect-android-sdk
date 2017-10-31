@@ -22,6 +22,7 @@ import com.boundlessgeo.spatialconnect.R;
 import com.boundlessgeo.spatialconnect.SpatialConnect;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
+import com.boundlessgeo.spatialconnect.services.SCMqttBackendService;
 import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
@@ -241,8 +242,10 @@ public class MqttHandler implements MqttCallbackExtended {
         if (reconnect) {
             clientConnected.onNext(true);
             Log.d(LOG_TAG, "connectComplete on reconnection!");
-            //clean session, re-subscribe
-            SpatialConnect.getInstance().getBackendService().reconnect();
+            // clean session, re-subscribe
+            SCMqttBackendService mqttBackendService =
+                    (SCMqttBackendService) SpatialConnect.getInstance().getBackendService();
+            mqttBackendService.reconnect();
         }
     }
 
