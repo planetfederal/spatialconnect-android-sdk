@@ -66,6 +66,7 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
      * @param fp Full path to file
      */
     public void addConfigFilePath(String fp) {
+        Log.v(LOG_TAG, "adding config at " + fp);
         configPaths.add(fp);
     }
 
@@ -74,9 +75,12 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
     }
 
     public void sweepDataDirectory() {
+        Log.v(LOG_TAG, String.format("sweeping directory %s for config files",
+                context.getFilesDir().getAbsolutePath()));
         File[] configFiles = SCFileUtilities.findFilesByExtension(context.getFilesDir(), ".scfg");
         if (configFiles.length > 0) {
             for (File file : configFiles) {
+                Log.v(LOG_TAG, "adding config from " + file.getAbsolutePath());
                 configPaths.add(file.getAbsolutePath());
             }
         }
@@ -101,15 +105,21 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
 
     /**
      * Load config in a running Config Service
+     *
      * @param config {@link SCConfig} Config object to be loaded
      */
     public void loadConfig(SCConfig config) {
+        try {
+            Log.v(LOG_TAG, String.format("loading config %s", SCObjectMapper.getMapper().writeValueAsString(config)));
+        }
+        catch (JsonProcessingException e) {
+            // swallow it
+        }
         loadForms(config.getForms());
         loadDataStores(config.getStores());
         SCRemoteConfig remoteConfig = config.getRemote();
         if (remoteConfig != null) {
             String auth = remoteConfig.getAuth();
-
             if ( !TextUtils.isEmpty(auth) && auth.equals("no-auth")) {
                 sc.connectAuth(new NoAuth());
             } else if ( !TextUtils.isEmpty(auth) && auth.equals("exchange")) {
@@ -193,10 +203,11 @@ public class SCConfigService extends SCService implements SCServiceLifecycle {
 
     @Override
     public boolean start(Map<String, SCService> deps) {
+        boolean started = super.start(deps);
         sweepDataDirectory();
         dataService = (SCDataService) deps.get(SCDataService.serviceId());
         loadConfigs();
-        return super.start(deps);
+        return started;
     }
 
     @Override

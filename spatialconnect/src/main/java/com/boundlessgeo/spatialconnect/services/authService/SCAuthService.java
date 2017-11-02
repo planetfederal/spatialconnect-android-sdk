@@ -136,4 +136,13 @@ public class SCAuthService extends SCService implements SCServiceLifecycle {
     public static String serviceId() {
         return SERVICE_NAME;
     }
+
+    /**
+     * Returns the implementation of ISCAuth used by the SCAuthService.
+     *
+     * @return an implementation of ISCAuth
+     */
+    public ISCAuth getAuthMethod() {
+        return authMethod;
+    }
 }

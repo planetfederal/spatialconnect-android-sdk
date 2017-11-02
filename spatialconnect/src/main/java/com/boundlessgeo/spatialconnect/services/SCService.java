@@ -14,11 +14,12 @@
  */
 package com.boundlessgeo.spatialconnect.services;
 
+import android.util.Log;
+
 import java.util.List;
 import java.util.Map;
 
-//TODO add service key
-public abstract class SCService implements SCServiceLifecycle{
+public abstract class SCService implements SCServiceLifecycle {
     private SCServiceStatus status;
     private String serviceId;
 
@@ -28,6 +29,7 @@ public abstract class SCService implements SCServiceLifecycle{
 
     @Override
     public boolean start(Map<String, SCService> deps) {
+        Log.v(this.getClass().getSimpleName(), "Starting service " + getServiceId());
         this.status = SCServiceStatus.SC_SERVICE_RUNNING;
         return true;
     }

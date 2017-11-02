@@ -39,7 +39,8 @@ public class HttpHandler {
     private static HttpHandler instance;
     private static OkHttpClient client;
     public static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-    public static final MediaType XML = MediaType.parse("application/x-www-form-urlencoded");
+    public static final MediaType FORM = MediaType.parse("application/x-www-form-urlencoded");
+    public static final MediaType XML = MediaType.parse("application/xml; charset=utf-8");
 
 
     public static HttpHandler getInstance() {

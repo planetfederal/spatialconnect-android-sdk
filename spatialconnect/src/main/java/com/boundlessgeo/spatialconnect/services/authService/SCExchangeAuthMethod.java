@@ -98,6 +98,10 @@ public class SCExchangeAuthMethod implements ISCAuth {
         return settings.getString(USERNAME, null);
     }
 
+    public String getPassword() {
+        return settings.getString(PWD, null);
+    }
+
     private boolean auth(final String username, final String pwd) {
         boolean authed = false;
         try {
@@ -108,7 +112,7 @@ public class SCExchangeAuthMethod implements ISCAuth {
             Response response = HttpHandler.getInstance()
                     .postBlocking(theUrl,
                             String.format("grant_type=password&username=%s&password=%s",
-                                    username, pwd), authHeader, HttpHandler.XML);
+                                    username, pwd), authHeader, HttpHandler.FORM);
 
             if (response.isSuccessful()) {
                 JSONObject responseJson = new JSONObject(response.body().string());
@@ -142,7 +146,7 @@ public class SCExchangeAuthMethod implements ISCAuth {
             Response response = HttpHandler.getInstance()
                     .postBlocking(theUrl,
                             String.format("grant_type=refresh_token&refresh_token=%s",
-                                    cache.getStringValue(REFRESH_TOKEN)), authHeader, HttpHandler.XML);
+                                    cache.getStringValue(REFRESH_TOKEN)), authHeader, HttpHandler.FORM);
 
             JSONObject responseJson = new JSONObject(response.body().string());
             if (response.isSuccessful()) {
@@ -169,11 +173,6 @@ public class SCExchangeAuthMethod implements ISCAuth {
         editor.putString(USERNAME, username);
         editor.putString(PWD, password);
         editor.commit();
-    }
-
-    private String getPassword() {
-        SecureSharedPreferences settings = new SecureSharedPreferences(context);
-        return settings.getString(PWD, null);
     }
 
     private void removeCredentials() {
