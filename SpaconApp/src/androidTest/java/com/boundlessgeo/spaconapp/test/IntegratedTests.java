@@ -155,8 +155,7 @@ public class IntegratedTests {
         SpatialConnect sc = SpatialConnect.getInstance();
         TestSubscriber testSubscriber = new TestSubscriber();
         // wait for connection to mqtt broker
-        ((SCSpaconBackend)sc.getBackendService().getSCBackend())
-            .connectedToBroker
+        sc.getBackendService().isConnected()
             .filter(new Func1<Boolean, Boolean>() {
                 @Override public Boolean call(Boolean connected) {
                     return connected;
@@ -234,8 +233,7 @@ public class IntegratedTests {
 
         // wait for connection to mqtt broker
         TestSubscriber testSubscriber = new TestSubscriber();
-        ((SCSpaconBackend)sc.getBackendService().getSCBackend())
-            .connectedToBroker
+        sc.getBackendService().isConnected()
             .filter(new Func1<Boolean, Boolean>() {
                 @Override public Boolean call(Boolean connected) {
                     return connected;
@@ -285,8 +283,7 @@ public class IntegratedTests {
     public void testZ_FormSubmission() {
         TestSubscriber testSubscriber = new TestSubscriber();
         // wait for connection to mqtt broker
-        ((SCSpaconBackend)sc.getBackendService().getSCBackend())
-            .connectedToBroker
+        sc.getBackendService().isConnected()
             .filter(new Func1<Boolean, Boolean>() {
                 @Override public Boolean call(Boolean connected) {
                     return connected;
