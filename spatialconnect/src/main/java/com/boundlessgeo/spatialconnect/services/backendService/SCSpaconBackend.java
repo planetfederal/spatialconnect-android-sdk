@@ -300,6 +300,11 @@ public class SCSpaconBackend implements ISCBackend {
     }
 
     @Override
+    public Observable<Boolean> isConnected() {
+        return connectedToBroker.asObservable();
+    }
+
+    @Override
     public void start(Map<String, SCService> deps) {
         authService = (SCAuthService) deps.get(SCAuthService.serviceId());
         configService = (SCConfigService) deps.get(SCConfigService.serviceId());

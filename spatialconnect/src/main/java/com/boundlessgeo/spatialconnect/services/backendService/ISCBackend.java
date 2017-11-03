@@ -31,4 +31,6 @@ public interface ISCBackend {
 
     void updateDeviceToken(String token);
 
+    Observable<Boolean> isConnected();
+
 }

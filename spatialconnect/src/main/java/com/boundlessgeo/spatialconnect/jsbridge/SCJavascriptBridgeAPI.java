@@ -17,11 +17,10 @@ import com.boundlessgeo.spatialconnect.query.SCPredicate;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
-import com.boundlessgeo.spatialconnect.services.backendService.SCBackendService;
-import com.boundlessgeo.spatialconnect.services.backendService.SCSpaconBackend;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.services.SCServiceStatusEvent;
 import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
+import com.boundlessgeo.spatialconnect.services.backendService.SCBackendService;
 import com.boundlessgeo.spatialconnect.stores.ISCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
@@ -134,8 +133,8 @@ public class SCJavascriptBridgeAPI {
             handleNotificationSubscribe(subscriber);
         } else if (command == Actions.BACKENDSERVICE_HTTP_URI) {
             handleBackendServiceHTTPUri(subscriber);
-        } else if (command == Actions.BACKENDSERVICE_MQTT_CONNECTED) {
-            handleMqttConnectionStatus(subscriber);
+        } else if (command == Actions.BACKENDSERVICE_CONNECTED) {
+            handleConnectionStatus(subscriber);
         }
     }
 
@@ -154,7 +153,7 @@ public class SCJavascriptBridgeAPI {
                 .hasStores
                 .subscribe(new SubscriberWrapper<Boolean>(subscriber) {
                     @Override
-                    public void onNext(Boolean hasStores){
+                    public void onNext(Boolean hasStores) {
                         if (hasStores) {
                             HashMap<String, Object> payload = new HashMap<>();
 
@@ -169,7 +168,7 @@ public class SCJavascriptBridgeAPI {
                             mSubscriber.onNext(payload);
                         }
                     }
-                } );
+                });
     }
 
     /**
@@ -208,20 +207,20 @@ public class SCJavascriptBridgeAPI {
         SCQueryFilter filter = getFilter(JsonUtilities.getHashMap(payload, "filter"));
 
         mSpatialConnect.getDataService().queryAllStores(filter)
-                       .subscribeOn(Schedulers.io())
-                       .subscribe(new SubscriberWrapper<SCSpatialFeature>(subscriber) {
-                           @Override
-                           public void onNext(SCSpatialFeature feature) {
-                               try {
-                                   // base64 encode id and set it before sending across wire
-                                   String encodedId = feature.getKey().encodedCompositeKey();
-                                   feature.setId(encodedId);
-                                   mSubscriber.onNext(feature.toJSON());
-                               } catch (UnsupportedEncodingException e) {
-                                   mSubscriber.onError(e);
-                               }
-                           }
-                       });
+                .subscribeOn(Schedulers.io())
+                .subscribe(new SubscriberWrapper<SCSpatialFeature>(subscriber) {
+                    @Override
+                    public void onNext(SCSpatialFeature feature) {
+                        try {
+                            // base64 encode id and set it before sending across wire
+                            String encodedId = feature.getKey().encodedCompositeKey();
+                            feature.setId(encodedId);
+                            mSubscriber.onNext(feature.toJSON());
+                        } catch (UnsupportedEncodingException e) {
+                            mSubscriber.onError(e);
+                        }
+                    }
+                });
     }
 
     /**
@@ -271,16 +270,16 @@ public class SCJavascriptBridgeAPI {
                 .subscribe(new SubscriberWrapper<SCSpatialFeature>(subscriber) {
                     @Override
                     public void onNext(SCSpatialFeature feature) {
-                                try {
-                                    // base64 encode id and set it before sending across wire
-                                    String encodedId = feature.getKey().encodedCompositeKey();
-                                    feature.setId(encodedId);
-                                    mSubscriber.onNext(feature.toJSON());
-                                } catch (UnsupportedEncodingException e) {
-                                    mSubscriber.onError(e);
-                                }
-                            }
-                        });
+                        try {
+                            // base64 encode id and set it before sending across wire
+                            String encodedId = feature.getKey().encodedCompositeKey();
+                            feature.setId(encodedId);
+                            mSubscriber.onNext(feature.toJSON());
+                        } catch (UnsupportedEncodingException e) {
+                            mSubscriber.onError(e);
+                        }
+                    }
+                });
     }
 
     /**
@@ -360,7 +359,7 @@ public class SCJavascriptBridgeAPI {
      */
     private void handleSensorServiceGps(int payload, final Subscriber<Object> subscriber) {
         SCSensorService sensorService = mSpatialConnect.getSensorService();
-        if ( payload == 1 ) {
+        if (payload == 1) {
             Subscriber<Location> locationSubscriber = new SubscriberWrapper<Location>(subscriber) {
                 @Override
                 public void onNext(Location location) {
@@ -376,7 +375,7 @@ public class SCJavascriptBridgeAPI {
 
             sensorService.enableGPS();
             sensorService.getLastKnownLocation().subscribeOn(Schedulers.newThread())
-                         .subscribe(locationSubscriber);
+                    .subscribe(locationSubscriber);
 
             sensorService.isEnabled().filter(new Func1<Boolean, Boolean>() {
                 @Override
@@ -390,8 +389,7 @@ public class SCJavascriptBridgeAPI {
                     unsubscribe();
                 }
             });
-        }
-        else if ( payload == 0 ) {
+        } else if (payload == 0) {
             sensorService.disableGPS();
         }
     }
@@ -477,24 +475,21 @@ public class SCJavascriptBridgeAPI {
     }
 
     /**
-     * Handles the {@link Actions#BACKENDSERVICE_MQTT_CONNECTED} command.
+     * Handles the {@link Actions#BACKENDSERVICE_CONNECTED} command.
      */
-    private void handleMqttConnectionStatus(Subscriber<Object> subscriber) {
+    private void handleConnectionStatus(Subscriber<Object> subscriber) {
         SubscriberWrapper<Boolean> wrapper = new SubscriberWrapper<Boolean>(subscriber) {
             @Override
             public void onNext(Boolean connected) {
                 HashMap<String, Object> payload = new HashMap<>();
                 payload.put("connected", connected);
-
                 this.mSubscriber.onNext(payload);
             }
         };
-
         SpatialConnect sc = SpatialConnect.getInstance();
         SCBackendService backendService = sc.getBackendService();
         if (backendService != null) {
-            ((SCSpaconBackend)backendService.getSCBackend())
-                    .connectedToBroker
+            backendService.isConnected()
                     .subscribeOn(Schedulers.io())
                     .subscribe(wrapper);
         } else {

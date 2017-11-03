@@ -86,4 +86,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     public String getBackendUri() {
         return scBackend.getBackendUri();
     }
+
+    public Observable<Boolean> isConnected() {
+        return scBackend.isConnected();
+    }
 }

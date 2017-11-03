@@ -407,4 +407,8 @@ public class SCExchangeBackend implements ISCBackend {
     public String getBackendUri() {
         return backendUri;
     }
+
+    public Observable<Boolean> isConnected() {
+     return SpatialConnect.getInstance().getSensorService().isConnected().asObservable();
+    }
 }
