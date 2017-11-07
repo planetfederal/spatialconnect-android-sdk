@@ -12,8 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and limitations under the License
  */
-package com.boundlessgeo.spatialconnect.services;
-
+package com.boundlessgeo.spatialconnect.services.backendService;
 
 import android.content.Context;
 import android.os.Build;
@@ -32,6 +31,10 @@ import com.boundlessgeo.spatialconnect.mqtt.QoS;
 import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.scutilities.SCTuple;
+import com.boundlessgeo.spatialconnect.services.SCConfigService;
+import com.boundlessgeo.spatialconnect.services.SCDataService;
+import com.boundlessgeo.spatialconnect.services.SCSensorService;
+import com.boundlessgeo.spatialconnect.services.SCService;
 import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
 import com.boundlessgeo.spatialconnect.stores.ISyncableStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
@@ -42,7 +45,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 import rx.Observable;
@@ -52,15 +54,13 @@ import rx.schedulers.Schedulers;
 import rx.subjects.BehaviorSubject;
 
 import static com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper.getMapper;
-import static java.util.Arrays.asList;
 
 /**
- * SCBackendService handles any communication with backend SpatialConnect services.
+ * SCSpaconBackend handles any communication with backend services through an MQTT broker.
  */
-public class SCBackendService extends SCService implements SCServiceLifecycle {
+public class SCSpaconBackend implements ISCBackend {
 
-    private static final String LOG_TAG = SCBackendService.class.getSimpleName();
-    private static final String SERVICE_NAME = "SC_BACKEND_SERVICE";
+    private static final String LOG_TAG = SCSpaconBackend.class.getSimpleName();
     private Context context;
     private MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
@@ -80,23 +80,21 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
      * Behavior Observable emitting True when Connected, False when the Connection is down
      */
     public BehaviorSubject<Boolean> connectedToBroker = BehaviorSubject.create(false);
+
     /**
      * Endpoint running SpatialConnect Server
      */
-    public String backendUri = null;
-
-    public SCBackendService(final Context context) {
-        this.context = context;
-        this.mqttHandler = MqttHandler.getInstance(context);
-    }
+    private String backendUri = null;
 
     /**
-     * Initialize the backend service with a {@code SCRemoteConfig} to setup connections to the
-     * SpatialConnect backend including the REST API and the MQTT broker.
+     * Initialize the backend service with a {@code SCRemoteConfig} to setup connections to the backend.
      *
+     * @param context
      * @param config
      */
-    public void initialize(SCRemoteConfig config) {
+    public SCSpaconBackend(final Context context, SCRemoteConfig config) {
+        this.context = context;
+        this.mqttHandler = MqttHandler.getInstance(context);
         if (backendUri == null) {
             backendUri = String.format(
                     "%s://%s:%s",
@@ -110,8 +108,9 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     /**
-     * Observable emiting SCNotifications
-     * @return Observable<{@link SCRemoteConfig}>
+     * Observable emitting SCNotifications received from MQTT broker
+     *
+     * @return Observable of notifications
      */
     public Observable<SCNotification> getNotifications() {
         return notifications;
@@ -119,11 +118,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     /**
      * Publishes an SCMessage to the SpatialConnect Server
-     * @param topic topic MQTT destination topic
+     *
+     * @param topic   topic MQTT destination topic
      * @param message msg {@link MessagePbf.Msg} to be sent
      */
     public void publish(String topic, MessagePbf.Msg message) {
-        MessagePbf.Msg.Builder msgBuilder =  MessagePbf.Msg.newBuilder();
+        MessagePbf.Msg.Builder msgBuilder = MessagePbf.Msg.newBuilder();
         msgBuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
                 .setTo(message.getTo())
@@ -134,11 +134,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     /**
      * Publishes an SCMessage to the SpatialConnect Server with At Most Once Delivery QoS 0
-     * @param topic topic MQTT destination topic
+     *
+     * @param topic   topic MQTT destination topic
      * @param message msg {@link MessagePbf.Msg} to be sent
      */
     public void publishAtMostOnce(String topic, MessagePbf.Msg message) {
-        MessagePbf.Msg.Builder msgBuilder =  MessagePbf.Msg.newBuilder();
+        MessagePbf.Msg.Builder msgBuilder = MessagePbf.Msg.newBuilder();
         msgBuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
                 .setTo(message.getTo())
@@ -149,11 +150,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     /**
      * Publishes an SCMessage to the SpatialConnect Server with At Least Once Delivery QoS 1
-     * @param topic topic MQTT destination topic
+     *
+     * @param topic   topic MQTT destination topic
      * @param message msg {@link MessagePbf.Msg} to be sent
      */
     public void publishAtLeastOnce(String topic, MessagePbf.Msg message) {
-        MessagePbf.Msg.Builder msgBuilder =  MessagePbf.Msg.newBuilder();
+        MessagePbf.Msg.Builder msgBuilder = MessagePbf.Msg.newBuilder();
         msgBuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
                 .setTo(message.getTo())
@@ -164,11 +166,12 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
     /**
      * Publishes an SCMessage to the SpatialConnect Server with Exactly Once Delivery QoS 2
-     * @param topic topic MQTT destination topic
+     *
+     * @param topic   topic MQTT destination topic
      * @param message msg {@link MessagePbf.Msg} to be sent
      */
     public void publishExactlyOnce(String topic, MessagePbf.Msg message) {
-        MessagePbf.Msg.Builder msgBuilder =  MessagePbf.Msg.newBuilder();
+        MessagePbf.Msg.Builder msgBuilder = MessagePbf.Msg.newBuilder();
         msgBuilder.setAction(message.getAction())
                 .setPayload(message.getPayload())
                 .setTo(message.getTo())
@@ -181,7 +184,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
      * Publishes a message with a reply-to observable returned for creating a request
      * reply with the server.
      *
-     * @param topic topic MQTT destination topic
+     * @param topic   topic MQTT destination topic
      * @param message msg {@link MessagePbf.Msg} to be sent
      * @return Observable of the {@link MessagePbf.Msg} filtered by the correlation id
      */
@@ -240,7 +243,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 });
     }
 
-    public String getJwt() {
+    private String getJwt() {
         SCAuthService authService = SpatialConnect.getInstance().getAuthService();
         String jwt = authService.getAccessToken();
         return (jwt != null) ? authService.getAccessToken() : "";
@@ -296,8 +299,13 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     }
 
     @Override
-    public boolean start(Map<String, SCService> deps) {
-        authService = (SCAuthService)deps.get(SCAuthService.serviceId());
+    public Observable<Boolean> isConnected() {
+        return connectedToBroker.asObservable();
+    }
+
+    @Override
+    public void start(Map<String, SCService> deps) {
+        authService = (SCAuthService) deps.get(SCAuthService.serviceId());
         configService = (SCConfigService) deps.get(SCConfigService.serviceId());
         sensorService = (SCSensorService) deps.get(SCSensorService.serviceId());
         dataService = (SCDataService) deps.get(SCDataService.serviceId());
@@ -307,19 +315,6 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
 
         //connect to backend and grab the latest config
         listenForNetworkConnection();
-
-        return super.start(deps);
-    }
-
-    @Override
-    public String getId() {
-        return SERVICE_NAME;
-    }
-
-    @Override
-    public List<String> getRequires() {
-        return asList(SCAuthService.serviceId(), SCConfigService.serviceId(),
-                SCSensorService.serviceId(), SCDataService.serviceId());
     }
 
     private void connectToMqttBroker() {
@@ -342,7 +337,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 });
     }
 
-    private void loadCachedConfig () {
+    private void loadCachedConfig() {
         SCConfig config = configService.getCachedConfig();
         if (config != null) {
             configService.loadConfig(config);
@@ -370,7 +365,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
             public void call(Boolean connected) {
                 if (connected) {
                     authListener();
-                } else {
+                }
+                else {
                     connectedToBroker.onNext(false);
                 }
             }
@@ -441,7 +437,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
         listenOnTopic("/config/update").subscribe(new Action1<MessagePbf.Msg>() {
             @Override
             public void call(MessagePbf.Msg msg) {
-                Log.d("FormStore","action: " + msg.getAction());
+                Log.d("FormStore", "action: " + msg.getAction());
                 SCConfig cachedConfig = configService.getCachedConfig();
                 JsonUtilities utilities = new JsonUtilities();
 
@@ -453,7 +449,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                             cachedConfig.addStore(config);
                             dataService.registerAndStartStoreByConfig(config);
 
-                        } catch (IOException e) {
+                        }
+                        catch (IOException e) {
                             e.printStackTrace();
                         }
                         break;
@@ -463,7 +460,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                                     .readValue(msg.getPayload(), SCStoreConfig.class);
                             cachedConfig.updateStore(config);
                             dataService.updateStoresByConfig(config);
-                        } catch (IOException e) {
+                        }
+                        catch (IOException e) {
                             e.printStackTrace();
                         }
                         break;
@@ -480,7 +478,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                                     .readValue(msg.getPayload(), SCFormConfig.class);
                             cachedConfig.addForm(config);
                             dataService.getFormStore().registerFormByConfig(config);
-                        } catch (IOException e) {
+                        }
+                        catch (IOException e) {
                             e.printStackTrace();
                         }
                         break;
@@ -490,7 +489,8 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                                     .readValue(msg.getPayload(), SCFormConfig.class);
                             cachedConfig.updateForm(config);
                             dataService.getFormStore().updateFormByConfig(config);
-                        } catch (IOException e) {
+                        }
+                        catch (IOException e) {
                             e.printStackTrace();
                         }
                         break;
@@ -543,7 +543,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
     private String buildDeviceInfo(String token) {
         String release = Build.VERSION.RELEASE;
         int sdkVersion = Build.VERSION.SDK_INT;
-        String os =  String.format("Android SDK: %s (%s)", sdkVersion, release);
+        String os = String.format("Android SDK: %s (%s)", sdkVersion, release);
         return String.format("{\"os\": \"%s\", \"token\": \"%s\"}", os, token);
     }
 
@@ -627,7 +627,7 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                 final ISyncableStore store =
                         (ISyncableStore) dataService.getStoreByIdentifier(feature.getStoreId());
                 Map<String, Object> featurePayload = store.generateSendPayload(feature);
-                if ( featurePayload == null || featurePayload.isEmpty() ) {
+                if (featurePayload == null || featurePayload.isEmpty()) {
                     return Observable.empty();
                 }
 
@@ -642,33 +642,37 @@ public class SCBackendService extends SCService implements SCServiceLifecycle {
                                     try {
                                         final JSONObject payload =
                                                 new JSONObject(message.getPayload());
-                                        if ( payload.getBoolean("result") ) {
+                                        if (payload.getBoolean("result")) {
                                             Log.d(LOG_TAG,
-                                                  "update audit table to remove sent feature");
+                                                    "update audit table to remove sent feature");
                                             store.updateAuditTable(feature);
                                             return Observable.empty();
                                         }
                                         else {
                                             String error = payload.getString("error");
                                             Log.e(LOG_TAG,
-                                                  "Something went wrong sending to server: " +
-                                                  error);
+                                                    "Something went wrong sending to server: " +
+                                                            error);
                                             return Observable.error(new Throwable(error));
                                         }
-                                    } catch ( JSONException je ) {
+                                    }
+                                    catch (JSONException je) {
                                         Log.e(LOG_TAG, "json parse error: " + je.getMessage());
                                         return Observable.error(je);
                                     }
                                 }
                             });
-                } catch ( JsonProcessingException e ) {
+                }
+                catch (JsonProcessingException e) {
                     return Observable.error(e);
                 }
             }
         });
     }
 
-    public static String serviceId() {
-        return SERVICE_NAME;
+    @Override
+    public String getBackendUri() {
+        return backendUri;
     }
+
 }

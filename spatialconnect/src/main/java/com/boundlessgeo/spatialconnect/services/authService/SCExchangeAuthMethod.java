@@ -56,6 +56,7 @@ public class SCExchangeAuthMethod implements ISCAuth {
 
     @Override
     public boolean authFromCache() {
+        Log.d(LOG_TAG, "authenticating from cache");
         String u = username();
         String p = getPassword();
         if (u != null && p != null) {
@@ -71,7 +72,11 @@ public class SCExchangeAuthMethod implements ISCAuth {
             if (currentTimestamp.isAfter(tokenExpiration) || secondsBeforeExpiration.getSeconds() < 3600) {
                 return refreshToken();
             } else {
-                return true;
+                if (settings.getString(TOKEN, null) != null) {
+                    return true;
+                } else {
+                    return authenticate(u, p);
+                }
             }
         } else {
             return false;
@@ -80,25 +85,6 @@ public class SCExchangeAuthMethod implements ISCAuth {
 
     @Override
     public boolean authenticate(String username, String pwd) {
-        return auth(username, pwd);
-    }
-
-    @Override
-    public void logout() {
-        removeCredentials();
-    }
-
-    @Override
-    public String xAccessToken() {
-        return settings.getString(TOKEN, null);
-    }
-
-    @Override
-    public String username() {
-        return settings.getString(USERNAME, null);
-    }
-
-    private boolean auth(final String username, final String pwd) {
         boolean authed = false;
         try {
             final String theUrl = String.format(Locale.US, "%s/o/token/", serverUrl);
@@ -108,11 +94,12 @@ public class SCExchangeAuthMethod implements ISCAuth {
             Response response = HttpHandler.getInstance()
                     .postBlocking(theUrl,
                             String.format("grant_type=password&username=%s&password=%s",
-                                    username, pwd), authHeader, HttpHandler.XML);
+                                    username, pwd), authHeader, HttpHandler.FORM);
 
             if (response.isSuccessful()) {
                 JSONObject responseJson = new JSONObject(response.body().string());
                 saveCredentials(username, pwd);
+                saveAccessToken(responseJson.getString("access_token"));
 
                 SCCache cache = SpatialConnect.getInstance().getCache();
                 cache.setValue(responseJson.getString("refresh_token"), REFRESH_TOKEN);
@@ -131,6 +118,25 @@ public class SCExchangeAuthMethod implements ISCAuth {
         return authed;
     }
 
+    @Override
+    public void logout() {
+        removeCredentials();
+    }
+
+    @Override
+    public String xAccessToken() {
+        return settings.getString(TOKEN, null);
+    }
+
+    @Override
+    public String username() {
+        return settings.getString(USERNAME, null);
+    }
+
+    public String getPassword() {
+        return settings.getString(PWD, null);
+    }
+
     private boolean refreshToken() {
         boolean authed = false;
         try {
@@ -142,10 +148,11 @@ public class SCExchangeAuthMethod implements ISCAuth {
             Response response = HttpHandler.getInstance()
                     .postBlocking(theUrl,
                             String.format("grant_type=refresh_token&refresh_token=%s",
-                                    cache.getStringValue(REFRESH_TOKEN)), authHeader, HttpHandler.XML);
+                                    cache.getStringValue(REFRESH_TOKEN)), authHeader, HttpHandler.FORM);
 
             JSONObject responseJson = new JSONObject(response.body().string());
             if (response.isSuccessful()) {
+                saveAccessToken(responseJson.getString("access_token"));
                 cache.setValue(responseJson.getString("refresh_token"), REFRESH_TOKEN);
                 cache.setValue(responseJson.getInt("expires_in"), TOKEN_EXPIRATION);
                 cache.setValue(new DateTime(), TOKEN_TIMESTAMP);
@@ -171,15 +178,17 @@ public class SCExchangeAuthMethod implements ISCAuth {
         editor.commit();
     }
 
-    private String getPassword() {
-        SecureSharedPreferences settings = new SecureSharedPreferences(context);
-        return settings.getString(PWD, null);
+    private void saveAccessToken(String accessToken) {
+        SecureSharedPreferences.Editor editor = settings.edit();
+        editor.putString(TOKEN, accessToken);
+        editor.commit();
     }
 
     private void removeCredentials() {
         SecureSharedPreferences.Editor editor = settings.edit();
         editor.remove(USERNAME);
         editor.remove(PWD);
+        editor.remove(TOKEN);
         editor.commit();
     }
 }

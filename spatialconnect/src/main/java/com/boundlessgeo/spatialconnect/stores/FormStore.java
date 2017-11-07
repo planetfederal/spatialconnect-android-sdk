@@ -131,6 +131,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
     }
 
     private void addLayerByConfig(SCFormConfig config) {
+        Log.v(LOG_TAG, String.format("adding form config for %s", config.getFormKey()));
         boolean fieldsValid = true;
 
         Map<String, String> typeDefs = new HashMap<>();
@@ -139,6 +140,7 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
             if (!TextUtils.isEmpty(fieldKey)) {
                 typeDefs.put(fieldKey, SCFormField.getColumnType(field));
             } else {
+                Log.w(LOG_TAG, String.format("Form field %s was invalid", fieldKey));
                 fieldsValid = false;
                 break;
             }

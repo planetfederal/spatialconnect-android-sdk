@@ -107,7 +107,7 @@ dependencies {
         exclude group: 'io.jeo', module: 'proj4j'
     }
     compile 'com.auth0:java-jwt:2.2.1'
-    compile files('libs/boundlessSchema-0.10.jar')
+    compile 'com.boundlessgeo:schema:0.13.0-SNAPSHOT'
     compile 'joda-time:joda-time:2.9.9'
 
     // testing dependencies

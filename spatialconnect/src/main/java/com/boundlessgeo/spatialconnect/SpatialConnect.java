@@ -19,9 +19,12 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
 import com.boundlessgeo.spatialconnect.scutilities.SCCache;
-import com.boundlessgeo.spatialconnect.services.SCBackendService;
+import com.boundlessgeo.spatialconnect.services.backendService.ISCBackend;
+import com.boundlessgeo.spatialconnect.services.backendService.SCBackendService;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
+import com.boundlessgeo.spatialconnect.services.backendService.SCExchangeBackend;
+import com.boundlessgeo.spatialconnect.services.backendService.SCSpaconBackend;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.services.SCService;
 import com.boundlessgeo.spatialconnect.services.SCServiceGraph;
@@ -59,7 +62,8 @@ public class SpatialConnect {
 
     private SpatialConnect() {}
 
-    /** Singleton of SpatialConnect
+    /**
+     * Singleton of SpatialConnect
      *
      * @return instance of the SpatialConnect object singleton
      */
@@ -85,6 +89,7 @@ public class SpatialConnect {
     /**
      * Adds an instantiated instance of Service that extends the {@link SCService} class.
      * The 'service' must extend the {@link SCService} class.
+     *
      * @param service the service object
      */
     public void addService(SCService service) {
@@ -93,6 +98,7 @@ public class SpatialConnect {
 
     /**
      * This stops and removes a {@link SCService} from the SpatialConnect instance.
+     *
      * @param serviceId the id of the service to be removed
      */
     public void removeService(String serviceId) {
@@ -104,6 +110,7 @@ public class SpatialConnect {
      *
      * Do not call service start on the service instance. Use this method to
      * start a {@link SCService}.
+     *
      * @param serviceId the id of the service that needs to start
      */
     public void startService(final String serviceId) {
@@ -125,6 +132,7 @@ public class SpatialConnect {
      *
      * Do not call service stop on the service instance. Use this method to
      * stop a {@link SCService}.
+     *
      * @param serviceId the id of the service that needs to be stopped.
      */
     public void stopService(String serviceId) {
@@ -145,6 +153,7 @@ public class SpatialConnect {
      *
      * Do not call service restart on the service instance. Use this method
      * to start a {@link SCService}.
+     *
      * @param serviceId the id of the service that needs to be restarted.
      */
     public void restartService(String serviceId) {
@@ -161,6 +170,7 @@ public class SpatialConnect {
 
     /**
      * Finds service from service id
+     *
      * @param serviceId the id of the service that needs to be retrieved
      * @return instance of service found by id
      */
@@ -202,17 +212,13 @@ public class SpatialConnect {
     }
 
     /**
-     * If you have an instance of SpatialConnect Server, this is how you would register it.
-     * Passing in a remote configuration object will use the info to start the connection to the backend.
-     * @param remoteConfig object that represents http and mqtt endpoints {@link SCRemoteConfig}.
+     * Connects to the backend using an implementation of ISCBackend defined by the config.
      */
-    public void connectBackend(final SCRemoteConfig remoteConfig) {
-        if (serviceGraph.getNodeById(SCBackendService.serviceId()) == null) {
-            backendService = new SCBackendService(context);
-            backendService.initialize(remoteConfig);
-            addService(backendService);
-            startService(backendService.getServiceId());
-        }
+    public void connectBackend(ISCBackend backend) {
+        Log.v(LOG_TAG, String.format("connecting to backend %s", backend.getBackendUri()));
+        backendService = new SCBackendService(context, backend);
+        addService(backendService);
+        startService(backendService.getServiceId());
     }
 
     public void connectAuth(ISCAuth authMethod) {
@@ -225,8 +231,12 @@ public class SpatialConnect {
         }
     }
 
+    /**
+     * This method is used by an app to send its Firebase token.
+     *
+     * @param token
+     */
     public void updateDeviceToken(final String token) {
-
         serviceRunning(SCBackendService.serviceId()).subscribe(
                 new Action1<SCServiceStatusEvent>() {
                     @Override
@@ -269,6 +279,7 @@ public class SpatialConnect {
     /**
      * Identifies an application instance running on a device. This is the recommended
      * solution for non-ads use-cases.
+     *
      * @return String UUID string of the install id
      */
     public String getDeviceIdentifier() {
