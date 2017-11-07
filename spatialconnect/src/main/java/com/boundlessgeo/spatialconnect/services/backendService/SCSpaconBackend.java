@@ -61,7 +61,6 @@ import static com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper.ge
 public class SCSpaconBackend implements ISCBackend {
 
     private static final String LOG_TAG = SCSpaconBackend.class.getSimpleName();
-    private static final String SERVICE_NAME = "SC_SPACON_BACKEND_SERVICE";
     private Context context;
     private MqttHandler mqttHandler;
     private Observable<SCNotification> notifications;
@@ -676,7 +675,4 @@ public class SCSpaconBackend implements ISCBackend {
         return backendUri;
     }
 
-    public static String serviceId() {
-        return SERVICE_NAME;
-    }
 }

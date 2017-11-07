@@ -59,7 +59,6 @@ import rx.functions.Func2;
 public class SCExchangeBackend implements ISCBackend {
 
     private static final String LOG_TAG = SCExchangeBackend.class.getSimpleName();
-    private static final String SERVICE_NAME = "SC_EXCHANGE_BACKEND_SERVICE";
     private SCConfigService configService;
     private SCSensorService sensorService;
     private SCDataService dataService;
@@ -398,10 +397,6 @@ public class SCExchangeBackend implements ISCBackend {
             val = ((Number) o).doubleValue();
         }
         return val;
-    }
-
-    public static String serviceId() {
-        return SERVICE_NAME;
     }
 
     public String getBackendUri() {
