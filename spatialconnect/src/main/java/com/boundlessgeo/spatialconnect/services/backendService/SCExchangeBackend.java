@@ -311,7 +311,11 @@ public class SCExchangeBackend implements ISCBackend {
                                         wfstPayload,
                                         String.format("Bearer %s", authService.getAccessToken()),
                                         HttpHandler.XML);
-                                if (!res.isSuccessful()) {
+                                if (res.isSuccessful()) {
+                                    final ISyncableStore store =
+                                            (ISyncableStore) dataService.getStoreByIdentifier(feature.getStoreId());
+                                    store.updateAuditTable(feature);
+                                } else {
                                     Log.w(LOG_TAG, String.format("Did not successfully send feature %s to backend",
                                             feature.getKey().encodedCompositeKey()));
                                 }
