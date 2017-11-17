@@ -132,11 +132,17 @@ public class WFSStore extends SCRemoteDataStore implements ISCSpatialStore {
                                 public void call(Response res) {
                                     try {
                                         String response = res.body().string();
-                                        SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(response);
-                                        for (SCSpatialFeature feature : collection.getFeatures()) {
-                                            feature.setLayerId(feature.getId().split("\\.")[0]);  // the first part of the id is the layer name
-                                            feature.setStoreId(getStoreId());
-                                            subscriber.onNext(feature);
+                                        if (response.contains("ows:ExceptionReport")) {
+                                            Log.w(LOG_TAG, String.format("something went wrong querying %s : %s",
+                                                            featureUrl, response));
+                                            subscriber.onError(new SCDataStoreException(response));
+                                        } else {
+                                            SCGeometryCollection collection = factory.getGeometryCollectionFromFeatureCollectionJson(response);
+                                            for (SCSpatialFeature feature : collection.getFeatures()) {
+                                                feature.setLayerId(feature.getId().split("\\.")[0]);  // the first part of the id is the layer name
+                                                feature.setStoreId(getStoreId());
+                                                subscriber.onNext(feature);
+                                            }
                                         }
                                         subscriber.onCompleted();
                                     } catch (IOException ioe) {

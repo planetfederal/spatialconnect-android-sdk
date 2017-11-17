@@ -23,6 +23,7 @@ import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
 import com.boundlessgeo.spatialconnect.services.backendService.SCBackendService;
 import com.boundlessgeo.spatialconnect.stores.ISCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.boundlessgeo.spatialconnect.stores.SCDataStoreException;
 import com.boundlessgeo.spatialconnect.stores.SCKeyTuple;
 import com.boundlessgeo.spatialconnect.stores.SCRasterStore;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -63,7 +64,12 @@ public class SCJavascriptBridgeAPI {
 
         @Override
         public void onError(Throwable e) {
-            mSubscriber.onError(e);
+            if (e instanceof SCDataStoreException) {
+                Log.e(TAG, "SCDataStoreException: " + e.getMessage());
+            }
+            else {
+                mSubscriber.onError(e);
+            }
         }
 
         @Override

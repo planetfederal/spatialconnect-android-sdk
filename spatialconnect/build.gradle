@@ -4,7 +4,7 @@ apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'maven'
 
 group 'com.boundlessgeo.spatialconnect'
-version '0.11.6'
+version '0.11.7'
 
 ext {
     bintrayRepo = 'mobile'
@@ -20,7 +20,7 @@ ext {
     siteUrl = 'https://github.com/boundlessgeo/spatialconnect-android-sdk'
     gitUrl = 'https://github.com/boundlessgeo/spatialconnect-android-sdk.git'
 
-    libraryVersion = '0.11.6'
+    libraryVersion = '0.11.7'
 
     developerId = 'boundlessgeo'
     developerName = 'Mobile Boundless'
