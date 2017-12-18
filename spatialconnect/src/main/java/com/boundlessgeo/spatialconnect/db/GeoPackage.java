@@ -31,6 +31,7 @@ public class GeoPackage {
 
     public static final String SENT_AUDIT_COL = "sent";
     public static final String RECEIVED_AUDIT_COL = "received";
+    public static final String AUDIT_OP_COL = "audit_op";
 
     /**
      * The log tag for this class.
@@ -180,6 +181,7 @@ public class GeoPackage {
                     cursor = db.query(String.format("PRAGMA table_info(%s)", auditTableName));
                     boolean sentColumnFound = false;
                     boolean recvdColumnFound = false;
+                    boolean auditOpColumnFound = false;
                     while (cursor.moveToNext()) {
                         String columnName = SCSqliteHelper.getString(cursor, "name");
                         if (columnName.equalsIgnoreCase(SENT_AUDIT_COL)) {
@@ -187,6 +189,9 @@ public class GeoPackage {
                         }
                         if (columnName.equalsIgnoreCase(RECEIVED_AUDIT_COL)) {
                             recvdColumnFound = true;
+                        }
+                        if (columnName.equalsIgnoreCase(AUDIT_OP_COL)) {
+                            auditOpColumnFound = true;
                         }
                     }
 
@@ -204,24 +209,27 @@ public class GeoPackage {
                         cursor.moveToFirst();
                     }
 
-                    //check for triggers
-                    cursor = db.query(
-                            "SELECT name FROM sqlite_master WHERE type='trigger' AND name=?",
-                            auditTableName + "_insert");
-                    if (cursor.getCount() != 1) {
-                        Map<String,String>  columns = new LinkedHashMap<>();
-                        cursor = db.query(String.format("PRAGMA table_info(%s)", source.getTableName()));
-                        String columnName;
-                        String columnType;
-                        while (cursor.moveToNext()) {
-                            columnName = SCSqliteHelper.getString(cursor, "name");
-                            columnType  = SCSqliteHelper.getString(cursor, "type");
-                            columns.put(columnName, columnType);
-                        }
-                        //create audit table trigger
-                        cursor = db.query(createAuditTableTriggersSQL(source.getTableName(), columns));
+                    if (!auditOpColumnFound) {
+                        cursor = db.query(String.format("ALTER TABLE %s ADD COLUMN %s INTEGER DEFAULT null",
+                                auditTableName, AUDIT_OP_COL)
+                        );
                         cursor.moveToFirst();
                     }
+
+                    Map<String,String>  columns = new LinkedHashMap<>();
+                    cursor = db.query(String.format("PRAGMA table_info(%s)", source.getTableName()));
+                    String columnName;
+                    String columnType;
+                    while (cursor.moveToNext()) {
+                        columnName = SCSqliteHelper.getString(cursor, "name");
+                        columnType  = SCSqliteHelper.getString(cursor, "type");
+                        columns.put(columnName, columnType);
+                    }
+
+                    //create audit table triggers
+                    createAuditTableTrigger("insert", source.getTableName(), columns);
+                    createAuditTableTrigger("update", source.getTableName(), columns);
+                    createAuditTableTrigger("delete", source.getTableName(), columns);
 
                 } else {
                     //get feature source fields
@@ -235,17 +243,20 @@ public class GeoPackage {
                         featureFields.put(columnName, columnType);
                     }
 
-                    //create audit tables and add 2 columns
+                    //create audit tables and add 3 columns
                     Map<String,String>  auditFields = new LinkedHashMap<>();
                     auditFields.putAll(featureFields);
                     auditFields.put(SENT_AUDIT_COL,"DATETIME DEFAULT NULL");
                     auditFields.put(RECEIVED_AUDIT_COL,"DATETIME");
+                    auditFields.put(AUDIT_OP_COL,"INTEGER");
                     cursor = db.query(createTableSQL(source.getTableName() + "_audit", auditFields));
                     cursor.moveToFirst();
 
-                    //create audit table trigger
-                    cursor = db.query(createAuditTableTriggersSQL(source.getTableName(), featureFields));
-                    cursor.moveToFirst();
+                    //create audit table triggers
+                    createAuditTableTrigger("insert", source.getTableName(), featureFields);
+                    createAuditTableTrigger("update", source.getTableName(), featureFields);
+                    createAuditTableTrigger("delete", source.getTableName(), featureFields);
+
                 }
             }
         } catch (Exception e) {
@@ -272,34 +283,91 @@ public class GeoPackage {
         return sb.toString();
     }
 
-    public String createAuditTableTriggersSQL(String layer, Map<String, String> typeDefs)  {
-        //AFTER insert trigger
-        StringBuilder sql = new StringBuilder();
-        sql.append("CREATE TRIGGER ");
-        sql.append(layer).append("_audit_insert ");
-        sql.append("AFTER INSERT ON ");
-        sql.append(layer).append(" BEGIN ");
-        sql.append("INSERT INTO ").append(layer).append("_audit (");
-        int count = 0;
-        for (String key : typeDefs.keySet()) {
-            if (count != 0) {
-                sql.append(",");
-            }
-            sql.append(key);
-            count++;
-        }
-        sql.append(") VALUES (");
-        count = 0;
-        for (String key : typeDefs.keySet()) {
-            if (count != 0) {
-                sql.append(",");
-            }
-            sql.append("NEW.").append(key);
-            count++;
-        }
-        sql.append("); END;");
+    public void createAuditTableTrigger(String triggerType, String layer, Map<String, String> typeDefs)  {
+        Cursor cursor = null;
 
-        return sql.toString();
+        try {
+            String auditTableName = String.format("%s_audit", layer) ;
+            String triggerName = "";
+            String auditOp = "";
+            String triggerEvent = "";
+            String columnPrefix = "";
+
+            if (triggerType.equalsIgnoreCase("insert")) {
+                triggerName = String.format("%s_insert ", auditTableName);
+                auditOp = "1";
+                triggerEvent = "INSERT";
+                columnPrefix = "NEW";
+            } else if (triggerType.equalsIgnoreCase("update")) {
+                triggerName = String.format("%s_update ", auditTableName);
+                auditOp = "2";
+                triggerEvent = "UPDATE";
+                columnPrefix = "NEW";
+            } else if (triggerType.equalsIgnoreCase("delete")) {
+                triggerName = String.format("%s_delete ", auditTableName);
+                auditOp = "3";
+                triggerEvent = "DELETE";
+                columnPrefix = "OLD";
+            }
+
+            //add audit operation, sent, recc to column definitions
+            typeDefs.put(AUDIT_OP_COL, auditOp);
+            typeDefs.put(SENT_AUDIT_COL, "NULL");
+            typeDefs.put(RECEIVED_AUDIT_COL, "NULL");
+
+            //Drop trigger if exits
+            cursor = db.query(String.format("DROP TRIGGER IF EXISTS %s", triggerName));
+            cursor.moveToFirst();
+
+            StringBuilder sql = new StringBuilder();
+            sql.append("CREATE TRIGGER ");
+            sql.append(triggerName);
+            sql.append("AFTER ");
+            sql.append(triggerEvent);
+            sql.append(" ON ");
+            sql.append(layer).append(" BEGIN ");
+            sql.append("INSERT INTO ");
+            sql.append(auditTableName).append(" (");
+
+            int count = 0;
+            for (String key : typeDefs.keySet()) {
+                if (count != 0) {
+                    sql.append(",");
+                }
+                sql.append(key);
+                count++;
+            }
+            sql.append(") VALUES (");
+            count = 0;
+            for (String key : typeDefs.keySet()) {
+                if (count != 0) {
+                    sql.append(",");
+                }
+                if (key.equalsIgnoreCase(AUDIT_OP_COL)) {
+                    sql.append(auditOp);
+                } else if (key.equalsIgnoreCase(SENT_AUDIT_COL)) {
+                    sql.append("NULL");
+                } else if (key.equalsIgnoreCase(RECEIVED_AUDIT_COL)) {
+                    sql.append("NULL");
+                }
+                else {
+                    sql.append(String.format("%s.", columnPrefix)).append(key);
+                }
+
+                count++;
+            }
+            sql.append("); END;");
+
+            cursor = db.query(sql.toString());
+            cursor.moveToFirst();
+        } catch (Exception e) {
+
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
     }
 
     // executes the CreateSpatialIndex function for a given table
@@ -739,7 +807,8 @@ public class GeoPackage {
                 Map<String,String>  auditFields = new HashMap<>();
                 auditFields.putAll(fields);
                 auditFields.put(SENT_AUDIT_COL,"DATETIME DEFAULT NULL");
-                auditFields.put(RECEIVED_AUDIT_COL,"DATETIME");
+                auditFields.put(RECEIVED_AUDIT_COL,"DATETIME DEFAULT NULL");
+                auditFields.put(AUDIT_OP_COL,"INTEGER DEFAULT NULL");
                 cursor = db.query(createTableSQL(auditTableName, auditFields));
                 cursor.moveToFirst();
 
@@ -751,10 +820,12 @@ public class GeoPackage {
                 cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", auditTableName));
                 cursor.moveToFirst(); // force query to execute
 
-                //create audit table trigger
                 fields.put("geom", "Geometry");
-                cursor = db.query(createAuditTableTriggersSQL(layer, fields));
-                cursor.moveToFirst();
+
+                //create audit table triggers
+                createAuditTableTrigger("insert", layer, fields);
+                createAuditTableTrigger("update", layer, fields);
+                createAuditTableTrigger("delete", layer, fields);
 
                 tx.markSuccessful();
             } catch (Exception ex) {
@@ -792,16 +863,13 @@ public class GeoPackage {
                     cursor.moveToFirst();
                 }
 
-                //drop existing trigger
-                StringBuilder triggerName = new StringBuilder();
-                triggerName.append(layer).append("_audit_insert ");
-                cursor = db.query(String.format("DROP TRIGGER %s", triggerName.toString()));
-                cursor.moveToFirst();
-
                 //re-create audit table trigger
                 fields.put("geom", "Geometry");
-                cursor = db.query(createAuditTableTriggersSQL(layer, fields));
-                cursor.moveToFirst();
+
+                //add audit table triggers
+                createAuditTableTrigger("insert", layer, fields);
+                createAuditTableTrigger("update", layer, fields);
+                createAuditTableTrigger("delete", layer, fields);
 
                 tx.markSuccessful();
             } catch (Exception e) {
