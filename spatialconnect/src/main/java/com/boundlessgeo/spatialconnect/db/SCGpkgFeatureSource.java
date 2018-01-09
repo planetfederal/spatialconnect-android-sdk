@@ -6,6 +6,7 @@ import android.util.Log;
 
 import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
+import com.boundlessgeo.spatialconnect.sync.SyncItem;
 import com.squareup.sqlbrite.BriteDatabase;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.PrecisionModel;
@@ -24,6 +25,7 @@ import java.util.Map;
 import rx.Observable;
 import rx.Subscriber;
 
+import static com.boundlessgeo.spatialconnect.db.GeoPackage.AUDIT_OP_COL;
 import static com.boundlessgeo.spatialconnect.db.GeoPackage.RECEIVED_AUDIT_COL;
 import static com.boundlessgeo.spatialconnect.db.GeoPackage.SENT_AUDIT_COL;
 
@@ -222,21 +224,22 @@ public class SCGpkgFeatureSource {
         properties.remove(primaryKeyName);
         properties.remove(RECEIVED_AUDIT_COL);
         properties.remove(SENT_AUDIT_COL);
+        properties.remove(AUDIT_OP_COL);
         spatialFeature.setProperties(properties);
 
         return spatialFeature;
     }
 
-    public Observable<SCSpatialFeature> unSent() {
+    public Observable<SyncItem> unSent() {
         Log.v(LOG_TAG, String.format("querying %s for unsent features", auditName));
         final String sql = String.format("SELECT %s FROM %s WHERE sent IS NULL",
                 gpkg.getSelectColumnsString(this),
                 auditName);
 
-        return Observable.create(new Observable.OnSubscribe<SCSpatialFeature>() {
+        return Observable.create(new Observable.OnSubscribe<SyncItem>() {
             @Override
             public void call(final Subscriber subscriber) {
-                query(sql, subscriber);
+                queryUnsentItems(sql, subscriber);
             }
         });
     }
@@ -283,6 +286,25 @@ public class SCGpkgFeatureSource {
             while (layerCursor.moveToNext()) {
                 SCSpatialFeature f = featureFromResultSet(layerCursor);
                 subscriber.onNext(f);
+
+            }
+            subscriber.onCompleted();
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Something went wrong trying to get unsynced features: " + e.getMessage());
+            subscriber.onError(e);
+        } finally {
+            layerCursor.close();
+        }
+    }
+
+    private void queryUnsentItems(String sql, Subscriber subscriber) {
+        Cursor layerCursor = gpkg.query(sql);
+        try {
+            while (layerCursor.moveToNext()) {
+                int auditOpColumnIndex = layerCursor.getColumnIndex(AUDIT_OP_COL);
+                SCSpatialFeature f = featureFromResultSet(layerCursor);
+                SyncItem syncItem = new SyncItem(f, layerCursor.getInt(auditOpColumnIndex));
+                subscriber.onNext(syncItem);
 
             }
             subscriber.onCompleted();

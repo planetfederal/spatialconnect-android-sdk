@@ -38,6 +38,7 @@ import com.boundlessgeo.spatialconnect.services.SCService;
 import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
 import com.boundlessgeo.spatialconnect.stores.ISyncableStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.boundlessgeo.spatialconnect.sync.SyncItem;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.protobuf.Timestamp;
 
@@ -605,10 +606,10 @@ public class SCSpaconBackend implements ISCBackend {
     private Observable syncStore(final ISyncableStore store) {
         Log.d(LOG_TAG, "Syncing store channel " + store.syncChannel());
 
-        return store.unSent().flatMap(new Func1<SCSpatialFeature, Observable<?>>() {
+        return store.unSent().flatMap(new Func1<SyncItem, Observable<?>>() {
             @Override
-            public Observable call(final SCSpatialFeature scSpatialFeature) {
-                return send(scSpatialFeature);
+            public Observable call(final SyncItem syncItem) {
+                return send(syncItem.getFeature());
             }
         });
     }

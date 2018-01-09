@@ -22,11 +22,12 @@ import com.boundlessgeo.spatialconnect.config.SCConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCRemoteConfig;
-import com.boundlessgeo.spatialconnect.geometries.SCGeometry;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.mqtt.SCNotification;
 import com.boundlessgeo.spatialconnect.scutilities.HttpHandler;
 import com.boundlessgeo.spatialconnect.scutilities.Json.SCObjectMapper;
+import com.boundlessgeo.spatialconnect.scutilities.WFSParser;
+import com.boundlessgeo.spatialconnect.scutilities.WFSUtils;
 import com.boundlessgeo.spatialconnect.services.SCConfigService;
 import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
@@ -34,8 +35,8 @@ import com.boundlessgeo.spatialconnect.services.SCService;
 import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
 import com.boundlessgeo.spatialconnect.stores.ISyncableStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
+import com.boundlessgeo.spatialconnect.sync.SyncItem;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.vividsolutions.jts.geom.Geometry;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -51,6 +52,7 @@ import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.functions.Func2;
+import rx.schedulers.Schedulers;
 
 /**
  * SCExchangeBackendService to enable Boundless Exchange to serve as a backend to the
@@ -59,6 +61,10 @@ import rx.functions.Func2;
 public class SCExchangeBackend implements ISCBackend {
 
     private static final String LOG_TAG = SCExchangeBackend.class.getSimpleName();
+    private final int AUDIT_OP_CREATE = 1;
+    private final int AUDIT_OP_UPDATE = 2;
+    private final int AUDIT_OP_DELETE = 3;
+
     private SCConfigService configService;
     private SCSensorService sensorService;
     private SCDataService dataService;
@@ -247,49 +253,73 @@ public class SCExchangeBackend implements ISCBackend {
     }
 
     private void listenForSyncEvents() {
-        // sync all stores each time we (re)connect to the backend
-        sensorService.isConnected().subscribe(new Action1<Boolean>() {
-            @Override
-            public void call(Boolean connected) {
-                if (connected) {
-                    Log.v(LOG_TAG, "Network connected...syncing all stores");
-                    syncStores();
-                }
-            }
-        });
+        Observable<SCDataStore> syncableStores = dataService.getISyncableStores();
 
-        // sync stores each time a new feature is added, updated, or deleted
-        dataService.getISyncableStores().flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
-            @Override
-            public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
-                // should the data service have a subject with all updated features across all the syncable stores?
-                return scDataStore.storeEdited.asObservable();
-            }
-        }).forEach(new Action1<SCSpatialFeature>() {
-            @Override
-            public void call(SCSpatialFeature scSpatialFeature) {
-                send(scSpatialFeature);
-            }
-        });
-
-    }
-
-    private void syncStores() {
-        dataService.getISyncableStores().forEach(new Action1<SCDataStore>() {
-            @Override
-            public void call(SCDataStore scDataStore) {
-                ((ISyncableStore) scDataStore).unSent().forEach(new Action1<SCSpatialFeature>() {
+        Observable<Object> storeEditSync =
+                syncableStores.flatMap(new Func1<SCDataStore, Observable<SCSpatialFeature>>() {
                     @Override
-                    public void call(SCSpatialFeature scSpatialFeature) {
-                        send(scSpatialFeature);
+                    public Observable<SCSpatialFeature> call(SCDataStore scDataStore) {
+                        return scDataStore.storeEdited;
+                    }
+                }).flatMap(new Func1<SCSpatialFeature, Observable<?>>() {
+                    @Override
+                    public Observable call(SCSpatialFeature feature) {
+                        final ISyncableStore store = (ISyncableStore) dataService
+                                .getStoreByIdentifier(feature.getStoreId());
+                        return syncStore(store);
                     }
                 });
+
+        //sync all stores when connection to broker is true
+        Observable<Object> onlineSync = sensorService.isConnected().filter(new Func1<Boolean, Boolean>() {
+            @Override
+            public Boolean call(Boolean sync) {
+                return sync;
+            }
+            // for each connected State true (sync is true), sync the stores
+        }).flatMap(new Func1<Boolean, Observable<?>>() {
+            @Override
+            public Observable call(Boolean sync) {
+                return syncStores();
+            }
+        });
+
+        Observable<Object> sync = onlineSync.mergeWith(storeEditSync);
+        sync.subscribeOn(Schedulers.io()).subscribe(new Action1<Object>() {
+            @Override
+            public void call(Object object) {
+
+            }
+        }, new Action1<Throwable>() {
+            @Override
+            public void call(Throwable throwable) {
+                Log.e(LOG_TAG, throwable.getLocalizedMessage());
             }
         });
     }
 
-    private void send(final SCSpatialFeature feature) {
-        Observable.combineLatest(
+    private Observable syncStores() {
+        return dataService.getISyncableStores().flatMap(new Func1<SCDataStore, Observable<?>>() {
+            @Override
+            public Observable call(SCDataStore scDataStore) {
+                return syncStore((ISyncableStore) scDataStore);
+            }
+        });
+    }
+
+    private Observable syncStore(final ISyncableStore store) {
+        Log.d(LOG_TAG, "Syncing store channel " + store.syncChannel());
+
+        return store.unSent().flatMap(new Func1<SyncItem, Observable<?>>() {
+            @Override
+            public Observable call(final SyncItem syncItem) {
+                return send(syncItem);
+            }
+        });
+    }
+
+    private Observable send(final SyncItem syncItem) {
+         return Observable.combineLatest(
                 sensorService.isConnected(),
                 authService.getLoginStatus(),
                 new Func2<Boolean, Integer, Boolean>() {
@@ -297,110 +327,56 @@ public class SCExchangeBackend implements ISCBackend {
                     public Boolean call(Boolean isConnected, Integer loginStatus) {
                         return isConnected && loginStatus == SCAuthService.SCAuthStatus.AUTHENTICATED.value();
                     }
-                })
-                .subscribe(new Action1<Boolean>() {
-                    @Override
-                    public void call(Boolean connected) {
-                        if (connected) {
-                            String wfstPayload = buildWFSTInsertPayload(feature);
-                            String wfsUrl = String.format("%s/geoserver/wfs", backendUri);
-                            Log.d(LOG_TAG, String.format("Sending WFS-T to %s\n%s", wfsUrl, wfstPayload));
-                            try {
-                                Response res = HttpHandler.getInstance().postBlocking(
-                                        wfsUrl,
-                                        wfstPayload,
-                                        String.format("Bearer %s", authService.getAccessToken()),
-                                        HttpHandler.XML);
-                                if (res.isSuccessful()) {
-                                    final ISyncableStore store =
-                                            (ISyncableStore) dataService.getStoreByIdentifier(feature.getStoreId());
-                                    store.updateAuditTable(feature);
-                                } else {
-                                    Log.w(LOG_TAG, String.format("Did not successfully send feature %s to backend",
-                                            feature.getKey().encodedCompositeKey()));
-                                }
-                            }
-                            catch (Exception e) {
-                                Log.e(LOG_TAG, String.format("Did not successfully send feature %s to backend",
-                                        feature.getId()), e);
-                            }
+                }).flatMap(new Func1<Boolean, Observable<?>>() {
+             @Override
+             public Observable call(Boolean connected) {
+                if (connected) {
+                    String wfstPayload = "";
+                    String url = String.format("%s/geoserver/wfs", backendUri);
+                    if (syncItem.getOperation() == AUDIT_OP_CREATE) {
+                        wfstPayload = WFSUtils.buildWFSTInsertPayload(syncItem.getFeature(), url);
+                    } else if (syncItem.getOperation() == AUDIT_OP_UPDATE) {
+                        wfstPayload = WFSUtils.buildWFSTUpdatePayload(syncItem.getFeature(), url);
+                    } else if (syncItem.getOperation() == AUDIT_OP_DELETE) {
+                        wfstPayload = WFSUtils.buildWFSTDeletePayload(syncItem.getFeature(), url);
+                    }
+
+                    Log.d(LOG_TAG, String.format("Sending WFS-T to %s\n%s", url, wfstPayload));
+                    try {
+                        Response res = HttpHandler.getInstance().postBlocking(
+                                url,
+                                wfstPayload,
+                                String.format("Bearer %s", authService.getAccessToken()),
+                                HttpHandler.XML);
+
+                        WFSParser wfsParser = new WFSParser(res.body().byteStream());
+                        if (wfsParser.isSuccess()) {
+                            final ISyncableStore store =
+                                    (ISyncableStore) dataService.getStoreByIdentifier(syncItem.getFeature().getStoreId());
+                            store.updateAuditTable(syncItem.getFeature());
+
+                            // TODO: updating the feature's ID from the WFST request is TBD at
+                            // TODO: update feature with wfsParser.featureId
+                            return Observable.empty();
+                        } else {
+                            String error = String.format("Did not successfully send feature %s to backend",
+                                    syncItem.getFeature().getKey().encodedCompositeKey());
+                            Log.e(LOG_TAG,
+                                    "Something went wrong sending to server: " +
+                                            error);
+                            return Observable.error(new Throwable(error));
                         }
                     }
-                });
-    }
-
-    private static final String WFST_INSERT_TEMPLATE =
-            "<wfs:Transaction service=\"WFS\" version=\"1.0.0\"\n"
-                    + "  xmlns:wfs=\"http://www.opengis.net/wfs\"\n"
-                    + "  xmlns:gml=\"http://www.opengis.net/gml\"\n"
-                    + "  xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
-                    + "  xsi:schemaLocation=\"http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.0.0/WFS-transaction.xsd %1$s\">\n"
-                    + "  <wfs:Insert>\n"
-                    + "    <%2$s>\n"
-                    + "      %3$s"
-                    + "      %4$s"
-                    + "    </%2$s>\n"
-                    + "  </wfs:Insert>\n"
-                    + "</wfs:Transaction>";
-
-    private static final String POINT_XML_TEMPLATE =
-            "<%1$s>\n"
-                    + "        <gml:Point srsName=\"http://www.opengis.net/gml/srs/epsg.xml#4326\">\n"
-                    + "          <gml:coordinates decimal=\".\" cs=\",\" ts=\" \">%2$f,%3$f</gml:coordinates>\n"
-                    + "        </gml:Point>\n"
-                    + "      </%1$s>\n";
-
-
-    private String buildPropertiesXml(SCSpatialFeature scSpatialFeature) {
-        Map<String, Object> properties = scSpatialFeature.getProperties();
-        StringBuilder sb = new StringBuilder();
-        for (String key : properties.keySet()) {
-            if (properties.get(key) != null) {
-                sb.append(String.format("<%1$s>%2$s</%1$s>\n", key, properties.get(key)));
-            }
-        }
-        return sb.toString();
-    }
-
-    private String buildGeometryXml(SCSpatialFeature scSpatialFeature) {
-        if (scSpatialFeature instanceof SCGeometry) {
-            if (((SCGeometry) scSpatialFeature).getGeometry() != null) {
-                Geometry geom = ((SCGeometry) scSpatialFeature).getGeometry();
-                String type = geom.getGeometryType();
-                // todo: find geometry column name
-                String geometryColumnName = "wkb_geometry";
-                if (type.equalsIgnoreCase("point")) {
-                    //Because we are using WFS 1.0.0 we specify the order in lon/lat
-                    //see http://docs.geoserver.org/stable/en/user/services/wfs/basics.html#wfs-basics-axis
-                    return String.format(POINT_XML_TEMPLATE,
-                            geometryColumnName,
-                            geom.getCoordinate().y,
-                            geom.getCoordinate().x);
+                    catch (Exception e) {
+                        Log.e(LOG_TAG, String.format("Did not successfully send feature %s to backend",
+                                syncItem.getFeature().getId()), e);
+                        return Observable.error(e);
+                    }
+                } else {
+                    return Observable.empty();
                 }
-            }
-        }
-        Log.w(LOG_TAG, String.format("Feature %s did not have a geometry", scSpatialFeature.getId()));
-        return "";
-    }
-
-    private String buildWFSTInsertPayload(SCSpatialFeature scSpatialFeature) {
-        // assumes "geonode" will always be the GeoServer workspace for Exchange backend
-        String featureTypeUrl = String.format("%s/geoserver/wfs/DescribeFeatureType?typename=%s:%s",
-                backendUri, "geonode", scSpatialFeature.getLayerId());
-
-        return String.format(WFST_INSERT_TEMPLATE,
-                featureTypeUrl,
-                scSpatialFeature.getLayerId(),
-                buildPropertiesXml(scSpatialFeature),
-                buildGeometryXml(scSpatialFeature));
-    }
-
-    private Double validateDouble(Object o) {
-        Double val = null;
-        if (o instanceof Number) {
-            val = ((Number) o).doubleValue();
-        }
-        return val;
+             }
+         });
     }
 
     public String getBackendUri() {

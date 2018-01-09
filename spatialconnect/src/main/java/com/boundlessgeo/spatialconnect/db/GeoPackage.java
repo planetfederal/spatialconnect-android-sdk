@@ -4,7 +4,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.util.Log;
 
-import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
+import com.boundlessgeo.spatialconnect.sync.SyncItem;
 import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.boundlessgeo.spatialconnect.tiles.SCTileMatrixRow;
 import com.squareup.sqlbrite.BriteDatabase;
@@ -705,7 +705,7 @@ public class GeoPackage {
         return name;
     }
 
-    public Observable<SCSpatialFeature> unSent() {
+    public Observable<SyncItem> unSent() {
         return getFeatureTables()
             .flatMap(new Func1<List<SCGpkgFeatureSource>, Observable<SCGpkgFeatureSource>>() {
                 @Override
@@ -713,9 +713,9 @@ public class GeoPackage {
                     return Observable.from(scGpkgFeatureSources);
                 }
             })
-            .flatMap(new Func1<SCGpkgFeatureSource, Observable<SCSpatialFeature>>() {
+            .flatMap(new Func1<SCGpkgFeatureSource, Observable<SyncItem>>() {
                 @Override
-                public Observable<SCSpatialFeature> call(SCGpkgFeatureSource scGpkgFeatureSource) {
+                public Observable<SyncItem> call(SCGpkgFeatureSource scGpkgFeatureSource) {
                     return scGpkgFeatureSource.unSent();
                 }
             });
