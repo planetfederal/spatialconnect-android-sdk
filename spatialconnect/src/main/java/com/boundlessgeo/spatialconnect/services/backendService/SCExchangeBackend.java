@@ -44,6 +44,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -188,6 +189,7 @@ public class SCExchangeBackend implements ISCBackend {
             Response response = client.newCall(request).execute();
             if (response.isSuccessful()) {
                 JsonNode root = SCObjectMapper.getMapper().readTree(response.body().string());
+                formConfig.setId(UUID.randomUUID().toString());
                 formConfig.setFormKey(layerName);
                 formConfig.setFormLabel(root.get("title").asText());
                 formConfig.setFields(buildFormFields(root));
@@ -203,8 +205,10 @@ public class SCExchangeBackend implements ISCBackend {
         Iterator<JsonNode> attributes = root.get("attributes").iterator();
         List<HashMap<String, Object>> formFields = new ArrayList<>();
         while (attributes.hasNext()) {
+
             JsonNode attribute = attributes.next();
             Iterator<String> fieldNames = attribute.fieldNames();
+
             HashMap<String, Object> formField = new HashMap<>();
             formField.put(SCFormField.FIELD_KEY, attribute.get("attribute").asText());
             if (!attribute.has("attribute_label") || attribute.get("attribute_label") == null) {
@@ -214,19 +218,12 @@ public class SCExchangeBackend implements ISCBackend {
             }
             formField.put(SCFormField.TYPE, getFieldType(attribute));
             formField.put(SCFormField.POSITION,  attribute.get("display_order").asInt());
-            while (fieldNames.hasNext()) {
-                String key = fieldNames.next();
-                JsonNode value = attribute.get(key);
-                if (value.isInt()) {
-                    formField.put(key, value.asInt());
-                } else if (value.isBoolean()) {
-                    formField.put(key, value.asBoolean());
-                } else if (value.isNumber() && !value.isInt()) {
-                    formField.put(key, value.asDouble());
-                } else {
-                    formField.put(key, value.asText());
-                }
+            int visible = attribute.get("visible").asBoolean() ? 1: 0;
+            if (attribute.get("attribute_type").asText().contains("gml")) {
+                visible = 0;
             }
+            formField.put(SCFormField.VISIBLE, visible);
+
             formFields.add(formField);
         }
         return formFields;
@@ -236,6 +233,9 @@ public class SCExchangeBackend implements ISCBackend {
         // if attribute name is "photos" then the type should be photo
         if (attribute.get("attribute").asText().equalsIgnoreCase("photos")) {
             return "photo";
+        }
+        if (attribute.get("attribute_type").asText().contains("gml")) {
+            return "geometry";
         }
         switch (attribute.get("attribute_type").asText()) {
             case "xsd:string":
@@ -248,7 +248,7 @@ public class SCExchangeBackend implements ISCBackend {
             case "xsd:date":
                 return "date";
             default:
-                return null;
+                return "string";
         }
     }
 
@@ -341,7 +341,6 @@ public class SCExchangeBackend implements ISCBackend {
                         wfstPayload = WFSUtils.buildWFSTDeletePayload(syncItem.getFeature(), url);
                     }
 
-                    Log.d(LOG_TAG, String.format("Sending WFS-T to %s\n%s", url, wfstPayload));
                     try {
                         Response res = HttpHandler.getInstance().postBlocking(
                                 url,

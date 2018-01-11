@@ -3,7 +3,6 @@ package com.boundlessgeo.spatialconnect.config;
 import android.text.TextUtils;
 
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
-import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.HashMap;
 
@@ -17,7 +16,9 @@ public class SCFormField {
     public static final String FIELD_LABEL = "field_label";
     public static final String TYPE = "type";
     public static final String POSITION = "position";
+    public static final String VISIBLE = "field_visible";
     private static final String IS_INTEGER = "is_integer";
+
 
     private SCFormField() { /** utility classes should not have a default constructor **/ }
 
@@ -46,6 +47,8 @@ public class SCFormField {
                 return "INTEGER";
             case "select":
                 return "TEXT";
+            case "geometry":
+                return "GEOMETRY";
             default:
                 return "NULL";
         }

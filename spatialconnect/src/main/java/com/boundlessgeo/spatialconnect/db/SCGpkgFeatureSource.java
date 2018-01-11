@@ -232,8 +232,7 @@ public class SCGpkgFeatureSource {
 
     public Observable<SyncItem> unSent() {
         Log.v(LOG_TAG, String.format("querying %s for unsent features", auditName));
-        final String sql = String.format("SELECT %s FROM %s WHERE sent IS NULL",
-                gpkg.getSelectColumnsString(this),
+        final String sql = String.format("SELECT * FROM %s WHERE sent IS NULL",
                 auditName);
 
         return Observable.create(new Observable.OnSubscribe<SyncItem>() {
@@ -309,7 +308,7 @@ public class SCGpkgFeatureSource {
             }
             subscriber.onCompleted();
         } catch (Exception e) {
-            Log.e(LOG_TAG, "Something went wrong trying to get unsynced features: " + e.getMessage());
+            Log.e(LOG_TAG, "queryUnsentItems: Something went wrong trying to get unsynced features: " + e.getMessage());
             subscriber.onError(e);
         } finally {
             layerCursor.close();

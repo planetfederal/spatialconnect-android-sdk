@@ -273,10 +273,12 @@ public class GeoPackage {
         StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS ").append(tableName);
         sb.append(" (id INTEGER PRIMARY KEY AUTOINCREMENT ");
         for (String key : typeDefs.keySet()) {
-            sb.append(", ");
-            sb.append(key);
-            sb.append(" ");
-            sb.append(typeDefs.get(key));
+            if (!typeDefs.get(key).equalsIgnoreCase("geometry")) {
+                sb.append(", ");
+                sb.append(key);
+                sb.append(" ");
+                sb.append(typeDefs.get(key));
+            }
         }
         sb.append(")");
 
@@ -310,7 +312,7 @@ public class GeoPackage {
                 columnPrefix = "OLD";
             }
 
-            //add audit operation, sent, recc to column definitions
+            //add audit operation, sent, rec to column definitions
             typeDefs.put(AUDIT_OP_COL, auditOp);
             typeDefs.put(SENT_AUDIT_COL, "NULL");
             typeDefs.put(RECEIVED_AUDIT_COL, "NULL");
@@ -737,10 +739,17 @@ public class GeoPackage {
                 cursor = db.query(addToGpkgContentsSQL(tableName));
                 cursor.moveToFirst(); // force query to execute
 
+                String geometryColumn = "geom";
+                for (String key : fields.keySet()) {
+                    if (fields.get(key).equalsIgnoreCase("geometry")) {
+                        geometryColumn = key;
+                    }
+                }
+
                 //add a geometry column to the table b/c we want to store where the package was submitted (if needed)
                 //also, note the this function will add the geometry to gpkg geometry_columns, which has a foreign key
                 //constraint on the table name, which requires the table to exist in gpkg contents
-                cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", tableName));
+                cursor = db.query(String.format("SELECT AddGeometryColumn('%s', '%s', 'Geometry', 4326)", tableName, geometryColumn));
                 cursor.moveToFirst(); // force query to execute
 
                 tx.markSuccessful();
@@ -817,10 +826,17 @@ public class GeoPackage {
                 cursor.moveToFirst(); // force query to execute
 
                 //add geom column to audit table
-                cursor = db.query(String.format("SELECT AddGeometryColumn('%s', 'geom', 'Geometry', 4326)", auditTableName));
+                String geometryColumn = "geom";
+                for (String key : fields.keySet()) {
+                    if (fields.get(key).equalsIgnoreCase("geometry")) {
+                        geometryColumn = key;
+                    }
+                }
+
+                cursor = db.query(String.format("SELECT AddGeometryColumn('%s', '%s', 'Geometry', 4326)", auditTableName, geometryColumn));
                 cursor.moveToFirst(); // force query to execute
 
-                fields.put("geom", "Geometry");
+                fields.put(geometryColumn, "Geometry");
 
                 //create audit table triggers
                 createAuditTableTrigger("insert", layer, fields);
@@ -863,8 +879,7 @@ public class GeoPackage {
                     cursor.moveToFirst();
                 }
 
-                //re-create audit table trigger
-                fields.put("geom", "Geometry");
+                //TODO: add any new geom cols
 
                 //add audit table triggers
                 createAuditTableTrigger("insert", layer, fields);
