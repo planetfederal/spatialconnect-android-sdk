@@ -363,7 +363,7 @@ public class GeoPackage {
             cursor = db.query(sql.toString());
             cursor.moveToFirst();
         } catch (Exception e) {
-
+            Log.w(LOG_TAG, "Error creating audit table triggers: " + e.getMessage());
         } finally {
             if (cursor != null) {
                 cursor.close();
@@ -723,6 +723,17 @@ public class GeoPackage {
             });
     }
 
+    private String findGemetryColumn(Map<String,String>  fields){
+        //default
+        String geometryColumn = "geom";
+        for (String key : fields.keySet()) {
+            if (fields.get(key).equalsIgnoreCase("geometry")) {
+                geometryColumn = key;
+            }
+        }
+        return geometryColumn;
+    }
+
     private boolean addContentsTable(String layer, Map<String,String>  fields) {
         boolean tableCreated = false;
         Cursor cursor = null;
@@ -739,12 +750,7 @@ public class GeoPackage {
                 cursor = db.query(addToGpkgContentsSQL(tableName));
                 cursor.moveToFirst(); // force query to execute
 
-                String geometryColumn = "geom";
-                for (String key : fields.keySet()) {
-                    if (fields.get(key).equalsIgnoreCase("geometry")) {
-                        geometryColumn = key;
-                    }
-                }
+                String geometryColumn = findGemetryColumn(fields);
 
                 //add a geometry column to the table b/c we want to store where the package was submitted (if needed)
                 //also, note the this function will add the geometry to gpkg geometry_columns, which has a foreign key

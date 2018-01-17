@@ -55,7 +55,7 @@ public class WFSUtils {
     private static String buildFilterXml(SCSpatialFeature feature) {
         String ogcFilter = "<ogc:Filter>\n"
                             + "   <ogc:FeatureId fid=\"%1$s\"/>\n"
-                            +"</wfs:Transaction>";
+                            +"</ogc:Filter>";
         return String.format(ogcFilter, feature.getId());
     }
     private static String buildPropertiesXml(SCSpatialFeature scSpatialFeature) {
