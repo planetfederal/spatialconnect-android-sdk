@@ -13,6 +13,7 @@ import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKBReader;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -59,7 +60,6 @@ public class SCGpkgFeatureSource {
      */
     private String geomColumnName;
 
-
     /**
      * A map of the columns and their database types.
      */
@@ -85,7 +85,13 @@ public class SCGpkgFeatureSource {
     }
 
     public void addColumn(String columnName, String columnType) {
-        this.columns.put(columnName, columnType);
+        if (SCSqliteHelper.SQLITE_KEYWORDS.contains(columnName.toUpperCase())) {
+          // append and underscore to the end of the name
+          this.columns.put(columnName + "_", columnType);
+        }
+        else {
+          this.columns.put(columnName, columnType);
+        }
     }
 
     public void setGeomColumnName(String geomColumnName) {
