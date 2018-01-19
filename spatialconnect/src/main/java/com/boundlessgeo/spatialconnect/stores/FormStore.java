@@ -23,6 +23,7 @@ import android.util.Log;
 import com.boundlessgeo.spatialconnect.config.SCFormConfig;
 import com.boundlessgeo.spatialconnect.config.SCFormField;
 import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
+import com.boundlessgeo.spatialconnect.db.SCSqliteHelper;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.style.SCStyle;
@@ -138,6 +139,9 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         for (HashMap<String, Object> field : config.getFields()) {
             String fieldKey = JsonUtilities.getString(field, SCFormField.FIELD_KEY);
             if (!TextUtils.isEmpty(fieldKey)) {
+                if (SCSqliteHelper.SQLITE_KEYWORDS.contains(fieldKey.toUpperCase())) {
+                    fieldKey = fieldKey + "_";
+                }
                 typeDefs.put(fieldKey, SCFormField.getColumnType(field));
             } else {
                 Log.w(LOG_TAG, String.format("Form field %s was invalid", fieldKey));

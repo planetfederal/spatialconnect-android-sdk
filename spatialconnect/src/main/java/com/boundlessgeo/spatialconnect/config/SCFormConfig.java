@@ -1,5 +1,6 @@
 package com.boundlessgeo.spatialconnect.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -15,6 +16,7 @@ import java.util.List;
  * {@link com.boundlessgeo.spatialconnect.stores.FormStore} to create a GeoPackage vector feature
  * table.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SCFormConfig {
 
     /**

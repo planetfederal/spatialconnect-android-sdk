@@ -819,9 +819,14 @@ public class GeoPackage {
     }
 
     public void addFeatureSource(String layer, Map<String,String>  fields) {
-        if (addContentsTable(layer, fields)) {
-            addAuditTable(layer, fields);
-            initializeFeatureSource(getFeatureSourceByName(layer));
+        // ensure layer name doesn't contain any invalid characters
+        String tableName = layer.replace(":", "_").replace(".", "_");
+        if (SCSqliteHelper.SQLITE_KEYWORDS.contains(tableName.toUpperCase())) {
+            tableName = tableName + "_";
+        }
+        if (addContentsTable(tableName, fields)) {
+            addAuditTable(tableName, fields);
+            initializeFeatureSource(getFeatureSourceByName(tableName));
         }
     }
 
