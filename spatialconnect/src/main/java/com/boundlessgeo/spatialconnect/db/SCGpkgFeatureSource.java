@@ -172,17 +172,20 @@ public class SCGpkgFeatureSource {
      */
     public String getUpdateSetClause(SCSpatialFeature feature) {
         StringBuilder sb = new StringBuilder();
-        for (String columnName : columns.keySet()) {
+        for (String columnName : feature.getProperties().keySet()) {
             if (feature.getProperties().get(columnName) != null) {
                 sb.append(columnName);
                 sb.append("=");
                 sb.append((DatabaseUtils.sqlEscapeString(String.valueOf(feature.getProperties().get(columnName)))));
-                sb.append(", ");
+
             }
         }
-        sb.append(geomColumnName);
-        sb.append("=");
-        sb.append("ST_GeomFromText('").append(((SCGeometry)feature).getGeometry().toString()).append("')");
+        if (((SCGeometry)feature).getGeometry() != null) {
+            sb.append(", ");
+            sb.append(geomColumnName);
+            sb.append("=");
+            sb.append("ST_GeomFromText('").append(((SCGeometry) feature).getGeometry().toString()).append("')");
+        }
         return sb.toString();
     }
 

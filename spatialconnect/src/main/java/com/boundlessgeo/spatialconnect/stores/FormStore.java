@@ -104,10 +104,6 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
         return Observable.empty();
     }
 
-    public Observable<SCSpatialFeature> update(final SCSpatialFeature scSpatialFeature) {
-        return Observable.empty();
-    }
-
     @Override
     public String syncChannel() {
         return "/store/form";

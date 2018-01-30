@@ -33,6 +33,7 @@ import com.boundlessgeo.spatialconnect.services.SCDataService;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.services.SCService;
 import com.boundlessgeo.spatialconnect.services.authService.SCAuthService;
+import com.boundlessgeo.spatialconnect.stores.ISCSpatialStore;
 import com.boundlessgeo.spatialconnect.stores.ISyncableStore;
 import com.boundlessgeo.spatialconnect.stores.SCDataStore;
 import com.boundlessgeo.spatialconnect.sync.SyncItem;
@@ -50,6 +51,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import rx.Observable;
+import rx.functions.Action0;
 import rx.functions.Action1;
 import rx.functions.Func1;
 import rx.functions.Func2;
@@ -354,8 +356,29 @@ public class SCExchangeBackend implements ISCBackend {
                                     (ISyncableStore) dataService.getStoreByIdentifier(syncItem.getFeature().getStoreId());
                             store.updateAuditTable(syncItem.getFeature());
 
-                            // TODO: updating the feature's ID from the WFST request is TBD at
-                            // TODO: update feature with wfsParser.featureId
+                            //Feature id comes back as layer_name.<id> for NON geogig layers
+                            Map<String, Object> properties = new HashMap<>();
+                            properties.put("id", wfsParser.getFeatureId().substring(wfsParser.getFeatureId().indexOf(".") + 1));
+                            syncItem.getFeature().setProperties(properties);
+
+                            ((ISCSpatialStore)store).update(syncItem.getFeature())
+                                    .subscribe(new Action1<SCSpatialFeature>() {
+                                        @Override
+                                        public void call(SCSpatialFeature scSpatialFeature) {
+
+                                        }
+                                    }, new Action1<Throwable>() {
+                                        @Override
+                                        public void call(Throwable t) {
+                                            Log.e(LOG_TAG, "Something when wrong update the local gpkg id: " + t.getMessage());
+                                        }
+                                    }, new Action0() {
+                                        @Override
+                                        public void call() {
+                                            Log.d(LOG_TAG, "updated local gkpk id succesuffly after WFST insert");
+                                        }
+                                    });
+
                             return Observable.empty();
                         } else {
                             String error = String.format("Did not successfully send feature %s to backend",

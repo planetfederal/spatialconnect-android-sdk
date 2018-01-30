@@ -327,7 +327,11 @@ public class GeoPackage {
             sql.append("AFTER ");
             sql.append(triggerEvent);
             sql.append(" ON ");
-            sql.append(layer).append(" BEGIN ");
+            sql.append(layer);
+            if (triggerType.equalsIgnoreCase("update")) {
+                sql.append(" WHEN new.ID = old.ID");
+            }
+            sql.append(" BEGIN ");
             sql.append("INSERT INTO ");
             sql.append(auditTableName).append(" (");
 
