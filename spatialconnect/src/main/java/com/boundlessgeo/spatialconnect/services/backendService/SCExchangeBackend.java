@@ -120,6 +120,12 @@ public class SCExchangeBackend implements ISCBackend {
         throw new UnsupportedOperationException("This method is not implemented yet");
     }
 
+    private void initializeDataStore() {
+        //download layers as geopackage
+
+        //construct forms based off of downloaded geopackage
+
+    }
     private void loadCachedConfig() {
         configService = SpatialConnect.getInstance().getConfigService();
         SCConfig config = configService.getCachedConfig();
@@ -129,7 +135,7 @@ public class SCExchangeBackend implements ISCBackend {
         }
     }
 
-    public void loadConfig() {
+    private void loadConfig() {
         // make request to Exchange to get layers and turn them into forms
         Observable.combineLatest(
                 sensorService.isConnected(),

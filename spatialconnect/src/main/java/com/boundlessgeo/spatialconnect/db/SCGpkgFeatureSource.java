@@ -212,7 +212,6 @@ public class SCGpkgFeatureSource {
         } else {
             spatialFeature = new SCGeometry();
         }
-
         for (int i=0; i<rs.getColumnCount(); i++) {
             columnName = rs.getColumnName(i);
             if (!columnName.equalsIgnoreCase(geomColumnName)) {
@@ -235,7 +234,11 @@ public class SCGpkgFeatureSource {
 
     public Observable<SyncItem> unSent() {
         Log.v(LOG_TAG, String.format("querying %s for unsent features", auditName));
-        final String sql = String.format("SELECT * FROM %s WHERE sent IS NULL",
+        StringBuilder selectColumns = new StringBuilder();
+        selectColumns.append(gpkg.getSelectColumnsString(this));
+        selectColumns.append(",").append(AUDIT_OP_COL);
+        final String sql = String.format("SELECT %s FROM %s WHERE sent IS NULL",
+                selectColumns.toString(),
                 auditName);
 
         return Observable.create(new Observable.OnSubscribe<SyncItem>() {
