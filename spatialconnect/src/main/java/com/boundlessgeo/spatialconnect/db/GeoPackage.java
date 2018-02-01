@@ -214,8 +214,10 @@ public class GeoPackage {
                         String columnName;
                         String columnType;
                         while (cursor.moveToNext()) {
-                            columnName = SCSqliteHelper.getString(cursor, "name");
-                            columnType  = SCSqliteHelper.getString(cursor, "type");
+                            columnName = SCSqliteHelper.sanitizeColumnName(
+                                SCSqliteHelper.getString(cursor, "name")
+                            );
+                            columnType = SCSqliteHelper.getString(cursor, "type");
                             columns.put(columnName, columnType);
                         }
                         //create audit table trigger
@@ -230,8 +232,10 @@ public class GeoPackage {
                     String columnName;
                     String columnType;
                     while (cursor.moveToNext()) {
-                        columnName = SCSqliteHelper.getString(cursor, "name");
-                        columnType  = SCSqliteHelper.getString(cursor, "type");
+                        columnName = SCSqliteHelper.sanitizeColumnName(
+                            SCSqliteHelper.getString(cursor, "name")
+                        );
+                        columnType = SCSqliteHelper.getString(cursor, "type");
                         featureFields.put(columnName, columnType);
                     }
 
@@ -484,11 +488,13 @@ public class GeoPackage {
                         // build a feature source from the table schema
                         SCGpkgFeatureSource source = createFeatureSource(tableName);
                         while (cursor.moveToNext()) {
-                            String columnName = SCSqliteHelper.getString(cursor, "name");
+                            String columnName = SCSqliteHelper.sanitizeColumnName(
+                                SCSqliteHelper.getString(cursor, "name")
+                            );
                             if (SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("GEOMETRY")
-                                    || SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("POINT")
-                                    || SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("LINESTRING")
-                                    || SCSqliteHelper.getString(cursor, "type").equalsIgnoreCase("POLYGON")) {
+                                    || SCSqliteHelper.getString(cursor, "type").contains("POINT")
+                                    || SCSqliteHelper.getString(cursor, "type").contains("LINESTRING")
+                                    || SCSqliteHelper.getString(cursor, "type").contains("POLYGON")) {
                                 source.setGeomColumnName(columnName);
                             }
                             else if (SCSqliteHelper.getInt(cursor, "pk") == 1) {
@@ -503,7 +509,6 @@ public class GeoPackage {
                 })
                 .toList();
     }
-
 
     public Observable<List<SCGpkgTileSource>> getTileTables() {
         return Observable.from(getGeoPackageContents())
