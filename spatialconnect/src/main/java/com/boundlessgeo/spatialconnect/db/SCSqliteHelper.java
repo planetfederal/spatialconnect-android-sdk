@@ -22,6 +22,8 @@ import android.util.Log;
 import com.squareup.sqlbrite.BriteDatabase;
 import com.squareup.sqlbrite.SqlBrite;
 
+import java.util.Arrays;
+import java.util.List;
 import org.sqlite.database.DatabaseErrorHandler;
 import org.sqlite.database.sqlite.SQLiteDatabase;
 import org.sqlite.database.sqlite.SQLiteOpenHelper;
@@ -35,6 +37,24 @@ import rx.schedulers.Schedulers;
  * provides a {@link BriteDatabase} object which can be used to provide observable sql queries.
  */
 public class SCSqliteHelper extends SQLiteOpenHelper {
+
+    private static final String KEYWORDS = "ABORT,ACTION,ADD,AFTER"
+        + ",ALL,ALTER,ANALYZE,AND,AS,ASC,ATTACH,AUTOINCREMENT,BEFORE,BEGIN,BETWEEN,BY,CASCADE"
+        + ",CASE,CAST,CHECK,COLLATE,COLUMN,COMMIT,CONFLICT,CONSTRAINT,CREATE,CROSS,CURRENT_DATE"
+        + ",CURRENT_TIME,CURRENT_TIMESTAMP,DATABASE,DEFAULT,DEFERRABLE,DEFERRED,DELETE,DESC"
+        + ",DETACH,DISTINCT,DROP,EACH,ELSE,END,ESCAPE,EXCEPT,EXCLUSIVE,EXISTS,EXPLAIN,FAIL,FOR"
+        + ",FOREIGN,FROM,FULL,GLOB,GROUP,HAVING,IF,IGNORE,IMMEDIATE,IN,INDEX,INDEXED,INITIALLY"
+        + ",INNER,INSERT,INSTEAD,INTERSECT,INTO,IS,ISNULL,JOIN,KEY,LEFT,LIKE,LIMIT,MATCH,NATURAL"
+        + ",NO,NOT,NOTNULL,NULL,OF,OFFSET,ON,OR,ORDER,OUTER,PLAN,PRAGMA,PRIMARY,QUERY,RAISE"
+        + ",RECURSIVE,REFERENCES,REGEXP,REINDEX,RELEASE,RENAME,REPLACE,RESTRICT,RIGHT,ROLLBACK"
+        + ",ROW,SAVEPOINT,SELECT,SET,TABLE,TEMP,TEMPORARY,THEN,TO,TRANSACTION,TRIGGER,UNION"
+        + ",UNIQUE,UPDATE,USING,VACUUM,VALUES,VIEW,VIRTUAL,WHEN,WHERE,WITH,WITHOUT";
+
+    /**
+     * A list of keywords used by Sqlite that we cannot use as table or column names.
+     * https://www.sqlite.org/lang_keywords.html
+     */
+    public static final List<String> SQLITE_KEYWORDS = Arrays.asList(KEYWORDS.split(","));
 
     private static final int DATABASE_VERSION = 1;
     private SqlBrite sqlBrite = SqlBrite.create(new SqlBrite.Logger() {
@@ -141,5 +161,13 @@ public class SCSqliteHelper extends SQLiteOpenHelper {
 
     public static byte[] getBlob(Cursor cursor, String columnName) {
         return cursor.getBlob(cursor.getColumnIndexOrThrow(columnName));
+    }
+
+    public static synchronized String sanitizeColumnName(String columnName) {
+        if (columnName.contains(":") ||
+            SCSqliteHelper.SQLITE_KEYWORDS.contains(columnName.toUpperCase())) {
+            return String.format("'%s'", columnName);
+        }
+        return columnName;
     }
 }
