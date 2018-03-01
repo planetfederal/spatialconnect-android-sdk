@@ -9,6 +9,10 @@ node {
         sh """        
           echo "Running ${env.BUILD_ID} on ${env.JENKINS_URL}"
         """
+	sh """
+	  sh "echo ${env.android-sdk-license} > licenses/android-sdk-license"
+	  sh "echo ${env.android-sdk-preview-license} > licenses/android-sdk-preview-license"
+	"""
       }
 
      stage('DockerBuild'){

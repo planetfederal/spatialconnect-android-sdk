@@ -4,10 +4,10 @@ LABEL de.mindrunner.android-docker.flavour="alpine-standalone"
 
 ARG GLIBC_VERSION="2.26-r0"
 
-ENV ANDROID_SDK_HOME /opt/android-sdk-linux
-ENV ANDROID_SDK_ROOT /opt/android-sdk-linux
 ENV ANDROID_HOME /opt/android-sdk-linux
-ENV ANDROID_SDK /opt/android-sdk-linux
+ENV ANDROID_SDK $ANDROID_HOME
+ENV ANDROID_SDK_HOME $ANDROID_HOME
+ENV ANDROID_SDK_ROOT $ANDROID_HOME
 
 # Install Required Tools
 RUN apk -U update && apk -U add \
