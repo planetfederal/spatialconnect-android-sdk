@@ -29,6 +29,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCPolygon;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.style.SCStyle;
+import com.boundlessgeo.spatialconnect.sync.SyncItem;
 import com.boundlessgeo.spatialconnect.tiles.GpkgTileProvider;
 import com.boundlessgeo.spatialconnect.tiles.SCGpkgTileSource;
 import com.google.android.gms.maps.GoogleMap;
@@ -485,12 +486,12 @@ public class GeoPackageStore extends SCDataStore implements ISCSpatialStore, SCD
     }
 
     @Override
-    public Observable<SCSpatialFeature> unSent() {
-        return gpkg.unSent().map(new Func1<SCSpatialFeature, SCSpatialFeature>() {
+    public Observable<SyncItem> unSent() {
+        return gpkg.unSent().map(new Func1<SyncItem, SyncItem>() {
             @Override
-            public SCSpatialFeature call(SCSpatialFeature feature) {
-                feature.setStoreId(storeId);
-                return feature;
+            public SyncItem call(SyncItem syncItem) {
+                syncItem.getFeature().setStoreId(storeId);
+                return syncItem;
             }
         });
     }

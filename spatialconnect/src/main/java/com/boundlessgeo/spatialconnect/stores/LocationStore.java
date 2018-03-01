@@ -29,6 +29,7 @@ import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.query.SCQueryFilter;
 import com.boundlessgeo.spatialconnect.services.SCSensorService;
 import com.boundlessgeo.spatialconnect.style.SCStyle;
+import com.boundlessgeo.spatialconnect.sync.SyncItem;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -117,13 +118,13 @@ public class LocationStore extends GeoPackageStore implements ISCSpatialStore, S
 
     //only send the last unSent location record
     @Override
-    public Observable<SCSpatialFeature> unSent() {
-        Observable<SCSpatialFeature> unSentFeatures = gpkg.unSent().takeLast(1);
-        return unSentFeatures.map(new Func1<SCSpatialFeature, SCSpatialFeature>() {
+    public Observable<SyncItem> unSent() {
+        Observable<SyncItem> unSentFeatures = gpkg.unSent().takeLast(1);
+        return unSentFeatures.map(new Func1<SyncItem, SyncItem>() {
             @Override
-            public SCSpatialFeature call(SCSpatialFeature feature) {
-                feature.setStoreId(storeId);
-                return feature;
+            public SyncItem call(SyncItem syncItem) {
+                syncItem.getFeature().setStoreId(storeId);
+                return syncItem;
             }
         });
     }

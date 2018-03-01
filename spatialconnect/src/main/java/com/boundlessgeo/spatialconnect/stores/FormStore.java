@@ -26,7 +26,6 @@ import com.boundlessgeo.spatialconnect.config.SCStoreConfig;
 import com.boundlessgeo.spatialconnect.geometries.SCSpatialFeature;
 import com.boundlessgeo.spatialconnect.scutilities.Json.JsonUtilities;
 import com.boundlessgeo.spatialconnect.style.SCStyle;
-import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -102,10 +101,6 @@ public class FormStore extends GeoPackageStore implements ISCSpatialStore, SCDat
 
     @Override
     public Observable<Void> delete(final SCKeyTuple keyTuple) {
-        return Observable.empty();
-    }
-
-    public Observable<SCSpatialFeature> update(final SCSpatialFeature scSpatialFeature) {
         return Observable.empty();
     }
 

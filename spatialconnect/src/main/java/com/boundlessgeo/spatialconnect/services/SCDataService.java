@@ -97,7 +97,7 @@ public class SCDataService extends SCService implements SCServiceLifecycle {
         addDefaultStoreImpls();
         this.context = context;
         initializeFormStore();
-        initializeLocationStore();
+        //initializeLocationStore();
     }
 
     /**
